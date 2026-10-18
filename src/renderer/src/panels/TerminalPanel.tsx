@@ -8,6 +8,8 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import type { TerminalParams } from '../layout'
 import { onSettings } from '../appearance'
+import { patchItem } from '../sidebarStore'
+import type { TermSession } from '../../../shared/types'
 import { themeById } from '../../../shared/themes'
 
 export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParams>) {
@@ -30,6 +32,22 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
     searchRef.current = search
     term.loadAddon(new WebLinksAddon((_e, uri) => window.open(uri, '_blank'))) // abre no navegador padrao
     term.open(el)
+    // Pasta atual: o prompt emite OSC 9;9;"<pasta>" (integracao injetada no shell pelo main).
+    let cur: { lastCwd?: string; lastSession?: TermSession } = { lastCwd: params.lastCwd, lastSession: params.lastSession }
+    const remember = (patch: typeof cur): void => {
+      cur = { ...cur, ...patch }
+      api.updateParameters({ ...api.getParameters?.(), ...cur })
+      const itemId = (api.getParameters?.() as TerminalParams | undefined)?.itemId ?? params.itemId
+      if (!itemId) return
+      if (patch.lastSession) patchItem(itemId, { agent: 'claude', sessionId: patch.lastSession.sessionId, cwd: patch.lastSession.cwd })
+      else if (patch.lastCwd) patchItem(itemId, { cwd: patch.lastCwd })
+    }
+    term.parser.registerOscHandler(9, (data) => {
+      if (!data.startsWith('9;')) return false
+      const path = data.slice(2).replace(/^"|"$/g, '')
+      if (path && path !== cur.lastCwd) remember({ lastCwd: path })
+      return true
+    })
     const uni = new Unicode11Addon()
     term.loadAddon(uni)
     term.unicode.activeVersion = '11'
@@ -89,6 +107,9 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
         setTimeout(() => window.turno.pty.write(id, cmd + '\r'), 150)
       }
     })
+    const offSession = window.turno.pty.onSession((id, s) => {
+      if (id === ptyId && s.sessionId !== cur.lastSession?.sessionId) remember({ lastSession: s })
+    })
     const offExit = window.turno.pty.onExit((id, code) => {
       if (id === ptyId) term.write(`\r\n\x1b[90m[processo encerrado: ${code}]\x1b[0m\r\n`)
     })
@@ -146,6 +167,7 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
       focus.dispose()
       input.dispose()
       offData()
+      offSession()
       offExit()
       if (ptyId) window.turno.pty.kill(ptyId)
       term.dispose()

@@ -151,9 +151,17 @@ export interface ShellInfo {
 // ---- barra lateral: pastas com chats (sessoes de agentes) e links ----
 export type AgentId = 'claude' | 'claude-qwen' | 'codex' | 'gemini' | 'qwen-code' | 'opencode' | 'custom'
 
+export interface TermSession {
+  agent: 'claude'
+  sessionId: string
+  cwd: string
+  name?: string
+}
+
 export interface SidebarItem {
   id: string
-  kind: 'chat' | 'link'
+  // terminal = aba arrastada para a pasta: reabre na ultima pasta/sessao em que estava
+  kind: 'chat' | 'link' | 'terminal'
   name: string
   agent?: AgentId
   sessionId?: string
@@ -161,6 +169,8 @@ export interface SidebarItem {
   model?: string
   command?: string // sobrescreve o comando; {id} vira o id da sessao
   url?: string
+  shell?: string
+  profile?: ProfileId
 }
 
 export interface SidebarFolder {
@@ -189,6 +199,7 @@ export interface TurnoApi {
     kill(id: number): void
     onData(cb: (id: number, data: string) => void): () => void
     onExit(cb: (id: number, code: number) => void): () => void
+    onSession(cb: (id: number, s: TermSession) => void): () => void
   }
   run: {
     start(req: RunRequest): Promise<string>
@@ -238,6 +249,8 @@ export interface TurnoApi {
     followup?: string
     theme?: string
     approve?: boolean
+    drag?: boolean
+    openItem?: string
     edit?: string
     waitSec: number
     done(): void

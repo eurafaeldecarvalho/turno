@@ -17,6 +17,8 @@ import { Sidebar } from './Sidebar'
 import { StatusBar } from './StatusBar'
 import { dockApi, openAdhoc, openHistory, openRoutine, openRun, openSettings, openTerminal, restoreLayout, saveLayout, setDockApi } from './layout'
 import { initStore, useStore } from './store'
+import { addTerminalItem, openItem, setDragging } from './sidebarStore'
+import type { TerminalParams } from './layout'
 import { updateSettings } from './appearance'
 import {
   IconClock,
@@ -140,6 +142,11 @@ function Welcome(_: IWatermarkPanelProps) {
 export function App() {
   const onReady = useCallback((e: DockviewReadyEvent) => {
     setDockApi(e.api)
+    // Guarda qual aba esta sendo arrastada: a sidebar aceita terminais soltos numa pasta.
+    e.api.onWillDragPanel((ev) => {
+      const params = (ev.panel.params ?? {}) as TerminalParams & { kind?: string }
+      setDragging(params.kind === 'terminal' ? { id: ev.panel.id, params, title: ev.panel.title ?? 'terminal' } : undefined)
+    })
     let t: ReturnType<typeof setTimeout> | undefined
     e.api.onDidLayoutChange(() => {
       clearTimeout(t)
@@ -223,6 +230,24 @@ async function runSmoke(): Promise<void> {
   if (window.turno.smoke.theme) {
     await updateSettings({ theme: window.turno.smoke.theme })
     openSettings()
+  }
+  if (window.turno.smoke.drag) {
+    // Mesmo caminho do arrasto: terminal com claude interativo -> solta na 1a pasta.
+    openTerminal('right', { initialCommand: 'claude --model haiku' }, 'claude aqui', undefined, 'smoke-claude')
+    await new Promise((r) => setTimeout(r, 25000))
+    const panel = api.getPanel('smoke-claude')!
+    const sb = await window.turno.sidebar.get()
+    const params = panel.params as TerminalParams
+    console.log('[smoke] params', JSON.stringify({ lastCwd: params.lastCwd, lastSession: params.lastSession }))
+    const itemId = addTerminalItem(sb.folders[0].id, params, panel.title ?? 'terminal')
+    panel.api.updateParameters({ ...params, itemId })
+    console.log('[smoke] item', itemId)
+  }
+  if (window.turno.smoke.openItem) {
+    const sb = await window.turno.sidebar.get()
+    const it = sb.folders.flatMap((f) => f.items).find((x) => x.id === window.turno.smoke.openItem)
+    if (it) await openItem(it)
+    await new Promise((r) => setTimeout(r, 12000))
   }
   if (window.turno.smoke.edit) openRoutine(window.turno.smoke.edit, window.turno.smoke.edit, true)
   const target = window.turno.smoke.runRoutine

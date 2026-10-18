@@ -3,16 +3,25 @@ import { useStore, isActive } from './store'
 import { scheduleSummary, statusTone, when, STATUS_LABEL } from './fmt'
 import { openAdhoc, openHistory, openRoutine, openSettings, openTerminal } from './layout'
 import { IconChat, IconChevron, IconClose, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
-import { addFolder, agentOf, deleteFolder, deleteItem, moveFolder, openItem, renameFolder, toggleSection, useSidebar } from './sidebarStore'
+import { addFolder, addTerminalItem, agentOf, deleteFolder, deleteItem, getDragging, moveFolder, openItem, renameFolder, setDragging, toggleSection, useSidebar } from './sidebarStore'
+import { dockApi } from './layout'
 import { FolderDialog, ItemDialog } from './ItemDialog'
 import type { SidebarFolder, SidebarItem } from '../../shared/types'
 
 // Secao recolhivel da barra lateral (Rotinas e cada pasta).
-function Section({ id, title, count, actions, children }: { id: string; title: ReactNode; count?: number; actions?: ReactNode; children: ReactNode }) {
+function Section({ id, title, count, actions, children, folder, dropping }: {
+  id: string
+  title: ReactNode
+  count?: number
+  actions?: ReactNode
+  children: ReactNode
+  folder?: boolean
+  dropping?: boolean
+}) {
   const { collapsed } = useSidebar()
   const closed = !!collapsed[id]
   return (
-    <section className={`side-section ${closed ? 'closed' : ''}`}>
+    <section className={`side-section ${closed ? 'closed' : ''} ${dropping ? 'drop-target' : ''}`} data-folder-id={folder ? id : undefined}>
       <div className="section-head">
         <button className="section-toggle" onClick={() => toggleSection(id)} aria-expanded={!closed}>
           <IconChevron size={12} className="chev" />
@@ -59,9 +68,61 @@ type Dialog =
   | { t: 'folder'; folder?: SidebarFolder }
   | { t: 'item'; folderId: string; item?: SidebarItem }
 
+// Pasta sob o ponteiro durante um arrasto de aba (funciona com drag HTML5 ou por ponteiro).
+function folderAt(x: number, y: number): string | undefined {
+  const el = document.elementFromPoint(x, y) as HTMLElement | null
+  return el?.closest<HTMLElement>('[data-folder-id]')?.dataset.folderId
+}
+
+function useTerminalDrop(): string | undefined {
+  const [hover, setHover] = useState<string>()
+  useEffect(() => {
+    const over = (e: DragEvent | PointerEvent): void => {
+      if (!getDragging()) return
+      const f = folderAt(e.clientX, e.clientY)
+      setHover(f)
+      if (f && 'dataTransfer' in e) {
+        e.preventDefault() // permite soltar aqui
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'link'
+      }
+    }
+    const drop = (e: DragEvent | PointerEvent): void => {
+      const d = getDragging()
+      const f = d && folderAt(e.clientX, e.clientY)
+      if (d && f) {
+        e.preventDefault()
+        e.stopPropagation()
+        const itemId = addTerminalItem(f, d.params, d.title)
+        const panel = dockApi()?.getPanel(d.id)
+        panel?.api.updateParameters({ ...d.params, itemId })
+      }
+      setDragging(undefined)
+      setHover(undefined)
+    }
+    const end = (): void => {
+      setDragging(undefined)
+      setHover(undefined)
+    }
+    window.addEventListener('dragover', over, true)
+    window.addEventListener('pointermove', over, true)
+    window.addEventListener('drop', drop, true)
+    window.addEventListener('pointerup', drop, true)
+    window.addEventListener('dragend', end, true)
+    return () => {
+      window.removeEventListener('dragover', over, true)
+      window.removeEventListener('pointermove', over, true)
+      window.removeEventListener('drop', drop, true)
+      window.removeEventListener('pointerup', drop, true)
+      window.removeEventListener('dragend', end, true)
+    }
+  }, [])
+  return hover
+}
+
 export function Sidebar() {
   const { folders } = useSidebar()
   const [dialog, setDialog] = useState<Dialog>()
+  const dropFolder = useTerminalDrop()
   const routines = useStore((s) => s.routines)
   const runs = useStore((s) => s.runs)
   const running = runs.filter(isActive)
@@ -167,6 +228,8 @@ export function Sidebar() {
         <Section
           key={f.id}
           id={f.id}
+          folder
+          dropping={dropFolder === f.id}
           title={f.name}
           count={f.items.length}
           actions={
@@ -194,19 +257,21 @@ export function Sidebar() {
           <ul className="routines">
             {!f.items.length && (
               <li className="empty muted small">
-                Vazia. Use <b>+</b> para adicionar um chat de agente ou um link.
+                Vazia. Use <b>+</b> ou arraste uma aba de terminal para cá.
               </li>
             )}
             {f.items.map((it) => (
               <li key={it.id} className="routine">
                 <button className="routine-main" onClick={() => void openItem(it)} title={it.kind === 'link' ? it.url : `${agentOf(it.agent).name}${it.cwd ? ` · ${it.cwd}` : ''}`}>
-                  <span className="item-icon">{it.kind === 'link' ? <IconLink size={14} /> : <IconChat size={14} />}</span>
+                  <span className="item-icon">{it.kind === 'link' ? <IconLink size={14} /> : it.kind === 'terminal' && !it.sessionId ? <IconTerminal size={14} /> : <IconChat size={14} />}</span>
                   <span className="routine-text">
                     <span className="routine-name">{it.name}</span>
                     <span className="routine-sub">
                       {it.kind === 'link'
                         ? (it.url ?? '').replace(/^https?:[/][/]/, '').slice(0, 40)
-                        : `${agentOf(it.agent).name}${it.cwd ? ` · ${lastPart(it.cwd)}` : ''}`}
+                        : it.kind === 'terminal'
+                          ? `${it.sessionId ? 'sessão do Claude' : 'terminal'}${it.cwd ? ` · ${lastPart(it.cwd)}` : ''}`
+                          : `${agentOf(it.agent).name}${it.cwd ? ` · ${lastPart(it.cwd)}` : ''}`}
                     </span>
                   </span>
                 </button>

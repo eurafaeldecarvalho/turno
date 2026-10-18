@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
-import type { TurnoApi, RunEvent, RunRecord, Routine, Settings, AwakeStatus } from '../shared/types'
+import type { TurnoApi, RunEvent, RunRecord, Routine, Settings, AwakeStatus, TermSession } from '../shared/types'
 
 function listen<T extends unknown[]>(channel: string, cb: (...args: T) => void): () => void {
   const h = (_e: IpcRendererEvent, ...args: unknown[]): void => cb(...(args as T))
@@ -15,6 +15,7 @@ const api: TurnoApi = {
     kill: (id) => ipcRenderer.send('pty:kill', id),
     onData: (cb) => listen<[number, string]>('pty:data', cb),
     onExit: (cb) => listen<[number, number]>('pty:exit', cb),
+    onSession: (cb) => listen<[number, TermSession]>('pty:session', cb),
   },
   run: {
     start: (req) => ipcRenderer.invoke('run:start', req),
@@ -64,6 +65,8 @@ const api: TurnoApi = {
     followup: process.argv.find((a) => a.startsWith('--smoke-followup='))?.slice('--smoke-followup='.length),
     theme: process.argv.find((a) => a.startsWith('--smoke-theme='))?.slice('--smoke-theme='.length),
     approve: process.argv.includes('--smoke-approve'),
+    drag: process.argv.includes('--smoke-drag'),
+    openItem: process.argv.find((a) => a.startsWith('--smoke-open='))?.slice('--smoke-open='.length),
     edit: process.argv.find((a) => a.startsWith('--smoke-edit='))?.slice('--smoke-edit='.length),
     runRoutine: process.argv.find((a) => a.startsWith('--smoke-run='))?.slice('--smoke-run='.length),
     done: () => ipcRenderer.send('smoke:done'),

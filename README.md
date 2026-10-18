@@ -140,7 +140,8 @@ Prompt. Be explicit: nobody is watching to answer questions.
 
 - **Terminals:** xterm.js 6 with WebGL, search (Ctrl+F), clickable links, Unicode 11 and bracketed paste. Ctrl+Shift+C/V copy and paste, right click copies or pastes, and Shift+Enter inserts a newline in the Claude Code prompt.
 - **Splits:** drag a tab onto another pane and pick a cell on the drop compass, use the split buttons in each pane header, or press Alt+Shift+= / Alt+Shift+-. The layout is saved between launches.
-- **Sidebar folders** hold two kinds of items. You can collapse any section, including *Rotinas*.
+- **Drag a terminal tab onto a sidebar folder** to keep it as an item. Turno tracks the terminal's current folder (OSC 9;9 from the prompt) and the Claude Code session running inside it (`~/.claude/sessions/<pid>.json`, matched through the process tree). Clicking the item later reopens it where you left off: `claude --resume <last session>` in that folder, or just a shell there.
+- **Sidebar folders** also hold two kinds of items you add by hand. You can collapse any section, including *Rotinas*.
   - **Agent chat** (Claude Code, Claude Code on local Qwen, Codex, Gemini CLI, Qwen Code, OpenCode or a custom command): clicking it opens that exact session in a terminal tab. For Claude Code you pick from your recent sessions (CLI and Desktop app), or Turno creates a fixed `--session-id` for a new one.
   - **Link** (claude.ai, ChatGPT, anything with a URL): opens in the browser or the registered app.
 - **Settings:**
@@ -202,7 +203,7 @@ pnpm dist:dir     # unpacked app in dist\win-unpacked\Turno.exe
 pnpm smoke        # build, open a sample layout, save smoke/screenshot.png and exit
 ```
 
-**Smoke flags** (they can be combined): `--smoke-run=<routine>`, `--smoke-followup="<text>"`, `--smoke-approve`, `--smoke-theme=<id>`, `--smoke-edit=<routine>`, `--smoke-wait=<sec>`.
+**Smoke flags** (they can be combined): `--smoke-run=<routine>`, `--smoke-followup="<text>"`, `--smoke-approve`, `--smoke-theme=<id>`, `--smoke-edit=<routine>`, `--smoke-drag`, `--smoke-open=<item id>`, `--smoke-wait=<sec>`.
 
 **Testing without touching your real setup:** set `TURNO_ROUTINES_DIR` and `TURNO_USER_DATA` to point at test folders.
 

@@ -1,5 +1,5 @@
 import type { DockviewApi, Direction } from 'dockview-react'
-import type { ProfileId } from '../../shared/types'
+import type { ProfileId, TermSession } from '../../shared/types'
 
 // Ponto unico para abrir paineis no dockview (sidebar, atalhos, botoes dos paineis).
 let api: DockviewApi | undefined
@@ -21,6 +21,13 @@ export interface TerminalParams {
   cwd?: string
   profile?: ProfileId
   initialCommand?: string
+  itemId?: string // item da sidebar que este terminal atualiza
+  lastCwd?: string // pasta atual (OSC 9;9 do prompt)
+  lastSession?: TermSession // sessao do Claude Code rodando aqui
+}
+
+export function panelForItem(itemId: string) {
+  return api?.panels.find((p) => (p.params as TerminalParams | undefined)?.itemId === itemId)
 }
 
 export function openTerminal(dir?: Dir, params: TerminalParams = {}, title?: string, refId?: string, fixedId?: string): void {
@@ -87,7 +94,7 @@ export function restoreLayout(): boolean {
     if (!raw) return false
     api.fromJSON(JSON.parse(raw))
     // Abas de chat voltariam como shell vazio: fecha; um clique no item reabre a sessao.
-    for (const p of api.panels.filter((x) => x.id.startsWith('chat:'))) p.api.close()
+    for (const p of api.panels.filter((x) => x.id.startsWith('chat:') || (x.params as TerminalParams | undefined)?.itemId)) p.api.close()
     return api.panels.length > 0
   } catch {
     api.clear()

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { AgentId, SidebarFolder, SidebarItem, SidebarState } from '../../shared/types'
-import { openTerminal } from './layout'
+import { openTerminal, panelForItem, type TerminalParams } from './layout'
 
 // ---- estado das pastas da barra lateral (persistido em %APPDATA%\turno\sidebar.json) ----
 let state: SidebarState = { collapsed: {}, folders: [] }
@@ -60,6 +60,44 @@ export const saveItem = (folderId: string, item: SidebarItem): void => {
   commit({ ...state, folders, collapsed: { ...state.collapsed, [folderId]: false } })
 }
 
+// Atualizacao vinda de um terminal aberto (pasta/sessao mudaram): salva sem mexer na ordem.
+let saveTimer: ReturnType<typeof setTimeout> | undefined
+export function patchItem(itemId: string, patch: Partial<SidebarItem>): void {
+  let changed = false
+  const folders = state.folders.map((f) => ({
+    ...f,
+    items: f.items.map((x) => {
+      if (x.id !== itemId) return x
+      const next = { ...x, ...patch }
+      if (JSON.stringify(next) !== JSON.stringify(x)) changed = true
+      return next
+    }),
+  }))
+  if (!changed) return
+  state = { ...state, folders }
+  subs.forEach((f) => f())
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => void window.turno.sidebar.save(state), 400)
+}
+
+const baseName = (p?: string): string => (p ? (p.split(/[\\/]/).filter(Boolean).pop() ?? p) : '')
+
+// Aba de terminal solta numa pasta: vira item ligado a esse terminal.
+export function addTerminalItem(folderId: string, params: TerminalParams, title: string): string {
+  const s = params.lastSession
+  const item: SidebarItem = {
+    id: uid(),
+    kind: 'terminal',
+    name: s?.name || (s ? `Claude · ${baseName(s.cwd)}` : '') || (params.lastCwd ? baseName(params.lastCwd) : title),
+    cwd: s?.cwd ?? params.lastCwd ?? params.cwd,
+    shell: params.shell,
+    profile: params.profile,
+    ...(s ? { agent: 'claude' as const, sessionId: s.sessionId } : {}),
+  }
+  saveItem(folderId, item)
+  return item.id
+}
+
 export const deleteItem = (itemId: string): void =>
   commit({ ...state, folders: state.folders.map((f) => ({ ...f, items: f.items.filter((x) => x.id !== itemId) })) })
 
@@ -106,12 +144,31 @@ export async function openItem(item: SidebarItem): Promise<void> {
     if (item.url) await window.turno.ui.openExternal(item.url).catch((e) => alert(String(e.message ?? e)))
     return
   }
-  const cmd = await resolveCommand(item)
+  // Ja aberto (inclusive a aba original que foi arrastada para a pasta): so foca.
+  const open = panelForItem(item.id)
+  if (open) return open.api.setActive()
+  let cmd = ''
+  if (item.kind === 'terminal') {
+    // Reabre onde parou: retoma a ultima sessao do Claude, senao so o shell na ultima pasta.
+    if (item.sessionId && (await window.turno.sidebar.claudeSessionExists(item.sessionId)))
+      cmd = `claude --resume ${item.sessionId}${item.profile === 'qwen-local' ? ' --model qwen3.6:35b' : ''}`
+  } else cmd = await resolveCommand(item)
   openTerminal(
     undefined,
-    { cwd: item.cwd || undefined, profile: item.agent === 'claude-qwen' ? 'qwen-local' : undefined, initialCommand: cmd || undefined },
+    {
+      cwd: item.cwd || undefined,
+      shell: item.shell,
+      profile: item.profile ?? (item.agent === 'claude-qwen' ? 'qwen-local' : undefined),
+      initialCommand: cmd || undefined,
+      itemId: item.id,
+    },
     item.name,
     undefined,
     `chat:${item.id}`, // mesmo item = mesma aba (clicar de novo so foca)
   )
 }
+
+// ---- arrastar aba do dockview para uma pasta ----
+let dragging: { id: string; params: TerminalParams; title: string } | undefined
+export const setDragging = (d: typeof dragging): void => void (dragging = d)
+export const getDragging = (): typeof dragging => dragging
