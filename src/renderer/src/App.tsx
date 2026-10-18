@@ -66,7 +66,7 @@ function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string }>) {
       <span className="tab-title">{title}</span>
       <button
         className="tab-close"
-        aria-label="Fechar"
+        aria-label="Close"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation()
@@ -86,17 +86,17 @@ function GroupActions({ group, containerApi }: IDockviewHeaderActionsProps) {
   const ref = group.activePanel?.id
   return (
     <div className="group-actions">
-      <button title="Novo terminal nesta aba" onClick={() => group.activePanel && openTerminal(undefined, {}, undefined, ref) }>
+      <button title="New terminal in this tab" onClick={() => group.activePanel && openTerminal(undefined, {}, undefined, ref) }>
         <IconPlus size={14} />
       </button>
-      <button title="Dividir à direita (Alt+Shift+=)" onClick={() => openTerminal('right', {}, undefined, ref)}>
+      <button title="Split right (Alt+Shift+=)" onClick={() => openTerminal('right', {}, undefined, ref)}>
         <IconSplitRight size={14} />
       </button>
-      <button title="Dividir abaixo (Alt+Shift+-)" onClick={() => openTerminal('below', {}, undefined, ref)}>
+      <button title="Split down (Alt+Shift+-)" onClick={() => openTerminal('below', {}, undefined, ref)}>
         <IconSplitDown size={14} />
       </button>
       <button
-        title={max ? 'Restaurar (Ctrl+Shift+M)' : 'Maximizar (Ctrl+Shift+M)'}
+        title={max ? 'Restore (Ctrl+Shift+M)' : 'Maximize (Ctrl+Shift+M)'}
         onClick={() => (max ? containerApi.exitMaximizedGroup() : group.activePanel && containerApi.maximizeGroup(group.activePanel))}
       >
         {max ? <IconMinimize size={14} /> : <IconMaximize size={14} />}
@@ -111,30 +111,30 @@ function Welcome(_: IWatermarkPanelProps) {
     <div className="welcome">
       <img src="./icon.png" alt="" width={56} height={56} />
       <h1>Turno</h1>
-      <p className="muted">Rotinas de agentes no seu PC, com Claude ou Qwen local.</p>
+      <p className="muted">Agent routines on your PC, with Claude or local Qwen.</p>
       <div className="welcome-actions">
-        <button className="btn primary" onClick={() => openRoutine(null, 'Nova rotina')}>
-          <IconRoutine /> Nova rotina
+        <button className="btn primary" onClick={() => openRoutine(null, 'New routine')}>
+          <IconRoutine /> New routine
         </button>
         <button className="btn" onClick={() => openTerminal()}>
           <IconTerminal /> Terminal
         </button>
         <button className="btn" onClick={() => openHistory()}>
-          <IconHistory /> Execuções
+          <IconHistory /> Runs
         </button>
       </div>
       <dl className="shortcuts">
-        <dt>Alt+Shift+=</dt><dd>dividir à direita</dd>
-        <dt>Alt+Shift+-</dt><dd>dividir abaixo</dd>
-        <dt>Ctrl+Shift+T</dt><dd>novo terminal</dd>
-        <dt>Ctrl+Shift+M</dt><dd>maximizar</dd>
-        <dt>Ctrl+Shift+W</dt><dd>fechar painel</dd>
-        <dt>Ctrl+,</dt><dd>configurações</dd>
-        <dt>Ctrl+Shift+H</dt><dd>execuções</dd>
-        <dt>Shift+Enter</dt><dd>nova linha no claude do terminal</dd>
-        <dt>arrastar aba</dt><dd>soltar sobre outro painel para dividir</dd>
+        <dt>Alt+Shift+=</dt><dd>split right</dd>
+        <dt>Alt+Shift+-</dt><dd>split down</dd>
+        <dt>Ctrl+Shift+T</dt><dd>new terminal</dd>
+        <dt>Ctrl+Shift+M</dt><dd>maximize</dd>
+        <dt>Ctrl+Shift+W</dt><dd>close panel</dd>
+        <dt>Ctrl+,</dt><dd>settings</dd>
+        <dt>Ctrl+Shift+H</dt><dd>runs</dd>
+        <dt>Shift+Enter</dt><dd>new line in terminal claude</dd>
+        <dt>drag tab</dt><dd>drop on another panel to split</dd>
       </dl>
-      {routines.length > 0 && <p className="muted small">{routines.length} rotina(s) carregada(s) na barra lateral.</p>}
+      {routines.length > 0 && <p className="muted small">{routines.length} routine(s) loaded in the sidebar.</p>}
     </div>
   )
 }
@@ -161,7 +161,7 @@ export function App() {
 
   useEffect(() => {
     void initStore()
-    const off = window.turno.ui.onOpenRun((id) => openRun(id, 'Execução'))
+    const off = window.turno.ui.onOpenRun((id) => openRun(id, 'Run'))
     const onKey = (ev: KeyboardEvent): void => {
       const api = dockApi()
       if (!api) return
@@ -233,7 +233,7 @@ async function runSmoke(): Promise<void> {
   }
   if (window.turno.smoke.drag) {
     // Mesmo caminho do arrasto: terminal com claude interativo -> solta na 1a pasta.
-    openTerminal('right', { initialCommand: 'claude --model haiku' }, 'claude aqui', undefined, 'smoke-claude')
+    openTerminal('right', { initialCommand: 'claude --model haiku' }, 'claude here', undefined, 'smoke-claude')
     await new Promise((r) => setTimeout(r, 25000))
     const panel = api.getPanel('smoke-claude')!
     const sb = await window.turno.sidebar.get()

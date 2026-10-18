@@ -15,7 +15,7 @@
 ---
 name: Daily standup notes
 schedule:
-  days: [seg, ter, qua, qui, sex]   # Mon–Fri
+  days: [mon, tue, wed, thu, fri]
   times: ["09:00"]
 profile: claude-max      # or qwen-local (Ollama)
 model: sonnet
@@ -58,15 +58,15 @@ Turno does not implement an agent. It schedules and supervises the CLIs you alre
    - The installer is not code-signed, so SmartScreen shows a warning. Click *More info → Run anyway*.
 3. Turno opens and stays in the system tray. Closing the window only hides it, so routines keep running. Use *Quit* in the tray menu to stop everything.
 
-> The interface is in Brazilian Portuguese. Routine files accept the Portuguese day names `dom seg ter qua qui sex sab` (Sun–Sat).
+> Routine files written for earlier versions with Portuguese day names (`dom seg ter qua qui sex sab`) and `notify: falhas|sempre|nunca` keep working.
 
 ## Quickstart
 
-1. Click **+** next to *Rotinas* in the sidebar.
+1. Click **+** next to *Routines* in the sidebar.
 2. Fill in the form: name, days and times, model, effort, permission mode, and the prompt.
-3. Click **Criar rotina**. Turno creates the folder `~/rotinas/<id>/ROUTINE.md`, and editing that file by hand works too, because Turno watches the folder.
-4. Press **▶ Rodar agora** to try the routine once. The run opens as a live chat.
-5. When you are happy with it, turn it on (**Ligada**). It will run on schedule from then on.
+3. Click **Create routine**. Turno creates the folder `~/rotinas/<id>/ROUTINE.md`, and editing that file by hand works too, because Turno watches the folder.
+4. Press **▶ Run now** to try the routine once. The run opens as a live chat.
+5. When you are happy with it, turn it on (**Enabled**). It will run on schedule from then on.
 
 ## Routine reference
 
@@ -78,7 +78,7 @@ name: Daily summary
 description: What this routine does
 enabled: true
 schedule:
-  days: [seg, ter, qua, qui, sex]
+  days: [mon, tue, wed, thu, fri]  # sun mon tue wed thu fri sat
   times: ["09:00", "18:30"]
   # cron: "15 9,12,15,18 * * *"     # advanced: replaces days/times
 timezone: America/Sao_Paulo
@@ -95,7 +95,7 @@ idle_timeout_min: 15         # stop if the agent emits nothing for this long
 catchup: true                # run the most recent missed slot once (PC was off/asleep)
 catchup_window_h: 12
 precheck: "python check.py"  # optional; non-zero exit = skip this run
-notify: falhas               # falhas (failures) | sempre (always) | nunca (never)
+notify: failures             # failures | always | never
 ---
 
 Prompt. Be explicit: nobody is watching to answer questions.
@@ -103,17 +103,17 @@ Prompt. Be explicit: nobody is watching to answer questions.
 
 | `permission_mode` | Shown as | What happens when the agent wants a tool that is not pre-approved |
 |---|---|---|
-| `manual` | Perguntar | An approval card appears in the chat and you get a notification. The run waits. |
-| `dontAsk` | Só o liberado | Only `allowed_tools` run; everything else is denied silently. |
+| `manual` | Ask | An approval card appears in the chat and you get a notification. The run waits. |
+| `dontAsk` | Allowed only | Only `allowed_tools` run; everything else is denied silently. |
 | `auto` | Auto | Claude Code's classifier approves safe actions and blocks risky ones. |
-| `acceptEdits` | Aceitar edições | File edits are allowed; other tools not in the list are denied. |
-| `bypassPermissions` | Ignorar tudo | Same as `--dangerously-skip-permissions`. |
+| `acceptEdits` | Accept edits | File edits are allowed; other tools not in the list are denied. |
+| `bypassPermissions` | Bypass all | Same as `--dangerously-skip-permissions`. |
 
 ## The live chat
 
 ![Routine editor](docs/screenshots/editor.png)
 
-- **Thinking** blocks are collapsed as *Pensou por 12s* (thought for 12s). Turno passes `--thinking-display summarized`, because without it thinking arrives empty in this mode.
+- **Thinking** blocks are collapsed as *Thought for 12s*. Turno passes `--thinking-display summarized`, because without it thinking arrives empty in this mode.
 - **Consecutive tool calls** are grouped into one sentence. Each call expands to its input and output, and failed calls are shown in red.
 - **Messages sent during a run** are written to the live process stdin as stream-json `user` messages.
 - **Messages sent after the run ended** start a continuation (`claude -p --resume <session>`) shown in the same thread.
@@ -127,9 +127,9 @@ Prompt. Be explicit: nobody is watching to answer questions.
 - **Skipped runs are recorded with the reason:** previous run still going, lock busy, precheck failed, Claude not logged in, Ollama down.
 - **Locks:** `chrome` is added automatically when `chrome: true`, and `gpu` for the local model.
 - **Keep the computer awake** (status bar, bottom right):
-  - *Ligado*: always awake;
-  - *Agente*: awake only while an agent is working (the default);
-  - *Desligado*: normal Windows power plan.
+  - *On*: always awake;
+  - *Agent*: awake only while an agent is working (the default);
+  - *Off*: normal Windows power plan.
 
   It uses Electron's `powerSaveBlocker` and is re-applied after resume, like [Orca](https://github.com/stablyai/orca).
 - **Notifications:** Windows toasts, plus optional push to your phone through [ntfy](https://ntfy.sh). They are suppressed while the window is focused and rate-limited per message.
@@ -141,7 +141,7 @@ Prompt. Be explicit: nobody is watching to answer questions.
 - **Terminals:** xterm.js 6 with WebGL, search (Ctrl+F), clickable links, Unicode 11 and bracketed paste. Ctrl+Shift+C/V copy and paste, right click copies or pastes, and Shift+Enter inserts a newline in the Claude Code prompt.
 - **Splits:** drag a tab onto another pane and pick a cell on the drop compass, use the split buttons in each pane header, or press Alt+Shift+= / Alt+Shift+-. The layout is saved between launches.
 - **Drag a terminal tab onto a sidebar folder** to keep it as an item. Turno tracks the terminal's current folder (OSC 9;9 from the prompt) and the Claude Code session running inside it (`~/.claude/sessions/<pid>.json`, matched through the process tree). Clicking the item later reopens it where you left off: `claude --resume <last session>` in that folder, or just a shell there.
-- **Sidebar folders** also hold two kinds of items you add by hand. You can collapse any section, including *Rotinas*.
+- **Sidebar folders** also hold two kinds of items you add by hand. You can collapse any section, including *Routines*.
   - **Agent chat** (Claude Code, Claude Code on local Qwen, Codex, Gemini CLI, Qwen Code, OpenCode or a custom command): clicking it opens that exact session in a terminal tab. For Claude Code you pick from your recent sessions (CLI and Desktop app), or Turno creates a fixed `--session-id` for a new one.
   - **Link** (claude.ai, ChatGPT, anything with a URL): opens in the browser or the registered app.
 - **Settings:**

@@ -66,7 +66,7 @@ export function summarize(line: string): Summ[] {
   }
   if (e.type === 'system' && e.subtype === 'init') {
     const mcp = (e.mcp_servers ?? []).map((m: any) => `${m.name}:${m.status}`).join(', ')
-    return [{ kind: 'init', summary: `modelo ${e.model} · ${e.tools?.length ?? 0} ferramentas · permissão ${e.permissionMode}${mcp ? ` · mcp ${mcp}` : ''}` }]
+    return [{ kind: 'init', summary: `model ${e.model} · ${e.tools?.length ?? 0} tools · permission ${e.permissionMode}${mcp ? ` · mcp ${mcp}` : ''}` }]
   }
   if (e.type === 'system' && e.subtype === 'api_retry') return [{ kind: 'retry', summary: trunc(JSON.stringify(e)) }]
   if (e.type === 'result') {
@@ -74,7 +74,7 @@ export function summarize(line: string): Summ[] {
     const ok = !e.is_error && e.subtype === 'success'
     return [{
       kind: 'final',
-      summary: `${ok ? 'turno concluído' : `terminou com erro (${e.subtype})`} · ${e.num_turns} passos · ${Math.round((e.duration_ms ?? 0) / 1000)}s${cost}`,
+      summary: `${ok ? 'turn completed' : `ended with an error (${e.subtype})`} · ${e.num_turns} steps · ${Math.round((e.duration_ms ?? 0) / 1000)}s${cost}`,
       detail: ok ? undefined : cap(String(e.result ?? ''), 4000),
     }]
   }
@@ -84,7 +84,7 @@ export function summarize(line: string): Summ[] {
   for (const b of content) {
     if (e.type === 'assistant' && b.type === 'text' && b.text?.trim()) out.push({ kind: 'text', summary: cap(b.text.trim(), 20000) })
     else if (b.type === 'thinking' && b.thinking?.trim()) out.push({ kind: 'thinking', summary: cap(b.thinking.trim(), 20000) })
-    else if (b.type === 'redacted_thinking') out.push({ kind: 'thinking', summary: '(pensamento oculto pelo modelo)' })
+    else if (b.type === 'redacted_thinking') out.push({ kind: 'thinking', summary: '(thinking hidden by the model)' })
     else if (b.type === 'tool_use') {
       const input = b.input ?? {}
       const file = input.file_path ?? input.notebook_path
@@ -138,7 +138,7 @@ export function answerPermission(runId: string, requestId: string, decision: Per
   a.permissions.delete(requestId)
   const response =
     decision === 'deny'
-      ? { behavior: 'deny', message: 'O usuário negou esta ação no Turno.', toolUseID: req.tool_use_id }
+      ? { behavior: 'deny', message: 'The user denied this action in Turno.', toolUseID: req.tool_use_id }
       : {
           behavior: 'allow',
           updatedInput: req.input,
@@ -146,7 +146,7 @@ export function answerPermission(runId: string, requestId: string, decision: Per
           ...(decision === 'allow_session' && req.permission_suggestions ? { updatedPermissions: req.permission_suggestions } : {}),
         }
   writeLine(a, { type: 'control_response', response: { subtype: 'success', request_id: requestId, response } })
-  const label = decision === 'deny' ? 'negado' : decision === 'allow_session' ? 'permitido nesta sessão' : 'permitido'
+  const label = decision === 'deny' ? 'denied' : decision === 'allow_session' ? 'allowed for this session' : 'allowed'
   a.emit('permission_reply', label, requestId)
   return true
 }
@@ -247,7 +247,7 @@ export function startRun(o: StartOptions): string {
   // Guardado para continuar a conversa depois (follow-up com --resume).
   writeFileSync(join(dir, 'request.json'), JSON.stringify({ ...req, prompt: undefined }, null, 2))
   const args = buildArgs(req)
-  emit('start', `claude ${args.join(' ')}  [perfil ${req.profile}${o.routine ? `, rotina ${o.routine}` : ''}]`)
+  emit('start', `claude ${args.join(' ')}  [profile ${req.profile}${o.routine ? `, routine ${o.routine}` : ''}]`)
   const child = spawn('claude', args, {
     cwd: req.cwd ?? process.env.USERPROFILE,
     env: childEnv({
@@ -295,7 +295,7 @@ export function startRun(o: StartOptions): string {
           onPermission(runId, r.display_name ?? r.tool_name, String(what))
         } else if (e.type === 'control_cancel_request') {
           a.permissions.delete(e.request_id)
-          emit('permission_reply', 'cancelado', { ref: e.request_id })
+          emit('permission_reply', 'cancelled', { ref: e.request_id })
         }
         if (e.type === 'result') {
           result = e
@@ -329,7 +329,7 @@ export function startRun(o: StartOptions): string {
     else if (code === 0 && result && !result.is_error && result.subtype === 'success') status = 'ok'
     else if (rateLimited) status = 'rate_limited'
     else status = 'failed'
-    emit('exit', err ? `falha ao iniciar: ${err}` : `processo terminou (exit=${code}) → ${status}`)
+    emit('exit', err ? `failed to start: ${err}` : `process exited (exit=${code}) → ${status}`)
     const close = (s: WriteStream): void => void s.end()
     ;[raw, summary, errLog].forEach(close)
     updateRun(runId, {

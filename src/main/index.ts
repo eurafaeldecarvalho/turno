@@ -106,22 +106,22 @@ function buildTray(): void {
 function refreshTray(): void {
   if (!tray) return
   const n = activeCount()
-  tray.setToolTip(n ? `Turno — ${n} rotina(s) rodando` : 'Turno — ocioso')
+  tray.setToolTip(n ? `Turno — ${n} routine(s) running` : 'Turno — idle')
   const s = getSettings()
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Abrir Turno', click: showWindow },
+      { label: 'Open Turno', click: showWindow },
       { type: 'separator' },
       {
-        label: 'Iniciar com o Windows',
+        label: 'Start with Windows',
         type: 'checkbox',
         checked: s.openAtLogin,
         click: (item) => applyOpenAtLogin(item.checked),
       },
       {
-        label: 'Manter o PC acordado',
+        label: 'Keep computer awake',
         submenu: (['on', 'auto', 'off'] as const).map((m) => ({
-          label: { on: 'Ligado (sempre)', auto: 'Agente (enquanto trabalha)', off: 'Desligado' }[m],
+          label: { on: 'On (always)', auto: 'Agent (while working)', off: 'Off' }[m],
           type: 'radio' as const,
           checked: s.keepAwake === m,
           click: () => {
@@ -132,9 +132,9 @@ function refreshTray(): void {
           },
         })),
       },
-      { label: 'Abrir pasta de rotinas', click: () => void shell.openPath(s.routinesDir) },
+      { label: 'Open routines folder', click: () => void shell.openPath(s.routinesDir) },
       { type: 'separator' },
-      { label: 'Sair (para as rotinas)', click: quit },
+      { label: 'Quit (stops routines)', click: quit },
     ]),
   )
 }
@@ -150,12 +150,12 @@ function applyOpenAtLogin(on: boolean): void {
 function onRunFinished(run: RunRecord): void {
   refreshTray()
   const r = routineOf(run)
-  const mode = r?.config.notify ?? 'falhas'
+  const mode = r?.config.notify ?? 'failures'
   const failed = run.status !== 'ok'
-  if (mode === 'nunca' || (mode === 'falhas' && !failed) || run.trigger === 'adhoc' || run.trigger === 'followup') return
-  const name = r?.config.name ?? run.routine ?? 'Execução'
-  const title = failed ? `⚠ ${name}: ${run.status}` : `✓ ${name} concluída`
-  const body = failed ? (run.skip_reason ?? run.result ?? 'veja o log no Turno') : (run.result ?? '')
+  if (mode === 'never' || (mode === 'failures' && !failed) || run.trigger === 'adhoc' || run.trigger === 'followup') return
+  const name = r?.config.name ?? run.routine ?? 'Run'
+  const title = failed ? `⚠ ${name}: ${run.status}` : `✓ ${name} finished`
+  const body = failed ? (run.skip_reason ?? run.result ?? 'see the log in Turno') : (run.result ?? '')
   void notify(title, body, () => {
     showWindow()
     send('ui:open-run', run.id)
@@ -174,8 +174,8 @@ initRunner({
   onFinished: onRunFinished,
   onPermission: (runId, tool, what) => {
     const run = getRun(runId)
-    const name = (run && routineOf(run)?.config.name) ?? 'Execução'
-    void notify(`🔐 ${name} pede permissão`, `${tool}: ${what}`.slice(0, 240), () => {
+    const name = (run && routineOf(run)?.config.name) ?? 'Run'
+    void notify(`🔐 ${name} needs permission`, `${tool}: ${what}`.slice(0, 240), () => {
       showWindow()
       send('ui:open-run', runId)
     })
@@ -219,7 +219,7 @@ ipcMain.handle('sidebar:claudeSessions', () => listClaudeSessions())
 ipcMain.handle('sidebar:claudeSessionExists', (_e, id: string) => claudeSessionExists(id))
 ipcMain.handle('ui:openExternal', (_e, url: string) => {
   // So abre esquemas conhecidos (http/https e protocolos de apps), nunca arquivo local.
-  if (!/^(https?|claude|vscode|cursor|chatgpt|slack|notion|obsidian):/i.test(url)) throw new Error('link não suportado')
+  if (!/^(https?|claude|vscode|cursor|chatgpt|slack|notion|obsidian):/i.test(url)) throw new Error('unsupported link')
   return shell.openExternal(url)
 })
 ipcMain.handle('ui:pickFolder', async () => {
@@ -238,7 +238,7 @@ ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
   send('settings:changed', s)
   return s
 })
-ipcMain.handle('settings:testNotify', () => notify('Turno', 'Notificação de teste: está funcionando.', undefined, { force: true }))
+ipcMain.handle('settings:testNotify', () => notify('Turno', 'Test notification: it works.', undefined, { force: true }))
 ipcMain.handle('settings:shells', () => detectShells())
 ipcMain.handle('settings:awake', () => awakeStatus())
 ipcMain.handle('settings:fonts', () => listFonts())

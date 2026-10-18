@@ -2,8 +2,8 @@ export type ProfileId = 'claude-max' | 'qwen-local'
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 // Modos do `claude --permission-mode`. bypassPermissions = --dangerously-skip-permissions.
 export type PermissionMode = 'manual' | 'acceptEdits' | 'auto' | 'dontAsk' | 'bypassPermissions'
-export type Weekday = 'dom' | 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab'
-export const WEEKDAYS: Weekday[] = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab']
+export type Weekday = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'
+export const WEEKDAYS: Weekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
 // Configuracao de uma rotina = frontmatter do ROUTINE.md.
 export interface RoutineConfig {
@@ -29,7 +29,7 @@ export interface RoutineConfig {
   catchup: boolean
   catchup_window_h: number
   precheck?: string
-  notify: 'falhas' | 'sempre' | 'nunca'
+  notify: 'failures' | 'always' | 'never'
 }
 
 export interface Routine {

@@ -111,7 +111,7 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
       if (id === ptyId && s.sessionId !== cur.lastSession?.sessionId) remember({ lastSession: s })
     })
     const offExit = window.turno.pty.onExit((id, code) => {
-      if (id === ptyId) term.write(`\r\n\x1b[90m[processo encerrado: ${code}]\x1b[0m\r\n`)
+      if (id === ptyId) term.write(`\r\n\x1b[90m[process exited: ${code}]\x1b[0m\r\n`)
     })
     window.turno.pty
       .create({ shell: params.shell, cwd: params.cwd, profile: params.profile, cols: term.cols, rows: term.rows })
@@ -187,7 +187,7 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
           <input
             autoFocus
             value={find}
-            placeholder="Buscar no terminal"
+            placeholder="Search terminal"
             onChange={(e) => {
               setFind(e.target.value)
               searchRef.current?.findNext(e.target.value, { incremental: true })
@@ -197,9 +197,9 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
               else if (e.key === 'Enter') e.shiftKey ? searchRef.current?.findPrevious(find) : searchRef.current?.findNext(find)
             }}
           />
-          <button className="icon-btn" title="Anterior (Shift+Enter)" onClick={() => searchRef.current?.findPrevious(find)}>↑</button>
-          <button className="icon-btn" title="Próximo (Enter)" onClick={() => searchRef.current?.findNext(find)}>↓</button>
-          <button className="icon-btn" title="Fechar (Esc)" onClick={close}>✕</button>
+          <button className="icon-btn" title="Previous (Shift+Enter)" onClick={() => searchRef.current?.findPrevious(find)}>↑</button>
+          <button className="icon-btn" title="Next (Enter)" onClick={() => searchRef.current?.findNext(find)}>↓</button>
+          <button className="icon-btn" title="Close (Esc)" onClick={close}>✕</button>
         </div>
       )}
     </div>

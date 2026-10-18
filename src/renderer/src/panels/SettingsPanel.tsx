@@ -8,20 +8,20 @@ const UI_FONTS = [
   { v: '"Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif', l: 'Segoe UI (Windows)' },
   { v: 'Inter, "Segoe UI", system-ui, sans-serif', l: 'Inter' },
   { v: '"Geist", "Segoe UI", system-ui, sans-serif', l: 'Geist' },
-  { v: 'system-ui, sans-serif', l: 'Fonte do sistema' },
+  { v: 'system-ui, sans-serif', l: 'System font' },
 ]
 const MONO_FONTS = [
   { v: '"Cascadia Mono", "Cascadia Code", Consolas, monospace', l: 'Cascadia Mono' },
-  { v: '"Cascadia Code", Consolas, monospace', l: 'Cascadia Code (ligaduras)' },
+  { v: '"Cascadia Code", Consolas, monospace', l: 'Cascadia Code (ligatures)' },
   { v: '"JetBrains Mono", Consolas, monospace', l: 'JetBrains Mono' },
   { v: '"Fira Code", Consolas, monospace', l: 'Fira Code' },
   { v: '"Geist Mono", Consolas, monospace', l: 'Geist Mono' },
   { v: 'Consolas, monospace', l: 'Consolas' },
 ]
 const CURSORS: Array<{ v: CursorStyle; l: string }> = [
-  { v: 'block', l: 'bloco' },
-  { v: 'bar', l: 'barra' },
-  { v: 'underline', l: 'sublinhado' },
+  { v: 'block', l: 'block' },
+  { v: 'bar', l: 'bar' },
+  { v: 'underline', l: 'underline' },
 ]
 
 function ThemeCard({ t, active, onPick }: { t: Theme; active: boolean; onPick: () => void }) {
@@ -72,21 +72,21 @@ function FontSelect({ value, options, onChange, system = [], fallback }: {
           onChange(e.target.value)
         }}
       >
-        <optgroup label="Sugeridas">
+        <optgroup label="Suggested">
           {options.map((o) => (
             <option key={o.v} value={o.v}>{o.l}</option>
           ))}
         </optgroup>
         {sysOpts.length > 0 && (
-          <optgroup label="Instaladas no Windows">
+          <optgroup label="Installed on Windows">
             {sysOpts.map((o) => (
               <option key={o.v} value={o.v}>{o.l}</option>
             ))}
           </optgroup>
         )}
-        <option value="__custom">Outra…</option>
+        <option value="__custom">Other…</option>
       </select>
-      {custom && <input className="mono" defaultValue={value} placeholder='"Minha Fonte", monospace' onBlur={(e) => e.target.value && onChange(e.target.value)} />}
+      {custom && <input className="mono" defaultValue={value} placeholder='"My Font", monospace' onBlur={(e) => e.target.value && onChange(e.target.value)} />}
     </div>
   )
 }
@@ -98,7 +98,7 @@ export function SettingsPanel() {
   useEffect(() => void window.turno.settings.fonts().then(setFonts), [])
   const [saved, setSaved] = useState(false)
   useEffect(() => void window.turno.settings.shells().then(setShells), [])
-  if (!s) return <div className="panel-empty">Carregando…</div>
+  if (!s) return <div className="panel-empty">Loading…</div>
 
   const patch = async (p: Partial<Settings>): Promise<void> => {
     await updateSettings(p)
@@ -112,13 +112,13 @@ export function SettingsPanel() {
     <div className="editor">
       <header className="editor-head">
         <div className="editor-title">
-          <h2>Configurações</h2>
-          <div className="editor-sub muted">{saved ? 'Salvo.' : 'As mudanças valem na hora.'}</div>
+          <h2>Settings</h2>
+          <div className="editor-sub muted">{saved ? 'Saved.' : 'Changes apply immediately.'}</div>
         </div>
       </header>
       <div className="editor-body">
         <section className="card grow">
-          <h3>Tema</h3>
+          <h3>Theme</h3>
           <div className="theme-grid">
             {THEMES.map((th) => (
               <ThemeCard key={th.id} t={th} active={s.theme === th.id} onPick={() => void patch({ theme: th.id })} />
@@ -129,37 +129,37 @@ export function SettingsPanel() {
         <section className="card">
           <h3>Interface</h3>
           <label className="field">
-            <span>Fonte</span>
+            <span>Font</span>
             <FontSelect value={s.uiFontFamily} options={UI_FONTS} system={fonts} fallback="system-ui, sans-serif" onChange={(v) => void patch({ uiFontFamily: v })} />
           </label>
           <label className="field">
-            <span>Tamanho: {s.uiFontSize}px</span>
+            <span>Size: {s.uiFontSize}px</span>
             <input type="range" min={11} max={16} step={0.5} value={s.uiFontSize} onChange={(e) => void patch({ uiFontSize: Number(e.target.value) })} />
           </label>
         </section>
 
         <section className="card">
-          <h3>Terminal: fonte e cursor</h3>
+          <h3>Terminal: font and cursor</h3>
           <label className="field">
-            <span>Fonte</span>
+            <span>Font</span>
             <FontSelect value={t.fontFamily} options={MONO_FONTS} system={fonts.filter((f) => MONO_HINT.test(f))} fallback="Consolas, monospace" onChange={(v) => void term({ fontFamily: v })} />
           </label>
           <div className="grid3">
             <label className="field">
-              <span>Tamanho</span>
+              <span>Size</span>
               <input type="number" min={8} max={28} value={t.fontSize} onChange={(e) => void term({ fontSize: Number(e.target.value) || 13 })} />
             </label>
             <label className="field">
-              <span>Altura da linha</span>
+              <span>Line height</span>
               <input type="number" min={1} max={2} step={0.05} value={t.lineHeight} onChange={(e) => void term({ lineHeight: Number(e.target.value) || 1.2 })} />
             </label>
             <label className="field">
-              <span>Espaçamento</span>
+              <span>Letter spacing</span>
               <input type="number" min={-2} max={4} step={0.5} value={t.letterSpacing} onChange={(e) => void term({ letterSpacing: Number(e.target.value) })} />
             </label>
           </div>
           <div className="field">
-            <span>Peso</span>
+            <span>Weight</span>
             <div className="seg small">
               {(['normal', '500', '600'] as const).map((w) => (
                 <button key={w} className={t.fontWeight === w ? 'on' : ''} onClick={() => void term({ fontWeight: w })}>
@@ -179,19 +179,19 @@ export function SettingsPanel() {
                 ))}
               </div>
               <label className="row small muted">
-                <Switch checked={t.cursorBlink} onChange={(v) => void term({ cursorBlink: v })} /> piscar
+                <Switch checked={t.cursorBlink} onChange={(v) => void term({ cursorBlink: v })} /> blink
               </label>
             </div>
           </div>
           <div className="term-sample" style={{ fontFamily: t.fontFamily, fontSize: t.fontSize, lineHeight: t.lineHeight, letterSpacing: t.letterSpacing, fontWeight: t.fontWeight as never }}>
-            PS C:\rotinas&gt; claude -p "resuma o dia" <span className="cursor-demo" data-style={t.cursorStyle} />
+            PS C:\routines&gt; claude -p "summarize the day" <span className="cursor-demo" data-style={t.cursorStyle} />
           </div>
         </section>
 
         <section className="card">
-          <h3>Terminal: comportamento</h3>
+          <h3>Terminal: behavior</h3>
           <label className="field">
-            <span>Shell padrão</span>
+            <span>Default shell</span>
             <select value={t.defaultShell} onChange={(e) => void term({ defaultShell: e.target.value })}>
               {!shells.some((x) => x.path === t.defaultShell) && <option value={t.defaultShell}>{t.defaultShell}</option>}
               {shells.map((sh) => (
@@ -200,52 +200,52 @@ export function SettingsPanel() {
             </select>
           </label>
           <label className="field">
-            <span>Histórico (linhas de scrollback)</span>
+            <span>Scrollback (lines)</span>
             <input type="number" min={1000} max={100000} step={1000} value={t.scrollback} onChange={(e) => void term({ scrollback: Number(e.target.value) || 10000 })} />
           </label>
           <label className="field toggle-field">
-            <span>Copiar ao selecionar</span>
+            <span>Copy on select</span>
             <Switch checked={t.copyOnSelect} onChange={(v) => void term({ copyOnSelect: v })} />
           </label>
           <label className="field toggle-field">
-            <span>Botão direito copia/cola</span>
+            <span>Right-click copies/pastes</span>
             <Switch checked={t.rightClickPaste} onChange={(v) => void term({ rightClickPaste: v })} />
           </label>
-          <small className="muted">Ctrl+Shift+C / Ctrl+Shift+V sempre copiam e colam.</small>
+          <small className="muted">Ctrl+Shift+C / Ctrl+Shift+V always copy and paste.</small>
         </section>
 
         <section className="card">
-          <h3>Geral</h3>
+          <h3>General</h3>
           <label className="field toggle-field">
-            <span>Iniciar com o Windows (fica na bandeja, sem abrir janela)</span>
+            <span>Start with Windows (stays in the tray, no window)</span>
             <Switch checked={s.openAtLogin} onChange={(v) => void patch({ openAtLogin: v })} />
           </label>
           <label className="field">
-            <span>Pasta das rotinas (uma subpasta com ROUTINE.md por rotina)</span>
+            <span>Routines folder (one subfolder with ROUTINE.md per routine)</span>
             <div className="row">
               <input className="mono grow" defaultValue={s.routinesDir} onBlur={(e) => e.target.value !== s.routinesDir && void patch({ routinesDir: e.target.value })} />
-              <button className="btn" onClick={() => void window.turno.routines.openFolder()}>Abrir</button>
+              <button className="btn" onClick={() => void window.turno.routines.openFolder()}>Open</button>
             </div>
           </label>
         </section>
 
         <section className="card">
-          <h3>Notificações no celular (ntfy)</h3>
+          <h3>Phone notifications (ntfy)</h3>
           <p className="muted small">
-            Instale o app ntfy no celular e assine um tópico com nome longo e difícil de adivinhar. Sem tópico, só aparecem os avisos do Windows.
+            Install the ntfy app on your phone and subscribe to a topic with a long, hard-to-guess name. Without a topic, only Windows notifications are shown.
           </p>
           <div className="grid2">
             <label className="field">
-              <span>Servidor</span>
+              <span>Server</span>
               <input defaultValue={s.ntfyServer} onBlur={(e) => void patch({ ntfyServer: e.target.value })} />
             </label>
             <label className="field">
-              <span>Tópico</span>
+              <span>Topic</span>
               <input className="mono" defaultValue={s.ntfyTopic} placeholder="turno-8f3k2x9q…" onBlur={(e) => void patch({ ntfyTopic: e.target.value.trim() })} />
             </label>
           </div>
           <div>
-            <button className="btn" onClick={() => void window.turno.settings.testNotify()}>Enviar notificação de teste</button>
+            <button className="btn" onClick={() => void window.turno.settings.testNotify()}>Send test notification</button>
           </div>
         </section>
       </div>

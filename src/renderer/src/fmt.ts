@@ -1,15 +1,15 @@
 import { WEEKDAYS, type RoutineConfig, type RunRecord, type RunStatus } from '../../shared/types'
 
 export const STATUS_LABEL: Record<RunStatus, string> = {
-  queued: 'na fila',
-  running: 'rodando',
+  queued: 'queued',
+  running: 'running',
   ok: 'ok',
-  failed: 'falhou',
-  skipped: 'pulada',
-  timeout: 'tempo esgotado',
-  idle_timeout: 'travada (inativa)',
-  rate_limited: 'limite de uso',
-  stopped: 'parada',
+  failed: 'failed',
+  skipped: 'skipped',
+  timeout: 'timed out',
+  idle_timeout: 'stalled (idle)',
+  rate_limited: 'usage limit',
+  stopped: 'stopped',
 }
 
 export function statusTone(s: RunStatus | undefined): 'ok' | 'run' | 'warn' | 'err' | 'idle' {
@@ -20,15 +20,21 @@ export function statusTone(s: RunStatus | undefined): 'ok' | 'run' | 'warn' | 'e
   return 'err'
 }
 
-const DAY_LABEL: Record<string, string> = { dom: 'dom', seg: 'seg', ter: 'ter', qua: 'qua', qui: 'qui', sex: 'sex', sab: 'sáb' }
+const DAY_LABEL: Record<string, string> = { sun: 'Sun', mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat' }
 
 export function scheduleSummary(c: RoutineConfig): string {
   if (c.schedule.cron) return `cron ${c.schedule.cron}`
-  if (!c.schedule.times.length) return 'só manual'
+  if (!c.schedule.times.length) return 'manual only'
   const d = [...c.schedule.days].sort((a, b) => WEEKDAYS.indexOf(a) - WEEKDAYS.indexOf(b))
   const key = d.join(',')
   const days =
-    d.length === 7 ? 'todo dia' : key === 'seg,ter,qua,qui,sex' ? 'seg–sex' : key === 'dom,sab' ? 'fim de semana' : d.map((x) => DAY_LABEL[x]).join(', ')
+    d.length === 7
+      ? 'every day'
+      : key === 'mon,tue,wed,thu,fri'
+        ? 'Mon–Fri'
+        : key === 'sun,sat' || key === 'sat,sun'
+          ? 'weekends'
+          : d.map((x) => DAY_LABEL[x]).join(', ')
   return `${days} · ${[...c.schedule.times].sort().join(', ')}`
 }
 
@@ -36,14 +42,14 @@ export function when(iso: string | null | undefined): string {
   if (!iso) return '—'
   const d = new Date(iso)
   const now = new Date()
-  const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
   const sameDay = d.toDateString() === now.toDateString()
   const tomorrow = new Date(now.getTime() + 86_400_000).toDateString() === d.toDateString()
   const yesterday = new Date(now.getTime() - 86_400_000).toDateString() === d.toDateString()
-  if (sameDay) return `hoje ${time}`
-  if (tomorrow) return `amanhã ${time}`
-  if (yesterday) return `ontem ${time}`
-  return `${d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })} ${time}`
+  if (sameDay) return `today ${time}`
+  if (tomorrow) return `tomorrow ${time}`
+  if (yesterday) return `yesterday ${time}`
+  return `${d.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: '2-digit' })} ${time}`
 }
 
 export function duration(r: RunRecord): string {
@@ -55,4 +61,4 @@ export function duration(r: RunRecord): string {
   return m < 60 ? `${m}min ${s % 60}s` : `${Math.floor(m / 60)}h ${m % 60}min`
 }
 
-export const TRIGGER_LABEL: Record<string, string> = { manual: 'manual', cron: 'agendada', catchup: 'recuperada', adhoc: 'avulsa', followup: 'continuação' }
+export const TRIGGER_LABEL: Record<string, string> = { manual: 'manual', cron: 'scheduled', catchup: 'catch-up', adhoc: 'ad hoc', followup: 'follow-up' }

@@ -16,7 +16,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
       <div className="modal" role="dialog" aria-label={title}>
         <header className="modal-head">
           <h2>{title}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Fechar">
+          <button className="icon-btn" onClick={onClose} aria-label="Close">
             <IconClose size={14} />
           </button>
         </header>
@@ -30,16 +30,16 @@ export function FolderDialog({ initial, onSave, onClose }: { initial?: string; o
   const [name, setName] = useState(initial ?? '')
   const ok = name.trim().length > 0
   return (
-    <Modal title={initial ? 'Renomear pasta' : 'Nova pasta'} onClose={onClose}>
+    <Modal title={initial ? 'Rename folder' : 'New folder'} onClose={onClose}>
       <div className="modal-body">
         <label className="field">
-          <span>Nome</span>
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && ok && (onSave(name.trim()), onClose())} placeholder="ex.: Vagas, Estudos, Clientes" />
+          <span>Name</span>
+          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && ok && (onSave(name.trim()), onClose())} placeholder="e.g. Jobs, Study, Clients" />
         </label>
       </div>
       <footer className="modal-foot">
-        <button className="btn ghost" onClick={onClose}>Cancelar</button>
-        <button className="btn primary" disabled={!ok} onClick={() => (onSave(name.trim()), onClose())}>Salvar</button>
+        <button className="btn ghost" onClick={onClose}>Cancel</button>
+        <button className="btn primary" disabled={!ok} onClick={() => (onSave(name.trim()), onClose())}>Save</button>
       </footer>
     </Modal>
   )
@@ -98,21 +98,21 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
   }
 
   return (
-    <Modal title={item ? 'Editar item' : 'Novo item'} onClose={onClose}>
+    <Modal title={item ? 'Edit item' : 'New item'} onClose={onClose}>
       <div className="modal-body">
         {kind !== 'terminal' && (
           <div className="seg">
-            <button className={kind === 'chat' ? 'on' : ''} onClick={() => setKind('chat')}>Chat de agente</button>
+            <button className={kind === 'chat' ? 'on' : ''} onClick={() => setKind('chat')}>Agent chat</button>
             <button className={kind === 'link' ? 'on' : ''} onClick={() => setKind('link')}>Link</button>
           </div>
         )}
         <div className="grid2">
           <label className="field">
-            <span>Nome</span>
-            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === 'chat' ? 'ex.: Estudar Kubernetes' : 'ex.: Chat no claude.ai'} />
+            <span>Name</span>
+            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === 'chat' ? 'e.g. Study Kubernetes' : 'e.g. Chat on claude.ai'} />
           </label>
           <label className="field">
-            <span>Pasta</span>
+            <span>Folder</span>
             <select value={folder} onChange={(e) => setFolder(e.target.value)}>
               {folders.map((f) => (
                 <option key={f.id} value={f.id}>{f.name}</option>
@@ -124,24 +124,24 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
         {kind === 'terminal' ? (
           <>
             <label className="field">
-              <span>Pasta de trabalho</span>
+              <span>Working folder</span>
               <input className="mono" value={cwd} onChange={(e) => setCwd(e.target.value)} />
             </label>
             <small className="muted">
-              {item?.sessionId ? `Reabre com claude --resume ${item.sessionId.slice(0, 8)}… nesta pasta.` : 'Reabre um terminal nesta pasta.'} A pasta e a sessão se
-              atualizam sozinhas enquanto o terminal está aberto.
+              {item?.sessionId ? `Reopens with claude --resume ${item.sessionId.slice(0, 8)}… in this folder.` : 'Reopens a terminal in this folder.'} The folder and session
+              update automatically while the terminal is open.
             </small>
           </>
         ) : kind === 'link' ? (
           <label className="field">
-            <span>Endereço</span>
+            <span>URL</span>
             <input className="mono" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://claude.ai/chat/…  ·  https://chatgpt.com/c/…" />
-            <small className="muted">Abre no navegador ou no app registrado para o link (claude.ai, ChatGPT, Notion…).</small>
+            <small className="muted">Opens in the browser or the app registered for the link (claude.ai, ChatGPT, Notion…).</small>
           </label>
         ) : (
           <>
             <label className="field">
-              <span>Agente</span>
+              <span>Agent</span>
               <select value={agent} onChange={(e) => setAgent(e.target.value as AgentId)}>
                 {AGENTS.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
@@ -150,53 +150,53 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
             </label>
             {claude && (
               <label className="field">
-                <span>Sessão</span>
+                <span>Session</span>
                 <select value={sessions.some((s) => s.id === sessionId) ? sessionId : ''} onChange={(e) => pickSession(e.target.value)}>
-                  <option value="">{item?.sessionId ? 'Manter a sessão atual deste item' : 'Nova conversa'}</option>
+                  <option value="">{item?.sessionId ? 'Keep this item\'s current session' : 'New conversation'}</option>
                   {sessions.map((s) => (
                     <option key={s.id} value={s.id}>
                       {when(s.updatedAt)} · {s.title}
                     </option>
                   ))}
                 </select>
-                <small className="muted">Lista as conversas recentes do Claude Code (terminal e app Desktop).</small>
+                <small className="muted">Lists recent Claude Code conversations (terminal and Desktop app).</small>
               </label>
             )}
             {!claude && agent !== 'custom' && (
               <label className="field">
-                <span>ID da sessão (opcional)</span>
-                <input className="mono" value={sessionId} onChange={(e) => setSessionId(e.target.value)} placeholder="vazio = conversa nova" />
+                <span>Session ID (optional)</span>
+                <input className="mono" value={sessionId} onChange={(e) => setSessionId(e.target.value)} placeholder="empty = new conversation" />
                 {preset.note && <small className="muted">{preset.note}</small>}
               </label>
             )}
             <label className="field">
-              <span>Pasta de trabalho</span>
+              <span>Working folder</span>
               <div className="row">
-                <input className="mono grow" value={cwd} onChange={(e) => setCwd(e.target.value)} placeholder="C:\projetos\meu-app" />
-                <button className="btn" onClick={async () => { const d = await window.turno.ui.pickFolder(); if (d) setCwd(d) }} title="Escolher pasta">
+                <input className="mono grow" value={cwd} onChange={(e) => setCwd(e.target.value)} placeholder="C:\projects\my-app" />
+                <button className="btn" onClick={async () => { const d = await window.turno.ui.pickFolder(); if (d) setCwd(d) }} title="Choose folder">
                   <IconFolder />
                 </button>
               </div>
             </label>
             {agent === 'claude' && (
               <label className="field">
-                <span>Modelo</span>
+                <span>Model</span>
                 <ModelSelect value={model} onChange={setModel} />
               </label>
             )}
             <details className="advanced" open={agent === 'custom'}>
-              <summary>Comando</summary>
+              <summary>Command</summary>
               <label className="field">
-                <span>Comando ({'{id}'} = id da sessão). Vazio = automático.</span>
-                <input className="mono" value={command} onChange={(e) => setCommand(e.target.value)} placeholder={preset.resumeCmd || 'meu-agente --resume {id}'} />
+                <span>Command ({'{id}'} = session id). Empty = automatic.</span>
+                <input className="mono" value={command} onChange={(e) => setCommand(e.target.value)} placeholder={preset.resumeCmd || 'my-agent --resume {id}'} />
               </label>
             </details>
           </>
         )}
       </div>
       <footer className="modal-foot">
-        <button className="btn ghost" onClick={onClose}>Cancelar</button>
-        <button className="btn primary" disabled={!valid} onClick={save}>Salvar</button>
+        <button className="btn ghost" onClick={onClose}>Cancel</button>
+        <button className="btn primary" disabled={!valid} onClick={save}>Save</button>
       </footer>
     </Modal>
   )

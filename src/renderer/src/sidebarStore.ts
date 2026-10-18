@@ -114,12 +114,12 @@ export interface AgentPreset {
 
 export const AGENTS: AgentPreset[] = [
   { id: 'claude', name: 'Claude Code', newCmd: 'claude --session-id {id}', resumeCmd: 'claude --resume {id}', hasModel: true },
-  { id: 'claude-qwen', name: 'Claude Code com Qwen local', newCmd: 'claude --session-id {id} --model qwen3.6:35b', resumeCmd: 'claude --resume {id} --model qwen3.6:35b' },
+  { id: 'claude-qwen', name: 'Claude Code with local Qwen', newCmd: 'claude --session-id {id} --model qwen3.6:35b', resumeCmd: 'claude --resume {id} --model qwen3.6:35b' },
   { id: 'codex', name: 'Codex CLI', newCmd: 'codex', resumeCmd: 'codex resume {id}' },
-  { id: 'gemini', name: 'Gemini CLI', newCmd: 'gemini', resumeCmd: 'gemini --resume {id}', note: 'confira o comando de retomada da sua versão' },
-  { id: 'qwen-code', name: 'Qwen Code', newCmd: 'qwen', resumeCmd: 'qwen --resume {id}', note: 'confira o comando de retomada da sua versão' },
+  { id: 'gemini', name: 'Gemini CLI', newCmd: 'gemini', resumeCmd: 'gemini --resume {id}', note: 'check the resume command for your version' },
+  { id: 'qwen-code', name: 'Qwen Code', newCmd: 'qwen', resumeCmd: 'qwen --resume {id}', note: 'check the resume command for your version' },
   { id: 'opencode', name: 'OpenCode', newCmd: 'opencode', resumeCmd: 'opencode --session {id}' },
-  { id: 'custom', name: 'Comando personalizado', newCmd: '', resumeCmd: '' },
+  { id: 'custom', name: 'Custom command', newCmd: '', resumeCmd: '' },
 ]
 
 export const agentOf = (id?: AgentId): AgentPreset => AGENTS.find((a) => a.id === id) ?? AGENTS[0]

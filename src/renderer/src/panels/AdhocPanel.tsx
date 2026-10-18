@@ -40,35 +40,35 @@ export function AdhocPanel({ params }: IDockviewPanelProps<AdhocParams>) {
   return (
     <div className="adhoc">
       <div className="adhoc-form">
-        <select value={profile} onChange={(e) => setProfile(e.target.value as ProfileId)} aria-label="Perfil">
+        <select value={profile} onChange={(e) => setProfile(e.target.value as ProfileId)} aria-label="Profile">
           <option value="claude-max">Claude</option>
-          <option value="qwen-local">Qwen local</option>
+          <option value="qwen-local">Local Qwen</option>
         </select>
-        {profile === 'qwen-local' ? <input value="qwen3.6:35b" disabled aria-label="Modelo" /> : <ModelSelect value={model} onChange={setModel} />}
-        <select value={effort} onChange={(e) => setEffort(e.target.value as Effort)} aria-label="Esforço">
+        {profile === 'qwen-local' ? <input value="qwen3.6:35b" disabled aria-label="Model" /> : <ModelSelect value={model} onChange={setModel} />}
+        <select value={effort} onChange={(e) => setEffort(e.target.value as Effort)} aria-label="Effort">
           {['low', 'medium', 'high', 'xhigh', 'max'].map((x) => <option key={x}>{x}</option>)}
         </select>
-        <select value={perm} onChange={(e) => setPerm(e.target.value as PermissionMode)} aria-label="Permissão">
-          <option value="manual">perguntar</option>
-          <option value="dontAsk">só o liberado</option>
+        <select value={perm} onChange={(e) => setPerm(e.target.value as PermissionMode)} aria-label="Permission">
+          <option value="manual">ask</option>
+          <option value="dontAsk">allowed only</option>
           <option value="auto">auto</option>
-          <option value="acceptEdits">aceitar edições</option>
-          <option value="bypassPermissions">ignorar tudo</option>
+          <option value="acceptEdits">accept edits</option>
+          <option value="bypassPermissions">bypass all</option>
         </select>
-        <input className="mono grow" value={tools} onChange={(e) => setTools(e.target.value)} placeholder="ferramentas liberadas" aria-label="Ferramentas" />
+        <input className="mono grow" value={tools} onChange={(e) => setTools(e.target.value)} placeholder="allowed tools" aria-label="Tools" />
         <textarea
           className="mono"
           rows={3}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Prompt… (Ctrl+Enter roda)"
+          placeholder="Prompt… (Ctrl+Enter runs)"
           onKeyDown={(e) => e.key === 'Enter' && e.ctrlKey && prompt.trim() && void start()}
         />
         <button className="btn primary" disabled={!prompt.trim()} onClick={() => void start()}>
-          <IconPlay /> Rodar
+          <IconPlay /> Run
         </button>
       </div>
-      {runId ? <Conversation runId={runId} compact /> : <div className="panel-empty">Escreva um prompt e rode. Não vira rotina nem tem agenda.</div>}
+      {runId ? <Conversation runId={runId} compact /> : <div className="panel-empty">Write a prompt and run it. It does not become a routine or get a schedule.</div>}
     </div>
   )
 }

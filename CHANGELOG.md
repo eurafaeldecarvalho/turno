@@ -4,6 +4,8 @@
 
 - Drag a terminal tab onto a sidebar folder to keep it as an item. The item follows the terminal's current folder (shell integration via OSC 9;9) and the Claude Code session running in it. Clicking the item reopens `claude --resume <last session>` in that folder, or a shell there.
 - Terminals opened from sidebar items keep updating their item, so a new session (for example after `/clear`) is remembered.
+- Rename folders and items in place with a double click.
+- The whole app is now in English. Routine files keep accepting the Portuguese day names and `notify` values from 0.1.0.
 
 ## 0.1.0 (2026-10-18)
 
@@ -19,7 +21,7 @@ First public release.
 - Importer for Claude Code Desktop scheduled tasks. Routines come in disabled.
 
 ### Live chat
-- Each run is shown as a chat with collapsed thinking ("Pensou por Ns"), grouped tool calls with expandable input/output, and run durations.
+- Each run is shown as a chat with collapsed thinking ("Thought for Ns"), grouped tool calls with expandable input/output, and run durations.
 - Messages sent during a run go to the live process stdin (stream-json). After the run ends they continue the session with `--resume`.
 - *Ask* permission mode: inline Allow / Allow for session / Deny cards (`--permission-prompt-tool stdio`) with a notification.
 

@@ -17,7 +17,7 @@ function InlineName({ value, onRename, className }: { value: string; onRename?: 
     return (
       <span
         className={className}
-        title="Duplo clique para renomear"
+        title="Double-click to rename"
         onDoubleClick={(e) => {
           e.stopPropagation()
           setDraft(value)
@@ -90,7 +90,7 @@ function Menu({ items }: { items: Array<{ label: string; danger?: boolean; onCli
   }, [open])
   return (
     <span className="menu-wrap" ref={ref}>
-      <button className="icon-btn" aria-label="Mais opções" title="Mais opções" onClick={() => setOpen(!open)}>
+      <button className="icon-btn" aria-label="More options" title="More options" onClick={() => setOpen(!open)}>
         <IconMore size={14} />
       </button>
       {open && (
@@ -181,28 +181,28 @@ export function Sidebar() {
 
       <nav className="nav">
         <button onClick={() => openTerminal()}>
-          <IconTerminal /> Novo terminal
+          <IconTerminal /> New terminal
         </button>
         <button onClick={() => openAdhoc()}>
-          <IconSpark /> Execução avulsa
+          <IconSpark /> Ad hoc run
         </button>
         <button onClick={() => openHistory()}>
-          <IconHistory /> Execuções
+          <IconHistory /> Runs
           {running.length > 0 && <span className="count run">{running.length}</span>}
-          {problems.length > 0 && <span className="count err" title="falhas nas últimas 24h">{problems.length}</span>}
+          {problems.length > 0 && <span className="count err" title="failures in the last 24h">{problems.length}</span>}
         </button>
         <button onClick={() => openSettings()}>
-          <IconSettings /> Configurações
+          <IconSettings /> Settings
         </button>
       </nav>
 
       <div className="side-scroll">
       <Section
         id="routines"
-        title="Rotinas"
+        title="Routines"
         count={routines.length}
         actions={
-          <button className="icon-btn" title="Nova rotina" aria-label="Nova rotina" onClick={() => openRoutine(null, 'Nova rotina')}>
+          <button className="icon-btn" title="New routine" aria-label="New routine" onClick={() => openRoutine(null, 'New routine')}>
             <IconPlus size={14} />
           </button>
         }
@@ -210,7 +210,7 @@ export function Sidebar() {
       <ul className="routines">
         {routines.length === 0 && (
           <li className="empty muted small">
-            Nenhuma rotina ainda. Clique em <b>+</b> para criar a primeira.
+            No routines yet. Click <b>+</b> to create the first one.
           </li>
         )}
         {routines.map((r) => {
@@ -218,13 +218,13 @@ export function Sidebar() {
           const active = isActive(last)
           const tone = r.error ? 'err' : active ? 'run' : !r.config.enabled ? 'idle' : statusTone(last?.status)
           const sub = r.error
-            ? 'erro no ROUTINE.md'
+            ? 'error in ROUTINE.md'
             : active
-              ? 'rodando agora'
+              ? 'running now'
               : !r.config.enabled
-                ? `desligada · ${scheduleSummary(r.config)}`
+                ? `off · ${scheduleSummary(r.config)}`
                 : r.nextRuns[0]
-                  ? `próxima ${when(r.nextRuns[0])}`
+                  ? `next ${when(r.nextRuns[0])}`
                   : scheduleSummary(r.config)
           return (
             <li key={r.id} className={`routine ${r.config.enabled ? '' : 'off'}`}>
@@ -240,18 +240,18 @@ export function Sidebar() {
                 </span>
               </button>
               <span className="routine-actions">
-                <button className="icon-btn" title="Configurar" aria-label="Configurar" onClick={() => openRoutine(r.id, r.config.name, true)}>
+                <button className="icon-btn" title="Configure" aria-label="Configure" onClick={() => openRoutine(r.id, r.config.name, true)}>
                   <IconSettings size={14} />
                 </button>
                 {active ? (
-                  <button className="icon-btn" title="Parar" aria-label="Parar" onClick={() => void window.turno.run.stop(last!.id)}>
+                  <button className="icon-btn" title="Stop" aria-label="Stop" onClick={() => void window.turno.run.stop(last!.id)}>
                     <IconStop size={14} />
                   </button>
                 ) : (
                   <button
                     className="icon-btn"
-                    title="Rodar agora"
-                    aria-label="Rodar agora"
+                    title="Run now"
+                    aria-label="Run now"
                     disabled={!!r.error}
                     onClick={async () => {
                       const id = await window.turno.run.startRoutine(r.id).catch(() => '')
@@ -279,19 +279,19 @@ export function Sidebar() {
           count={f.items.length}
           actions={
             <>
-              <button className="icon-btn" title="Novo chat ou link" aria-label="Novo item" onClick={() => setDialog({ t: 'item', folderId: f.id })}>
+              <button className="icon-btn" title="New chat or link" aria-label="New item" onClick={() => setDialog({ t: 'item', folderId: f.id })}>
                 <IconPlus size={14} />
               </button>
               <Menu
                 items={[
-                  { label: 'Renomear', onClick: () => setDialog({ t: 'folder', folder: f }) },
-                  ...(i > 0 ? [{ label: 'Mover para cima', onClick: () => moveFolder(f.id, -1) }] : []),
-                  ...(i < folders.length - 1 ? [{ label: 'Mover para baixo', onClick: () => moveFolder(f.id, 1) }] : []),
+                  { label: 'Rename', onClick: () => setDialog({ t: 'folder', folder: f }) },
+                  ...(i > 0 ? [{ label: 'Move up', onClick: () => moveFolder(f.id, -1) }] : []),
+                  ...(i < folders.length - 1 ? [{ label: 'Move down', onClick: () => moveFolder(f.id, 1) }] : []),
                   {
-                    label: 'Excluir pasta',
+                    label: 'Delete folder',
                     danger: true,
                     onClick: () => {
-                      if (!f.items.length || confirm(`Excluir a pasta "${f.name}" e seus ${f.items.length} item(ns)? As sessões em si não são apagadas.`)) deleteFolder(f.id)
+                      if (!f.items.length || confirm(`Delete the folder "${f.name}" and its ${f.items.length} item(s)? The sessions themselves are not deleted.`)) deleteFolder(f.id)
                     },
                   },
                 ]}
@@ -302,7 +302,7 @@ export function Sidebar() {
           <ul className="routines">
             {!f.items.length && (
               <li className="empty muted small">
-                Vazia. Use <b>+</b> ou arraste uma aba de terminal para cá.
+                Empty. Use <b>+</b> or drag a terminal tab here.
               </li>
             )}
             {f.items.map((it) => (
@@ -315,16 +315,16 @@ export function Sidebar() {
                       {it.kind === 'link'
                         ? (it.url ?? '').replace(/^https?:[/][/]/, '').slice(0, 40)
                         : it.kind === 'terminal'
-                          ? `${it.sessionId ? 'sessão do Claude' : 'terminal'}${it.cwd ? ` · ${lastPart(it.cwd)}` : ''}`
+                          ? `${it.sessionId ? 'Claude session' : 'terminal'}${it.cwd ? ` · ${lastPart(it.cwd)}` : ''}`
                           : `${agentOf(it.agent).name}${it.cwd ? ` · ${lastPart(it.cwd)}` : ''}`}
                     </span>
                   </span>
                 </button>
                 <span className="routine-actions">
-                  <button className="icon-btn" title="Editar" aria-label="Editar" onClick={() => setDialog({ t: 'item', folderId: f.id, item: it })}>
+                  <button className="icon-btn" title="Edit" aria-label="Edit" onClick={() => setDialog({ t: 'item', folderId: f.id, item: it })}>
                     <IconSettings size={14} />
                   </button>
-                  <button className="icon-btn" title="Remover da pasta" aria-label="Remover" onClick={() => confirm(`Remover "${it.name}" da pasta? A sessão não é apagada.`) && deleteItem(it.id)}>
+                  <button className="icon-btn" title="Remove from folder" aria-label="Remove" onClick={() => confirm(`Remove "${it.name}" from the folder? The session is not deleted.`) && deleteItem(it.id)}>
                     <IconClose size={14} />
                   </button>
                 </span>
@@ -335,7 +335,7 @@ export function Sidebar() {
       ))}
 
       <button className="new-folder" onClick={() => setDialog({ t: 'folder' })}>
-        <IconFolder size={14} /> Nova pasta
+        <IconFolder size={14} /> New folder
       </button>
       </div>
 

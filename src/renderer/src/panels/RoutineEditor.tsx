@@ -7,15 +7,15 @@ import { openHistory, openRoutine } from '../layout'
 import { scheduleSummary, when } from '../fmt'
 import { IconFolder, IconHistory, IconPlay, IconPlus, IconClose } from '../icons'
 
-const DAY_LABEL: Record<Weekday, string> = { dom: 'D', seg: 'S', ter: 'T', qua: 'Q', qui: 'Q', sex: 'S', sab: 'S' }
-const DAY_TITLE: Record<Weekday, string> = { dom: 'domingo', seg: 'segunda', ter: 'terça', qua: 'quarta', qui: 'quinta', sex: 'sexta', sab: 'sábado' }
+const DAY_LABEL: Record<Weekday, string> = { sun: 'S', mon: 'M', tue: 'T', wed: 'W', thu: 'T', fri: 'F', sat: 'S' }
+const DAY_TITLE: Record<Weekday, string> = { sun: 'Sunday', mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday' }
 const EFFORTS: Effort[] = ['low', 'medium', 'high', 'xhigh', 'max']
 const PERMS: Array<{ v: PermissionMode; t: string; d: string }> = [
-  { v: 'manual', t: 'Perguntar', d: 'Pede aprovação no app (e avisa no celular). Sem resposta, a execução fica parada esperando.' },
-  { v: 'dontAsk', t: 'Só o liberado', d: 'Usa apenas as ferramentas da lista abaixo; o resto é negado sem perguntar.' },
-  { v: 'auto', t: 'Auto', d: 'Um classificador aprova ações seguras e bloqueia as arriscadas.' },
-  { v: 'acceptEdits', t: 'Aceitar edições', d: 'Edita arquivos sem pedir; comandos fora da lista são negados.' },
-  { v: 'bypassPermissions', t: 'Ignorar tudo', d: 'Equivale a --dangerously-skip-permissions. Faz qualquer coisa sem perguntar.' },
+  { v: 'manual', t: 'Ask', d: 'Asks for approval in the app (and pings your phone). Without an answer, the run stays paused waiting.' },
+  { v: 'dontAsk', t: 'Allowed only', d: 'Uses only the tools in the list below; everything else is denied without asking.' },
+  { v: 'auto', t: 'Auto', d: 'A classifier approves safe actions and blocks risky ones.' },
+  { v: 'acceptEdits', t: 'Accept edits', d: 'Edits files without asking; commands not on the list are denied.' },
+  { v: 'bypassPermissions', t: 'Bypass all', d: 'Same as --dangerously-skip-permissions. Does anything without asking.' },
 ]
 
 const slug = (s: string): string =>
@@ -50,7 +50,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   useEffect(() => {
     if (!params.routineId)
       void window.turno.routines.template().then((t) => {
-        setCfg({ ...t.config, schedule: { days: ['seg', 'ter', 'qua', 'qui', 'sex'], times: ['09:00'] } })
+        setCfg({ ...t.config, schedule: { days: ['mon', 'tue', 'wed', 'thu', 'fri'], times: ['09:00'] } })
         setPrompt('')
       })
   }, [])
@@ -63,7 +63,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   const upSched = (patch: Partial<RoutineConfig['schedule']>): void => up({ schedule: { ...cfg!.schedule, ...patch } })
 
   const preview = useMemo(() => (cfg ? scheduleSummary(cfg) : ''), [cfg])
-  if (!cfg) return <div className="panel-empty">Carregando…</div>
+  if (!cfg) return <div className="panel-empty">Loading…</div>
 
   const isNew = !savedId
   const folder = isNew && !idTouched ? slug(cfg.name) : id
@@ -74,7 +74,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
       setSavedId(folder)
       setDirty(false)
       api.setTitle(cfg!.name)
-      setMsg(r?.error ? { tone: 'err', text: `Salvo, mas com erro: ${r.error}` } : { tone: 'ok', text: 'Salvo.' })
+      setMsg(r?.error ? { tone: 'err', text: `Saved, but with an error: ${r.error}` } : { tone: 'ok', text: 'Saved.' })
       return !r?.error
     } catch (e) {
       setMsg({ tone: 'err', text: String((e as Error).message).replace(/^Error invoking remote method '[^']+': (Error: )?/, '') })
@@ -87,7 +87,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
     try {
       const runId = await window.turno.run.startRoutine(folder)
       if (runId) openRoutine(folder, cfg!.name)
-      else setMsg({ tone: 'err', text: 'Não rodou: veja o motivo no histórico.' })
+      else setMsg({ tone: 'err', text: 'Did not run: see the reason in the history.' })
     } catch (e) {
       setMsg({ tone: 'err', text: String((e as Error).message) })
     }
@@ -111,44 +111,44 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
             className="title-input"
             value={cfg.name}
             onChange={(e) => up({ name: e.target.value })}
-            placeholder="Nome da rotina"
-            aria-label="Nome da rotina"
+            placeholder="Routine name"
+            aria-label="Routine name"
           />
           <div className="editor-sub">
-            <span className={`pill ${cfg.enabled ? 'pill-on' : ''}`}>{cfg.enabled ? 'ligada' : 'desligada'}</span>
+            <span className={`pill ${cfg.enabled ? 'pill-on' : ''}`}>{cfg.enabled ? 'on' : 'off'}</span>
             <span className="muted">{preview}</span>
-            {existing?.nextRuns[0] && <span className="muted">· próxima {when(existing.nextRuns[0])}</span>}
+            {existing?.nextRuns[0] && <span className="muted">· next {when(existing.nextRuns[0])}</span>}
           </div>
         </div>
         <div className="editor-actions">
           {!isNew && (
             <>
-              <button className="btn ghost" onClick={() => openHistory(folder)} title="Histórico desta rotina">
-                <IconHistory /> Histórico
+              <button className="btn ghost" onClick={() => openHistory(folder)} title="History for this routine">
+                <IconHistory /> History
               </button>
-              <button className="btn ghost" onClick={() => void window.turno.routines.openFolder(folder)} title="Abrir pasta">
-                <IconFolder /> Pasta
+              <button className="btn ghost" onClick={() => void window.turno.routines.openFolder(folder)} title="Open folder">
+                <IconFolder /> Folder
               </button>
               <button className="btn" onClick={() => void runNow()} disabled={!!existing?.error && !dirty}>
-                <IconPlay /> Rodar agora
+                <IconPlay /> Run now
               </button>
             </>
           )}
           <button className="btn primary" onClick={() => void save()} disabled={!dirty && !isNew}>
-            {isNew ? 'Criar rotina' : 'Salvar'}
+            {isNew ? 'Create routine' : 'Save'}
           </button>
         </div>
       </header>
       {(msg || existing?.error) && (
-        <div className={`banner ${msg?.tone === 'ok' ? 'banner-ok' : 'banner-err'}`}>{msg?.text ?? `Erro no ROUTINE.md: ${existing!.error}`}</div>
+        <div className={`banner ${msg?.tone === 'ok' ? 'banner-ok' : 'banner-err'}`}>{msg?.text ?? `Error in ROUTINE.md: ${existing!.error}`}</div>
       )}
 
       <div className="editor-body">
         <section className="card">
-          <h3>Geral</h3>
+          <h3>General</h3>
           <div className="grid2">
             <label className="field">
-              <span>Pasta</span>
+              <span>Folder</span>
               <input
                 value={folder}
                 onChange={(e) => {
@@ -156,24 +156,24 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
                   setId(e.target.value)
                   setDirty(true)
                 }}
-                placeholder="resumo-diario"
+                placeholder="daily-summary"
               />
             </label>
             <label className="field toggle-field">
-              <span>Ligada</span>
+              <span>Enabled</span>
               <Switch checked={cfg.enabled} onChange={(v) => up({ enabled: v })} />
             </label>
           </div>
           <label className="field">
-            <span>Descrição</span>
-            <input value={cfg.description} onChange={(e) => up({ description: e.target.value })} placeholder="O que esta rotina faz" />
+            <span>Description</span>
+            <input value={cfg.description} onChange={(e) => up({ description: e.target.value })} placeholder="What this routine does" />
           </label>
         </section>
 
         <section className="card">
-          <h3>Quando roda</h3>
+          <h3>When it runs</h3>
           <div className="field">
-            <span>Dias</span>
+            <span>Days</span>
             <div className="days">
               {WEEKDAYS.map((d) => (
                 <button
@@ -187,18 +187,18 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
                 </button>
               ))}
               <span className="day-presets">
-                <button className="link" onClick={() => upSched({ days: [...WEEKDAYS] })}>todos</button>
-                <button className="link" onClick={() => upSched({ days: ['seg', 'ter', 'qua', 'qui', 'sex'] })}>úteis</button>
+                <button className="link" onClick={() => upSched({ days: [...WEEKDAYS] })}>all</button>
+                <button className="link" onClick={() => upSched({ days: ['mon', 'tue', 'wed', 'thu', 'fri'] })}>weekdays</button>
               </span>
             </div>
           </div>
           <div className="field">
-            <span>Horários</span>
+            <span>Times</span>
             <div className="times">
               {cfg.schedule.times.map((t) => (
                 <span className="chip" key={t}>
                   {t}
-                  <button aria-label={`remover ${t}`} onClick={() => upSched({ times: cfg.schedule.times.filter((x) => x !== t) })}>
+                  <button aria-label={`remove ${t}`} onClick={() => upSched({ times: cfg.schedule.times.filter((x) => x !== t) })}>
                     <IconClose size={12} />
                   </button>
                 </span>
@@ -206,29 +206,29 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
               <span className="time-add">
                 <input type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTime()} />
                 <button className="btn small" onClick={addTime}>
-                  <IconPlus size={14} /> adicionar
+                  <IconPlus size={14} /> add
                 </button>
               </span>
             </div>
-            {!cfg.schedule.times.length && !cfg.schedule.cron && <small className="muted">Sem horário: só roda pelo botão "Rodar agora".</small>}
+            {!cfg.schedule.times.length && !cfg.schedule.cron && <small className="muted">No times: only runs via the "Run now" button.</small>}
           </div>
           <details className="advanced">
-            <summary>Avançado</summary>
+            <summary>Advanced</summary>
             <div className="grid2">
               <label className="field">
-                <span>Cron (substitui dias/horários)</span>
+                <span>Cron (overrides days/times)</span>
                 <input value={cfg.schedule.cron ?? ''} onChange={(e) => upSched({ cron: e.target.value || undefined })} placeholder="15 9,12,15,18 * * *" />
               </label>
               <label className="field">
-                <span>Fuso horário</span>
+                <span>Time zone</span>
                 <input value={cfg.timezone} onChange={(e) => up({ timezone: e.target.value })} />
               </label>
               <label className="field toggle-field">
-                <span>Recuperar horário perdido (PC desligado/dormindo)</span>
+                <span>Catch up on missed runs (PC off/asleep)</span>
                 <Switch checked={cfg.catchup} onChange={(v) => up({ catchup: v })} />
               </label>
               <label className="field">
-                <span>Janela de recuperação (horas)</span>
+                <span>Catch-up window (hours)</span>
                 <input type="number" min={1} value={cfg.catchup_window_h} onChange={(e) => up({ catchup_window_h: Number(e.target.value) || 1 })} />
               </label>
             </div>
@@ -236,18 +236,18 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
         </section>
 
         <section className="card">
-          <h3>Modelo</h3>
+          <h3>Model</h3>
           <div className="seg">
             <button className={!qwen ? 'on' : ''} onClick={() => up({ profile: 'claude-max' })}>
-              Claude <small>assinatura</small>
+              Claude <small>subscription</small>
             </button>
             <button className={qwen ? 'on' : ''} onClick={() => up({ profile: 'qwen-local', chrome: cfg.chrome })}>
-              Qwen local <small>Ollama</small>
+              Local Qwen <small>Ollama</small>
             </button>
           </div>
           <div className="grid2">
             <label className="field">
-              <span>Modelo</span>
+              <span>Model</span>
               {qwen ? (
                 <input value="qwen3.6:35b" disabled />
               ) : (
@@ -255,7 +255,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
               )}
             </label>
             <div className="field">
-              <span>Esforço</span>
+              <span>Effort</span>
               <div className="seg small">
                 {EFFORTS.map((e) => (
                   <button key={e} className={cfg.effort === e ? 'on' : ''} onClick={() => up({ effort: e })}>
@@ -268,7 +268,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
         </section>
 
         <section className="card">
-          <h3>Permissões</h3>
+          <h3>Permissions</h3>
           <div className="perm-grid">
             {PERMS.map((p) => (
               <button
@@ -283,7 +283,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
           </div>
           {cfg.permission_mode !== 'bypassPermissions' && (
             <label className="field">
-              <span>Ferramentas liberadas (uma por linha)</span>
+              <span>Allowed tools (one per line)</span>
               <textarea
                 rows={3}
                 className="mono"
@@ -294,52 +294,52 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
             </label>
           )}
           <label className="field toggle-field">
-            <span>Usar o Chrome (Claude in Chrome, sessão logada)</span>
+            <span>Use Chrome (Claude in Chrome, signed-in session)</span>
             <Switch checked={cfg.chrome} onChange={(v) => up({ chrome: v })} />
           </label>
         </section>
 
         <section className="card">
-          <h3>Execução</h3>
+          <h3>Execution</h3>
           <div className="grid3">
             <label className="field">
-              <span>Tempo máximo (min)</span>
+              <span>Max time (min)</span>
               <input type="number" min={1} value={cfg.timeout_min} onChange={(e) => up({ timeout_min: Number(e.target.value) || 1 })} />
             </label>
             <label className="field">
-              <span>Parar se inativa por (min)</span>
+              <span>Stop if idle for (min)</span>
               <input type="number" min={1} value={cfg.idle_timeout_min} onChange={(e) => up({ idle_timeout_min: Number(e.target.value) || 1 })} />
             </label>
             <label className="field">
-              <span>Notificar</span>
+              <span>Notify</span>
               <select value={cfg.notify} onChange={(e) => up({ notify: e.target.value as RoutineConfig['notify'] })}>
-                <option value="falhas">só falhas</option>
-                <option value="sempre">sempre</option>
-                <option value="nunca">nunca</option>
+                <option value="failures">failures only</option>
+                <option value="always">always</option>
+                <option value="never">never</option>
               </select>
             </label>
             <label className="field">
-              <span>Travas extras</span>
+              <span>Extra locks</span>
               <input
                 value={cfg.locks.join(', ')}
                 onChange={(e) => up({ locks: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
-                placeholder="ex.: site-x"
+                placeholder="e.g. site-x"
               />
             </label>
             <label className="field">
-              <span>Se a trava estiver ocupada</span>
+              <span>If the lock is busy</span>
               <select value={cfg.lock_policy} onChange={(e) => up({ lock_policy: e.target.value as 'skip' | 'queue' })}>
-                <option value="queue">esperar (até 45 min)</option>
-                <option value="skip">pular</option>
+                <option value="queue">wait (up to 45 min)</option>
+                <option value="skip">skip</option>
               </select>
             </label>
             <label className="field">
-              <span>Precheck (comando; erro = pula)</span>
+              <span>Precheck (command; error = skip)</span>
               <input className="mono" value={cfg.precheck ?? ''} onChange={(e) => up({ precheck: e.target.value || undefined })} placeholder="python check.py" />
             </label>
           </div>
           <small className="muted">
-            Travas automáticas: <code>chrome</code> quando usa o Chrome, <code>gpu</code> no Qwen. Duas rotinas com a mesma trava nunca rodam juntas.
+            Automatic locks: <code>chrome</code> when using Chrome, <code>gpu</code> for Qwen. Two routines with the same lock never run at the same time.
           </small>
         </section>
 
@@ -352,7 +352,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
               setPrompt(e.target.value)
               setDirty(true)
             }}
-            placeholder="O que o agente deve fazer a cada execução. Seja explícito: ninguém vai estar olhando para responder perguntas."
+            placeholder="What the agent should do on each run. Be explicit: nobody will be watching to answer questions."
           />
         </section>
       </div>

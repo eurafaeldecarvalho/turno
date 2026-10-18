@@ -8,14 +8,19 @@ import { WEEKDAYS, type Routine, type RoutineConfig, type RoutineDraft } from '.
 export const ROUTINE_FILE = 'ROUTINE.md'
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,62}$/
 
+// Rotinas antigas usavam nomes em portugues: continuam valendo.
+const PT_DAYS: Record<string, string> = { dom: 'sun', seg: 'mon', ter: 'tue', qua: 'wed', qui: 'thu', sex: 'fri', sab: 'sat', 'sáb': 'sat' }
+const PT_NOTIFY: Record<string, string> = { falhas: 'failures', sempre: 'always', nunca: 'never' }
+const day = z.preprocess((v) => (typeof v === 'string' ? (PT_DAYS[v.toLowerCase()] ?? v.toLowerCase()) : v), z.enum(['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']))
+
 const schema = z.object({
   name: z.string().min(1),
   description: z.string().default(''),
   enabled: z.boolean().default(true),
   schedule: z
     .object({
-      days: z.array(z.enum(['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'])).default([...WEEKDAYS]),
-      times: z.array(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'horário deve ser HH:MM')).default([]),
+      days: z.array(day).default([...WEEKDAYS]),
+      times: z.array(z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'time must be HH:MM')).default([]),
       cron: z.string().optional(),
     })
     .default({ days: [...WEEKDAYS], times: [] }),
@@ -33,11 +38,11 @@ const schema = z.object({
   catchup: z.boolean().default(true),
   catchup_window_h: z.number().positive().default(12),
   precheck: z.string().optional(),
-  notify: z.enum(['falhas', 'sempre', 'nunca']).default('falhas'),
+  notify: z.preprocess((v) => (typeof v === 'string' ? (PT_NOTIFY[v] ?? v) : v), z.enum(['failures', 'always', 'never'])).default('failures'),
 })
 
 export function defaultConfig(): RoutineConfig {
-  return schema.parse({ name: 'Nova rotina' }) as RoutineConfig
+  return schema.parse({ name: 'New routine' }) as RoutineConfig
 }
 
 // dias + horarios -> uma expressao cron por horario. "cron" avancado tem prioridade.
@@ -72,26 +77,26 @@ export function parseRoutine(dir: string, id: string): Routine {
   const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/)
   const base = { id, dir, prompt: '', nextRuns: [] as string[] }
   const fallback = (): RoutineConfig => ({ ...defaultConfig(), name: id, enabled: false })
-  if (!m) return { ...base, config: fallback(), error: 'ROUTINE.md sem frontmatter (--- ... ---)' }
+  if (!m) return { ...base, config: fallback(), error: 'ROUTINE.md has no frontmatter (--- ... ---)' }
   const prompt = m[2].trim()
   let fm: unknown
   try {
     fm = parse(m[1]) ?? {}
   } catch (e) {
-    return { ...base, config: fallback(), prompt, error: `YAML inválido: ${(e as Error).message}` }
+    return { ...base, config: fallback(), prompt, error: `invalid YAML: ${(e as Error).message}` }
   }
   const r = schema.safeParse(fm)
   if (!r.success) {
-    const msg = r.error.issues.map((i) => `${i.path.join('.') || '(raiz)'}: ${i.message}`).join('; ')
+    const msg = r.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ')
     return { ...base, config: fallback(), prompt, error: msg }
   }
   const config = r.data as RoutineConfig
   const routine: Routine = { ...base, config, prompt }
-  if (!prompt) routine.error = 'prompt vazio (escreva o prompt abaixo do frontmatter)'
+  if (!prompt) routine.error = 'empty prompt (write it below the frontmatter)'
   try {
     routine.nextRuns = config.enabled ? nextRuns(config).map((d) => d.toISOString()) : []
   } catch (e) {
-    routine.error = `agenda inválida: ${(e as Error).message}`
+    routine.error = `invalid schedule: ${(e as Error).message}`
   }
   return routine
 }
@@ -114,15 +119,15 @@ export function serialize(config: RoutineConfig, prompt: string): string {
 }
 
 export function saveRoutine(root: string, draft: RoutineDraft): string {
-  if (!ID_RE.test(draft.id)) throw new Error('nome da pasta: use só letras minúsculas, números e hífen')
+  if (!ID_RE.test(draft.id)) throw new Error('folder name: use only lowercase letters, numbers and hyphens')
   const r = schema.safeParse(draft.config)
   if (!r.success) throw new Error(r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '))
   const dir = join(root, draft.id)
   if (draft.originalId && draft.originalId !== draft.id) {
-    if (existsSync(dir)) throw new Error(`já existe uma rotina "${draft.id}"`)
+    if (existsSync(dir)) throw new Error(`a routine named "${draft.id}" already exists`)
     renameSync(join(root, draft.originalId), dir)
   } else if (!draft.originalId && existsSync(join(dir, ROUTINE_FILE))) {
-    throw new Error(`já existe uma rotina "${draft.id}"`)
+    throw new Error(`a routine named "${draft.id}" already exists`)
   }
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, ROUTINE_FILE), serialize(r.data as RoutineConfig, draft.prompt))

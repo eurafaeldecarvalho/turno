@@ -91,17 +91,23 @@ export function fmtSecs(s: number): string {
 }
 
 const CATS: Array<{ test: (n: string) => boolean; one: string; many: (n: number) => string; doing: string }> = [
-  { test: (n) => n === 'Bash' || n === 'PowerShell', one: 'rodou 1 comando', many: (n) => `rodou ${n} comandos`, doing: 'rodando comando' },
-  { test: (n) => n === 'Read', one: 'leu 1 arquivo', many: (n) => `leu ${n} arquivos`, doing: 'lendo' },
-  { test: (n) => /^(Edit|Write|MultiEdit|NotebookEdit)$/.test(n), one: 'editou 1 arquivo', many: (n) => `editou ${n} arquivos`, doing: 'editando' },
-  { test: (n) => n === 'Grep' || n === 'Glob', one: 'buscou 1 vez', many: (n) => `buscou ${n} vezes`, doing: 'buscando' },
-  { test: (n) => n === 'WebFetch' || n === 'WebSearch', one: 'consultou a web', many: (n) => `consultou a web ${n} vezes`, doing: 'consultando a web' },
-  { test: (n) => n.startsWith('mcp__claude-in-chrome__') || n.startsWith('mcp__Claude_Browser__'), one: 'usou o navegador', many: (n) => `usou o navegador ${n} vezes`, doing: 'no navegador' },
-  { test: (n) => n === 'Agent' || n === 'Task', one: 'rodou 1 subagente', many: (n) => `rodou ${n} subagentes`, doing: 'subagente trabalhando' },
-  { test: (n) => n === 'TodoWrite', one: 'atualizou as tarefas', many: () => 'atualizou as tarefas', doing: 'atualizando tarefas' },
-  { test: (n) => n === 'ToolSearch', one: 'carregou ferramentas', many: () => 'carregou ferramentas', doing: 'carregando ferramentas' },
-  { test: (n) => n.startsWith('mcp__'), one: 'usou 1 integração', many: (n) => `usou ${n} integrações`, doing: 'usando integração' },
+  { test: (n) => n === 'Bash' || n === 'PowerShell', one: 'ran 1 command', many: (n) => `ran ${n} commands`, doing: 'running command' },
+  { test: (n) => n === 'Read', one: 'read 1 file', many: (n) => `read ${n} files`, doing: 'reading' },
+  { test: (n) => /^(Edit|Write|MultiEdit|NotebookEdit)$/.test(n), one: 'edited 1 file', many: (n) => `edited ${n} files`, doing: 'editing' },
+  { test: (n) => n === 'Grep' || n === 'Glob', one: 'searched once', many: (n) => `searched ${n} times`, doing: 'searching' },
+  { test: (n) => n === 'WebFetch' || n === 'WebSearch', one: 'checked the web', many: (n) => `checked the web ${n} times`, doing: 'checking the web' },
+  { test: (n) => n.startsWith('mcp__claude-in-chrome__') || n.startsWith('mcp__Claude_Browser__'), one: 'used the browser', many: (n) => `used the browser ${n} times`, doing: 'in the browser' },
+  { test: (n) => n === 'Agent' || n === 'Task', one: 'ran 1 subagent', many: (n) => `ran ${n} subagents`, doing: 'subagent working' },
+  { test: (n) => n === 'TodoWrite', one: 'updated the tasks', many: () => 'updated the tasks', doing: 'updating tasks' },
+  { test: (n) => n === 'ToolSearch', one: 'loaded tools', many: () => 'loaded tools', doing: 'loading tools' },
+  { test: (n) => n.startsWith('mcp__'), one: 'used 1 integration', many: (n) => `used ${n} integrations`, doing: 'using integration' },
 ]
+
+// Respostas/erros vindos do main: aceita os valores antigos (pt) gravados no banco e os novos (en).
+const isErr = (r?: RunEvent): boolean => !!r && (r.summary.startsWith('[erro]') || r.summary.startsWith('[error]'))
+const REPLY_DENIED = new Set(['negado', 'denied'])
+const REPLY_CANCELLED = new Set(['cancelado', 'cancelled'])
+const REPLY_LABEL: Record<string, string> = { negado: 'denied', cancelado: 'cancelled', permitido: 'allowed', 'permitido nesta sessão': 'allowed for this session' }
 
 function toolName(t: Tool): string {
   return t.call.summary.split('  ')[0]
@@ -116,7 +122,7 @@ function runSummary(items: Tool[]): string {
     else counts.set(i, (counts.get(i) ?? 0) + 1)
   }
   const parts = [...counts].sort((a, b) => a[0] - b[0]).map(([i, n]) => (n === 1 ? CATS[i].one : CATS[i].many(n)))
-  if (other) parts.push(other === 1 ? 'usou 1 ferramenta' : `usou ${other} ferramentas`)
+  if (other) parts.push(other === 1 ? 'used 1 tool' : `used ${other} tools`)
   const s = parts.join(', ')
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
@@ -138,7 +144,7 @@ function EventBlock({ ev, dur }: { ev: RunEvent; dur?: number }) {
   switch (ev.kind) {
     case 'prompt':
       return (
-        <Collapsible className="msg-prompt" head={<span>Prompt da rotina <span className="muted">· {ev.summary.length} caracteres</span></span>}>
+        <Collapsible className="msg-prompt" head={<span>Routine prompt <span className="muted">· {ev.summary.length} characters</span></span>}>
           <pre className="pre">{ev.summary}</pre>
         </Collapsible>
       )
@@ -153,7 +159,7 @@ function EventBlock({ ev, dur }: { ev: RunEvent; dur?: number }) {
     case 'thinking': {
       const first = ev.summary.split('\n')[0].slice(0, 140)
       return (
-        <Collapsible className="msg-thinking" head={<span>{dur ? `Pensou por ${fmtSecs(dur)}` : 'Pensou'} <span className="muted">— {first}{ev.summary.length > first.length ? '…' : ''}</span></span>}>
+        <Collapsible className="msg-thinking" head={<span>{dur ? `Thought for ${fmtSecs(dur)}` : 'Thought'} <span className="muted">— {first}{ev.summary.length > first.length ? '…' : ''}</span></span>}>
           <div className="thinking-text">{ev.summary}</div>
         </Collapsible>
       )
@@ -173,7 +179,7 @@ function EventBlock({ ev, dur }: { ev: RunEvent; dur?: number }) {
       return <div className="msg-sys">{ev.summary}</div>
     case 'start':
       return (
-        <Collapsible className="msg-sys" head={<span>comando</span>}>
+        <Collapsible className="msg-sys" head={<span>command</span>}>
           <pre className="pre">{ev.summary}</pre>
         </Collapsible>
       )
@@ -184,7 +190,7 @@ function EventBlock({ ev, dur }: { ev: RunEvent; dur?: number }) {
 
 function ToolBlock({ call, result }: Tool) {
   const [name, ...rest] = call.summary.split('  ')
-  const err = result?.summary.startsWith('[erro]')
+  const err = isErr(result)
   return (
     <Collapsible
       className={`msg-tool ${err ? 'err' : ''} ${result ? '' : 'pending'}`}
@@ -198,13 +204,13 @@ function ToolBlock({ call, result }: Tool) {
     >
       {call.detail && (
         <>
-          <div className="tool-label">entrada</div>
+          <div className="tool-label">input</div>
           <pre className="pre">{call.detail}</pre>
         </>
       )}
       {result && (
         <>
-          <div className="tool-label">resultado</div>
+          <div className="tool-label">result</div>
           <pre className="pre">{result.detail ?? result.summary}</pre>
         </>
       )}
@@ -215,7 +221,7 @@ function ToolBlock({ call, result }: Tool) {
 function ToolRun({ items }: { items: Tool[] }) {
   if (items.length === 1) return <ToolBlock {...items[0]} />
   const pending = items.some((t) => !t.result)
-  const errors = items.filter((t) => t.result?.summary.startsWith('[erro]')).length
+  const errors = items.filter((t) => isErr(t.result)).length
   return (
     <Collapsible
       className="msg-toolrun"
@@ -223,7 +229,7 @@ function ToolRun({ items }: { items: Tool[] }) {
       head={
         <span className="tool-head">
           <span>{runSummary(items)}</span>
-          {errors > 0 && <span className="pill pill-err">{errors} com erro</span>}
+          {errors > 0 && <span className="pill pill-err">{errors} with errors</span>}
           {pending && <span className="spinner sm" />}
         </span>
       }
@@ -254,19 +260,19 @@ function PermissionCard({ ev, reply, live }: { ev: RunEvent; reply?: RunEvent; l
   return (
     <div className={`perm-card ${done ? 'done' : ''}`}>
       <div className="perm-title">
-        <span>🔐 Pede permissão: <b>{ev.summary.split('  ')[0]}</b></span>
-        {reply && <span className={`pill ${reply.summary === 'negado' ? 'pill-err' : reply.summary === 'cancelado' ? '' : 'pill-ok'}`}>{reply.summary}</span>}
-        {!reply && !live && <span className="pill">sem resposta</span>}
+        <span>🔐 Permission request: <b>{ev.summary.split('  ')[0]}</b></span>
+        {reply && <span className={`pill ${REPLY_DENIED.has(reply.summary) ? 'pill-err' : REPLY_CANCELLED.has(reply.summary) ? '' : 'pill-ok'}`}>{REPLY_LABEL[reply.summary] ?? reply.summary}</span>}
+        {!reply && !live && <span className="pill">no answer</span>}
       </div>
       {info.description && <div className="muted small">{info.description}</div>}
       <pre className="pre">{typeof info.input === 'object' ? JSON.stringify(info.input, null, 2) : ev.summary}</pre>
       {!done && (
         <div className="row">
-          <button className="btn primary small" disabled={busy} onClick={() => void answer('allow')}>Permitir</button>
+          <button className="btn primary small" disabled={busy} onClick={() => void answer('allow')}>Allow</button>
           {info.canSession && (
-            <button className="btn small" disabled={busy} onClick={() => void answer('allow_session')}>Permitir nesta sessão</button>
+            <button className="btn small" disabled={busy} onClick={() => void answer('allow_session')}>Allow for this session</button>
           )}
-          <button className="btn danger small" disabled={busy} onClick={() => void answer('deny')}>Negar</button>
+          <button className="btn danger small" disabled={busy} onClick={() => void answer('deny')}>Deny</button>
         </div>
       )}
     </div>
@@ -282,7 +288,7 @@ function LiveLine({ since }: { since: string | null }) {
   const secs = since ? Math.max(0, Math.round((Date.now() - Date.parse(since)) / 1000)) : 0
   return (
     <div className="msg-live">
-      <span className="spinner sm" /> trabalhando há {fmtSecs(secs)}…
+      <span className="spinner sm" /> working for {fmtSecs(secs)}…
     </div>
   )
 }
@@ -310,7 +316,7 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
     if (follow) listRef.current?.scrollTo({ top: listRef.current.scrollHeight })
   }, [total, follow])
 
-  if (!last) return <div className="panel-empty">Carregando execução…</div>
+  if (!last) return <div className="panel-empty">Loading run…</div>
   const tone = statusTone(last.status)
   const live = isActive(last)
   const canSend = live || !!last.session_id
@@ -340,7 +346,7 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
       cwd: last.cwd ?? undefined,
       profile: last.profile === 'qwen-local' ? 'qwen-local' : 'claude-max',
       initialCommand: `claude --resume ${last.session_id}`,
-    }, `retomar · ${routine?.config.name ?? 'sessão'}`)
+    }, `resume · ${routine?.config.name ?? 'session'}`)
 
   return (
     <div className="runview">
@@ -348,29 +354,29 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
         <span className={`dot dot-${tone}`} />
         <div className="run-head-main">
           <div className="run-title">
-            {routine ? routine.config.name : first.routine ?? 'Execução avulsa'}
+            {routine ? routine.config.name : first.routine ?? 'Ad hoc run'}
             <span className={`pill pill-${tone}`}>{STATUS_LABEL[last.status]}</span>
           </div>
           <div className="muted small">
-            {TRIGGER_LABEL[first.trigger]} · {last.profile === 'qwen-local' ? 'qwen3.6:35b' : last.model ?? 'padrão'} · {when(first.started_at ?? first.ended_at)}
+            {TRIGGER_LABEL[first.trigger]} · {last.profile === 'qwen-local' ? 'qwen3.6:35b' : last.model ?? 'default'} · {when(first.started_at ?? first.ended_at)}
             {first.started_at && ` · ${duration(last)}`}
-            {runs.length > 1 && ` · ${runs.length - 1} continuação(ões)`}
+            {runs.length > 1 && ` · ${runs.length - 1} follow-up(s)`}
           </div>
         </div>
         <div className="run-actions">
           {routine && !compact && (
             <button className="btn ghost" onClick={() => openRoutine(routine.id, routine.config.name, true)}>
-              <IconRoutine /> Configurar
+              <IconRoutine /> Configure
             </button>
           )}
           {last.session_id && !live && (
-            <button className="btn ghost" onClick={resume} title="Abre o Claude Code interativo nesta sessão">
-              <IconTerminal /> Abrir no terminal
+            <button className="btn ghost" onClick={resume} title="Opens interactive Claude Code in this session">
+              <IconTerminal /> Open in terminal
             </button>
           )}
           {live && (
             <button className="btn danger" onClick={() => void window.turno.run.stop(last.id)}>
-              <IconStop /> Parar
+              <IconStop /> Stop
             </button>
           )}
         </div>
@@ -387,8 +393,8 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
         <div className="conv-inner">
           {blocksByRun.map(({ run, blocks }, i) => (
             <div key={run.id} className="conv-run">
-              {i > 0 && <div className="conv-sep"><span>continuação · {when(run.started_at)}</span></div>}
-              {run.skip_reason && <div className="banner banner-warn">{run.status === 'skipped' ? 'Pulada: ' : ''}{run.skip_reason}</div>}
+              {i > 0 && <div className="conv-sep"><span>follow-up · {when(run.started_at)}</span></div>}
+              {run.skip_reason && <div className="banner banner-warn">{run.status === 'skipped' ? 'Skipped: ' : ''}{run.skip_reason}</div>}
               {blocks.map((b, j) =>
                 b.t === 'tools' ? (
                   <ToolRun key={j} items={b.items} />
@@ -403,10 +409,10 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
           {live && <LiveLine since={last.started_at} />}
           {!live && last.started_at && last.ended_at && last.status !== 'skipped' && (
             <div className="msg-sys">
-              {last.status === 'ok' ? 'Trabalhou por' : last.status === 'stopped' ? 'Interrompida após' : 'Falhou após'} {fmtSecs(Math.round((Date.parse(last.ended_at) - Date.parse(last.started_at)) / 1000))}
+              {last.status === 'ok' ? 'Worked for' : last.status === 'stopped' ? 'Stopped after' : 'Failed after'} {fmtSecs(Math.round((Date.parse(last.ended_at) - Date.parse(last.started_at)) / 1000))}
             </div>
           )}
-          {total === 0 && !live && <div className="muted pad">Sem eventos registrados.</div>}
+          {total === 0 && !live && <div className="muted pad">No events recorded.</div>}
         </div>
       </div>
 
@@ -426,18 +432,18 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
             }}
             placeholder={
               !canSend
-                ? 'Esta execução não tem sessão para continuar.'
+                ? 'This run has no session to continue.'
                 : live
-                  ? 'Mandar mensagem para o agente agora (entra depois do passo atual)…'
-                  : 'Continuar a conversa (retoma a mesma sessão)…'
+                  ? 'Message the agent now (delivered after the current step)…'
+                  : 'Continue the conversation (resumes the same session)…'
             }
           />
-          <button className="btn primary send" disabled={!draft.trim() || !canSend || sending} onClick={() => void send()} aria-label="Enviar">
+          <button className="btn primary send" disabled={!draft.trim() || !canSend || sending} onClick={() => void send()} aria-label="Send">
             <IconSend size={15} />
           </button>
         </div>
         <div className="composer-hint muted small">
-          Enter envia · Shift+Enter quebra linha · {live ? 'ao vivo na execução atual' : 'cria uma continuação com --resume'}
+          Enter sends · Shift+Enter new line · {live ? 'live in the current run' : 'creates a follow-up with --resume'}
         </div>
       </div>
     </div>
@@ -461,15 +467,15 @@ export function RoutineSession({ params }: IDockviewPanelProps<{ routineId: stri
     if (lr.trigger !== 'followup' || lr.parent_id === shown || !shown) setShown(lastId)
   }, [lastId])
 
-  if (!routine) return <div className="panel-empty">Rotina não encontrada.</div>
+  if (!routine) return <div className="panel-empty">Routine not found.</div>
   if (!shown)
     return (
       <div className="welcome">
         <h1>{routine.config.name}</h1>
-        <p className="muted">Ainda não rodou. {routine.nextRuns[0] ? `Próxima execução ${when(routine.nextRuns[0])}.` : ''}</p>
+        <p className="muted">Has not run yet. {routine.nextRuns[0] ? `Next run ${when(routine.nextRuns[0])}.` : ''}</p>
         <div className="welcome-actions">
-          <button className="btn primary" onClick={() => void window.turno.run.startRoutine(routine.id)}>Rodar agora</button>
-          <button className="btn" onClick={() => openRoutine(routine.id, routine.config.name, true)}>Configurar</button>
+          <button className="btn primary" onClick={() => void window.turno.run.startRoutine(routine.id)}>Run now</button>
+          <button className="btn" onClick={() => openRoutine(routine.id, routine.config.name, true)}>Configure</button>
         </div>
       </div>
     )

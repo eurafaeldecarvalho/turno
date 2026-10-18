@@ -37,7 +37,7 @@ export function detectShells(): ShellInfo[] {
   }
   add('pwsh', 'PowerShell 7', which('pwsh.exe'))
   add('powershell', 'Windows PowerShell', join(process.env.SystemRoot ?? 'C:\\Windows', 'System32\\WindowsPowerShell\\v1.0\\powershell.exe'))
-  add('cmd', 'Prompt de Comando', join(process.env.SystemRoot ?? 'C:\\Windows', 'System32\\cmd.exe'))
+  add('cmd', 'Command Prompt', join(process.env.SystemRoot ?? 'C:\\Windows', 'System32\\cmd.exe'))
   const git = ['C:\\Program Files\\Git\\bin\\bash.exe', join(process.env.LOCALAPPDATA ?? '', 'Programs\\Git\\bin\\bash.exe')].find(existsSync)
   add('gitbash', 'Git Bash', git)
   add('wsl', 'WSL', which('wsl.exe'))

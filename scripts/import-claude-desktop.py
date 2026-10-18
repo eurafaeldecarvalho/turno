@@ -11,12 +11,12 @@ Usage:
   you want in a JSON file (keep it out of git), for example:
 
     {
-      "daily-summary": { "days": ["seg","ter","qua","qui","sex"], "times": ["20:30"],
+      "daily-summary": { "days": ["mon","tue","wed","thu","fri"], "times": ["20:30"],
                          "name": "Daily summary", "timeout_min": 30 },
       "weekly-report": { "cron": "30 13 * * 1,4" }
     }
 
-  Days use the Turno names: dom seg ter qua qui sex sab. Tasks without an entry are
+  Days: sun mon tue wed thu fri sat. Tasks without an entry are
   imported with no schedule (manual only).
 """
 import argparse
@@ -25,7 +25,7 @@ import os
 import re
 
 SRC = os.path.expanduser(os.path.join('~', '.claude', 'scheduled-tasks'))
-ALL_DAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab']
+ALL_DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
 
 def q(s):
@@ -90,7 +90,7 @@ timeout_min: {cfg.get('timeout_min', 120)}
 idle_timeout_min: 20
 catchup: true
 catchup_window_h: 6
-notify: falhas
+notify: failures
 ---
 
 """

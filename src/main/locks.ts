@@ -4,7 +4,7 @@ const waiters = new Set<() => void>()
 
 export function tryAcquire(names: string[], holder: string): string | undefined {
   const busy = names.find((n) => holders.has(n) && holders.get(n) !== holder)
-  if (busy) return `${busy} (com ${holders.get(busy)})`
+  if (busy) return `${busy} (held by ${holders.get(busy)})`
   for (const n of names) holders.set(n, holder)
   return undefined
 }
@@ -26,7 +26,7 @@ export function acquireWait(names: string[], holder: string, timeoutMs: number):
       if (busy) return void (last = busy)
       done(undefined)
     }
-    const timer = setTimeout(() => done(`trava ocupada: ${last}`), timeoutMs)
+    const timer = setTimeout(() => done(`lock busy: ${last}`), timeoutMs)
     function done(reason: string | undefined): void {
       clearTimeout(timer)
       waiters.delete(tryNow)

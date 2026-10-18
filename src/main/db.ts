@@ -39,7 +39,7 @@ export function openDb(file: string): void {
   }
   // Runs que estavam "rodando" quando o app caiu nao vao terminar mais.
   db.prepare(
-    `UPDATE runs SET status='failed', ended_at=COALESCE(ended_at, ?), skip_reason='app encerrado durante a execução'
+    `UPDATE runs SET status='failed', ended_at=COALESCE(ended_at, ?), skip_reason='app closed during the run'
      WHERE status IN ('running','queued')`,
   ).run(new Date().toISOString())
 }

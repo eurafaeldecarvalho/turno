@@ -56,7 +56,7 @@ const ansi = (a: string[]) => ({
 export const THEMES: Theme[] = [
   {
     id: 'orca-dark',
-    name: 'Orca Escuro',
+    name: 'Orca Dark',
     dark: true,
     ui: {
       bg: '#0a0a0a', surface: '#171717', surface2: '#1f1f1f', surface3: '#262626', border: '#262626', borderStrong: '#333333',
@@ -69,7 +69,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: 'orca-light',
-    name: 'Orca Claro',
+    name: 'Orca Light',
     dark: false,
     ui: {
       bg: '#ffffff', surface: '#fafafa', surface2: '#f5f5f5', surface3: '#ebebeb', border: '#e5e5e5', borderStrong: '#d4d4d4',
@@ -82,7 +82,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: 'turno-dark',
-    name: 'Turno Escuro',
+    name: 'Turno Dark',
     dark: true,
     ui: {
       bg: '#0a0a0b', surface: '#111113', surface2: '#18181b', surface3: '#202024', border: '#232327', borderStrong: '#2e2e33',
@@ -95,7 +95,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: 'turno-light',
-    name: 'Turno Claro',
+    name: 'Turno Light',
     dark: false,
     ui: {
       bg: '#ffffff', surface: '#f7f7f8', surface2: '#efeff1', surface3: '#e6e6ea', border: '#e4e4e7', borderStrong: '#d4d4d8',
@@ -173,7 +173,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: 'github-light',
-    name: 'GitHub Claro',
+    name: 'GitHub Light',
     dark: false,
     ui: {
       bg: '#ffffff', surface: '#f6f8fa', surface2: '#eaeef2', surface3: '#d0d7de', border: '#d8dee4', borderStrong: '#d0d7de',

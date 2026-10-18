@@ -6,6 +6,7 @@ import { STATUS_LABEL, TRIGGER_LABEL, duration, statusTone, when } from '../fmt'
 import { openRun } from '../layout'
 
 type Filter = 'todas' | 'problemas' | 'rodando'
+const FILTER_LABEL: Record<Filter, string> = { todas: 'all', problemas: 'problems', rodando: 'running' }
 
 export function HistoryPanel({ params }: IDockviewPanelProps<{ routine?: string }>) {
   const runs = useStore((s) => s.runs)
@@ -24,7 +25,7 @@ export function HistoryPanel({ params }: IDockviewPanelProps<{ routine?: string 
 
   const options = useMemo(() => {
     const ids = new Set([...routines.map((r) => r.id), ...runs.map((r) => r.routine).filter((x): x is string => !!x)])
-    return [...ids].map((id) => ({ id, name: names.get(id) ?? `${id} (removida)` })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+    return [...ids].map((id) => ({ id, name: names.get(id) ?? `${id} (removed)` })).sort((a, b) => a.name.localeCompare(b.name, 'en-US'))
   }, [routines, runs, names])
 
   const source = useMemo(() => {
@@ -47,36 +48,36 @@ export function HistoryPanel({ params }: IDockviewPanelProps<{ routine?: string 
         <div className="seg small">
           {(['todas', 'problemas', 'rodando'] as Filter[]).map((f) => (
             <button key={f} className={filter === f ? 'on' : ''} onClick={() => setFilter(f)}>
-              {f}
+              {FILTER_LABEL[f]}
             </button>
           ))}
         </div>
-        <select className="history-routine" value={routine} onChange={(e) => setRoutine(e.target.value)} aria-label="Filtrar por rotina">
-          <option value="">Todas as rotinas</option>
+        <select className="history-routine" value={routine} onChange={(e) => setRoutine(e.target.value)} aria-label="Filter by routine">
+          <option value="">All routines</option>
           {options.map((o) => (
             <option key={o.id} value={o.id}>{o.name}</option>
           ))}
-          <option value="__adhoc">Execuções avulsas</option>
+          <option value="__adhoc">Ad hoc runs</option>
         </select>
-        <span className="muted small history-count">{list.length} execuções</span>
+        <span className="muted small history-count">{list.length} runs</span>
       </header>
       <div className="table-wrap">
         <table className="table">
           <thead>
             <tr>
               <th />
-              <th>Rotina</th>
+              <th>Routine</th>
               <th>Status</th>
-              <th>Quando</th>
-              <th>Duração</th>
-              <th>Origem</th>
-              <th>Modelo</th>
-              <th>Detalhe</th>
+              <th>When</th>
+              <th>Duration</th>
+              <th>Trigger</th>
+              <th>Model</th>
+              <th>Detail</th>
             </tr>
           </thead>
           <tbody>
             {list.map((r) => {
-              const name = r.routine ? (names.get(r.routine) ?? r.routine) : 'avulsa'
+              const name = r.routine ? (names.get(r.routine) ?? r.routine) : 'ad hoc'
               return (
                 <tr key={r.id} onClick={() => openRun(r.id, name)} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && openRun(r.id, name)}>
                   <td><span className={`dot dot-${statusTone(r.status)}`} /></td>
@@ -92,7 +93,7 @@ export function HistoryPanel({ params }: IDockviewPanelProps<{ routine?: string 
             })}
           </tbody>
         </table>
-        {!list.length && <div className="panel-empty">Nenhuma execução ainda.</div>}
+        {!list.length && <div className="panel-empty">No runs yet.</div>}
       </div>
     </div>
   )
