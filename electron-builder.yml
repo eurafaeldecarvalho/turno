@@ -1,0 +1,27 @@
+appId: io.github.eurafaeldecarvalho.turno
+productName: Turno
+artifactName: Turno-Setup-${version}.${ext}
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - out/**
+  - package.json
+extraResources:
+  - from: resources
+    to: resources
+    filter: ['*.png']
+asarUnpack:
+  - node_modules/node-pty/**
+npmRebuild: false
+win:
+  icon: resources/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: Turno
