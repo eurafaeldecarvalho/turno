@@ -74,6 +74,7 @@ export function patchItem(itemId: string, patch: Partial<SidebarItem>): void {
     }),
   }))
   if (!changed) return
+  if (patch.name) panelForItem(itemId)?.api.setTitle(patch.name)
   state = { ...state, folders }
   subs.forEach((f) => f())
   clearTimeout(saveTimer)

@@ -3,15 +3,59 @@ import { useStore, isActive } from './store'
 import { scheduleSummary, statusTone, when, STATUS_LABEL } from './fmt'
 import { openAdhoc, openHistory, openRoutine, openSettings, openTerminal } from './layout'
 import { IconChat, IconChevron, IconClose, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
-import { addFolder, addTerminalItem, agentOf, deleteFolder, deleteItem, getDragging, moveFolder, openItem, renameFolder, setDragging, toggleSection, useSidebar } from './sidebarStore'
+import { addFolder, addTerminalItem, agentOf, deleteFolder, deleteItem, getDragging, moveFolder, openItem, patchItem, renameFolder, setDragging, toggleSection, useSidebar } from './sidebarStore'
 import { dockApi } from './layout'
 import { FolderDialog, ItemDialog } from './ItemDialog'
 import type { SidebarFolder, SidebarItem } from '../../shared/types'
 
+// Nome editavel no lugar: duplo clique (ou F2) abre o campo; Enter salva, Esc cancela.
+function InlineName({ value, onRename, className }: { value: string; onRename?: (v: string) => void; className?: string }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+  if (!onRename) return <span className={className}>{value}</span>
+  if (!editing)
+    return (
+      <span
+        className={className}
+        title="Duplo clique para renomear"
+        onDoubleClick={(e) => {
+          e.stopPropagation()
+          setDraft(value)
+          setEditing(true)
+        }}
+      >
+        {value}
+      </span>
+    )
+  const commit = (): void => {
+    const v = draft.trim()
+    if (v && v !== value) onRename(v)
+    setEditing(false)
+  }
+  return (
+    <input
+      className="inline-rename"
+      autoFocus
+      value={draft}
+      onFocus={(e) => e.target.select()}
+      onClick={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        e.stopPropagation()
+        if (e.key === 'Enter') commit()
+        else if (e.key === 'Escape') setEditing(false)
+      }}
+    />
+  )
+}
+
 // Secao recolhivel da barra lateral (Rotinas e cada pasta).
-function Section({ id, title, count, actions, children, folder, dropping }: {
+function Section({ id, title, count, actions, children, folder, dropping, onRename }: {
   id: string
-  title: ReactNode
+  title: string
+  onRename?: (v: string) => void
   count?: number
   actions?: ReactNode
   children: ReactNode
@@ -25,7 +69,7 @@ function Section({ id, title, count, actions, children, folder, dropping }: {
       <div className="section-head">
         <button className="section-toggle" onClick={() => toggleSection(id)} aria-expanded={!closed}>
           <IconChevron size={12} className="chev" />
-          <span className="section-title">{title}</span>
+          <InlineName className="section-title" value={title} onRename={onRename} />
           {closed && count !== undefined && <span className="section-count">{count}</span>}
         </button>
         <span className="section-actions">{actions}</span>
@@ -231,6 +275,7 @@ export function Sidebar() {
           folder
           dropping={dropFolder === f.id}
           title={f.name}
+          onRename={(v) => renameFolder(f.id, v)}
           count={f.items.length}
           actions={
             <>
@@ -265,7 +310,7 @@ export function Sidebar() {
                 <button className="routine-main" onClick={() => void openItem(it)} title={it.kind === 'link' ? it.url : `${agentOf(it.agent).name}${it.cwd ? ` · ${it.cwd}` : ''}`}>
                   <span className="item-icon">{it.kind === 'link' ? <IconLink size={14} /> : it.kind === 'terminal' && !it.sessionId ? <IconTerminal size={14} /> : <IconChat size={14} />}</span>
                   <span className="routine-text">
-                    <span className="routine-name">{it.name}</span>
+                    <InlineName className="routine-name" value={it.name} onRename={(v) => patchItem(it.id, { name: v })} />
                     <span className="routine-sub">
                       {it.kind === 'link'
                         ? (it.url ?? '').replace(/^https?:[/][/]/, '').slice(0, 40)

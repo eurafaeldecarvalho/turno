@@ -73,9 +73,13 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
     }
   }
 
-  const valid = name.trim() && (kind === 'link' ? /^[a-z][\w+.-]*:/i.test(url.trim()) : agent !== 'custom' || command.trim())
+  const valid = name.trim() && (kind === 'terminal' || kind === 'link' ? /^[a-z][\w+.-]*:/i.test(url.trim()) : agent !== 'custom' || command.trim())
 
   function save(): void {
+    if (kind === 'terminal' && item) {
+      saveItem(folder, { ...item, name: name.trim(), cwd: cwd.trim() || undefined })
+      return onClose()
+    }
     const base: SidebarItem = { id: item?.id ?? uid(), kind, name: name.trim() }
     const next: SidebarItem =
       kind === 'link'
@@ -96,10 +100,12 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
   return (
     <Modal title={item ? 'Editar item' : 'Novo item'} onClose={onClose}>
       <div className="modal-body">
-        <div className="seg">
-          <button className={kind === 'chat' ? 'on' : ''} onClick={() => setKind('chat')}>Chat de agente</button>
-          <button className={kind === 'link' ? 'on' : ''} onClick={() => setKind('link')}>Link</button>
-        </div>
+        {kind !== 'terminal' && (
+          <div className="seg">
+            <button className={kind === 'chat' ? 'on' : ''} onClick={() => setKind('chat')}>Chat de agente</button>
+            <button className={kind === 'link' ? 'on' : ''} onClick={() => setKind('link')}>Link</button>
+          </div>
+        )}
         <div className="grid2">
           <label className="field">
             <span>Nome</span>
@@ -115,7 +121,18 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
           </label>
         </div>
 
-        {kind === 'link' ? (
+        {kind === 'terminal' ? (
+          <>
+            <label className="field">
+              <span>Pasta de trabalho</span>
+              <input className="mono" value={cwd} onChange={(e) => setCwd(e.target.value)} />
+            </label>
+            <small className="muted">
+              {item?.sessionId ? `Reabre com claude --resume ${item.sessionId.slice(0, 8)}… nesta pasta.` : 'Reabre um terminal nesta pasta.'} A pasta e a sessão se
+              atualizam sozinhas enquanto o terminal está aberto.
+            </small>
+          </>
+        ) : kind === 'link' ? (
           <label className="field">
             <span>Endereço</span>
             <input className="mono" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://claude.ai/chat/…  ·  https://chatgpt.com/c/…" />
