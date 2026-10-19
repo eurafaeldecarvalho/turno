@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { IDockviewPanelProps } from 'dockview-react'
 import { WEEKDAYS, type Effort, type PermissionMode, type RoutineConfig, type Weekday } from '../../../shared/types'
 import { useStore } from '../store'
@@ -55,9 +55,29 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
       })
   }, [])
 
+  // Auto save: rotina existente grava sozinha ~0,6s depois da ultima mudanca.
+  // A pasta (id) so grava ao sair do campo, para nao renomear o diretorio a cada tecla.
+  const rev = useRef(0)
+  const saveRef = useRef<() => Promise<boolean>>(undefined)
+  const [folderFocus, setFolderFocus] = useState(false)
+  const [status, setStatus] = useState<'saving' | 'saved'>()
+  const touch = (): void => {
+    rev.current++
+    setDirty(true)
+    setStatus(undefined)
+  }
+  useEffect(() => {
+    if (!dirty || !savedId || folderFocus) return
+    const t = setTimeout(() => void saveRef.current?.(), 600)
+    return () => clearTimeout(t)
+  }, [dirty, savedId, folderFocus, cfg, prompt, id])
+  const pendingRef = useRef(false)
+  pendingRef.current = dirty && !!savedId
+  useEffect(() => () => void (pendingRef.current && saveRef.current?.()), []) // fechou a aba antes do debounce
+
   const up = (patch: Partial<RoutineConfig>): void => {
     setCfg((c) => (c ? { ...c, ...patch } : c))
-    setDirty(true)
+    touch()
     setMsg(undefined)
   }
   const upSched = (patch: Partial<RoutineConfig['schedule']>): void => up({ schedule: { ...cfg!.schedule, ...patch } })
@@ -69,18 +89,23 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   const folder = isNew && !idTouched ? slug(cfg.name) : id
 
   async function save(): Promise<boolean> {
+    const at = rev.current
+    setStatus('saving')
     try {
       const r = await window.turno.routines.save({ id: folder, originalId: savedId ?? undefined, config: cfg!, prompt })
       setSavedId(folder)
-      setDirty(false)
+      if (rev.current === at) setDirty(false) // mudou durante a gravacao: o proximo auto save pega
       api.setTitle(cfg!.name)
-      setMsg(r?.error ? { tone: 'err', text: `Saved, but with an error: ${r.error}` } : { tone: 'ok', text: 'Saved.' })
+      setMsg(r?.error ? { tone: 'err', text: `Saved, but with an error: ${r.error}` } : undefined)
+      setStatus('saved')
       return !r?.error
     } catch (e) {
+      setStatus(undefined)
       setMsg({ tone: 'err', text: String((e as Error).message).replace(/^Error invoking remote method '[^']+': (Error: )?/, '') })
       return false
     }
   }
+  saveRef.current = save
 
   async function runNow(): Promise<void> {
     if (dirty && !(await save())) return
@@ -118,6 +143,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
             <span className={`pill ${cfg.enabled ? 'pill-on' : ''}`}>{cfg.enabled ? 'on' : 'off'}</span>
             <span className="muted">{preview}</span>
             {existing?.nextRuns[0] && <span className="muted">· next {when(existing.nextRuns[0])}</span>}
+            {!isNew && (status === 'saving' || dirty ? <span className="muted">· saving…</span> : status === 'saved' && <span className="muted">· saved</span>)}
           </div>
         </div>
         <div className="editor-actions">
@@ -134,9 +160,11 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
               </button>
             </>
           )}
-          <button className="btn primary" onClick={() => void save()} disabled={!dirty && !isNew}>
-            {isNew ? 'Create routine' : 'Save'}
-          </button>
+          {isNew && (
+            <button className="btn primary" onClick={() => void save()}>
+              Create routine
+            </button>
+          )}
         </div>
       </header>
       {(msg || existing?.error) && (
@@ -154,8 +182,10 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
                 onChange={(e) => {
                   setIdTouched(true)
                   setId(e.target.value)
-                  setDirty(true)
+                  touch()
                 }}
+                onFocus={() => setFolderFocus(true)}
+                onBlur={() => setFolderFocus(false)}
                 placeholder="daily-summary"
               />
             </label>
@@ -350,7 +380,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
             value={prompt}
             onChange={(e) => {
               setPrompt(e.target.value)
-              setDirty(true)
+              touch()
             }}
             placeholder="What the agent should do on each run. Be explicit: nobody will be watching to answer questions."
           />

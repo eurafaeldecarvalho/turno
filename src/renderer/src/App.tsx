@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactElement } from 'react'
+import { useCallback, useEffect, useState, type PointerEvent as RPointerEvent, type ReactElement } from 'react'
 import {
   DockviewReact,
   DockviewReadyEvent,
@@ -30,6 +30,7 @@ import {
   IconPlus,
   IconRoutine,
   IconSettings,
+  IconSidebar,
   IconSpark,
   IconSplitDown,
   IconSplitRight,
@@ -56,7 +57,7 @@ const KIND_ICON: Record<string, (p: { size?: number }) => ReactElement> = {
   settings: IconSettings,
 }
 
-function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string }>) {
+function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string; itemId?: string }>) {
   const [title, setTitle] = useState(api.title ?? '')
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(api.title ?? '')
@@ -99,6 +100,7 @@ function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string }>) {
       <button
         className="tab-close"
         aria-label="Close"
+        title={params.itemId ? 'Hide (keeps running; reopen from its folder)' : 'Close'}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation()
@@ -247,11 +249,37 @@ export function App() {
     }
   }, [])
 
+  const side = useSidebarLayout()
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent): void => {
+      if (ev.ctrlKey && !ev.shiftKey && !ev.altKey && ev.key.toLowerCase() === 'b') {
+        ev.preventDefault()
+        ev.stopPropagation()
+        side.toggle()
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [side.toggle])
+
   return (
-    <div className="app">
-      <Sidebar />
+    <div className="app" style={{ gridTemplateColumns: side.hidden ? '0 1fr' : `${side.width}px 1fr` }}>
+      {side.hidden ? <div /> : <Sidebar />}
+      {!side.hidden && (
+        <div
+          className="sidebar-resizer"
+          style={{ left: side.width - 3 }}
+          title="Drag to resize · double-click to reset"
+          onPointerDown={side.startResize}
+          onDoubleClick={side.reset}
+        />
+      )}
       <main className="main">
-        <div className="titlebar drag" />
+        <div className="titlebar drag">
+          <button className="sidebar-toggle" title={side.hidden ? 'Show sidebar (Ctrl+B)' : 'Hide sidebar (Ctrl+B)'} aria-label="Toggle sidebar" onClick={side.toggle}>
+            <IconSidebar size={15} />
+          </button>
+        </div>
         <DockviewReact
           className="dock"
           components={components}
@@ -267,6 +295,48 @@ export function App() {
       <StatusBar />
     </div>
   )
+}
+
+// Largura e visibilidade da barra lateral, lembradas entre sessoes (so conveniencia: falha em silencio).
+const SIDE_KEY = 'turno.sidebar.v1'
+const SIDE_DEFAULT = 272
+const clampW = (w: number): number => Math.min(560, Math.max(190, Math.round(w)))
+
+function useSidebarLayout() {
+  const [st, setSt] = useState<{ width: number; hidden: boolean }>(() => {
+    try {
+      const j = JSON.parse(localStorage.getItem(SIDE_KEY) ?? '{}')
+      return { width: clampW(Number(j.width) || SIDE_DEFAULT), hidden: !!j.hidden }
+    } catch {
+      return { width: SIDE_DEFAULT, hidden: false }
+    }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDE_KEY, JSON.stringify(st))
+    } catch {
+      /* storage indisponivel */
+    }
+  }, [st])
+  const toggle = useCallback(() => setSt((s) => ({ ...s, hidden: !s.hidden })), [])
+  const reset = useCallback(() => setSt((s) => ({ ...s, width: SIDE_DEFAULT })), [])
+  const startResize = useCallback((e: RPointerEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const el = e.currentTarget
+    el.setPointerCapture(e.pointerId)
+    document.body.classList.add('resizing-x')
+    const move = (ev: PointerEvent): void => setSt((s) => ({ ...s, width: clampW(ev.clientX) }))
+    const up = (): void => {
+      el.removeEventListener('pointermove', move)
+      el.removeEventListener('pointerup', up)
+      el.removeEventListener('pointercancel', up)
+      document.body.classList.remove('resizing-x')
+    }
+    el.addEventListener('pointermove', move)
+    el.addEventListener('pointerup', up)
+    el.addEventListener('pointercancel', up)
+  }, [])
+  return { ...st, toggle, reset, startResize }
 }
 
 // Smoke: monta um layout de exemplo (splits + rotina + historico) e pede o screenshot.

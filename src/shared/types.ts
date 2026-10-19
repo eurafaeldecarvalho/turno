@@ -219,6 +219,7 @@ export interface TurnoApi {
     save(draft: RoutineDraft): Promise<Routine>
     setEnabled(id: string, enabled: boolean): Promise<void>
     openFolder(id?: string): Promise<void>
+    delete(id: string): Promise<void>
     template(): Promise<RoutineDraft>
     onChanged(cb: (rs: Routine[]) => void): () => void
   }

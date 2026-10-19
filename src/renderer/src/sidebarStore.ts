@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import type { AgentId, SidebarFolder, SidebarItem, SidebarState } from '../../shared/types'
-import { openTerminal, panelForItem, type TerminalParams } from './layout'
+import { discarded, openTerminal, panelForItem, type TerminalParams } from './layout'
+import { isParked, killParked, setLive } from './liveTerms'
 
 // ---- estado das pastas da barra lateral (persistido em %APPDATA%\turno\sidebar.json) ----
 let state: SidebarState = { collapsed: {}, folders: [] }
@@ -38,7 +39,11 @@ export const addFolder = (name: string): string => {
 export const renameFolder = (id: string, name: string): void =>
   commit({ ...state, folders: state.folders.map((f) => (f.id === id ? { ...f, name } : f)) })
 
-export const deleteFolder = (id: string): void => commit({ ...state, folders: state.folders.filter((f) => f.id !== id) })
+export const deleteFolder = (id: string): void => {
+  const gone = state.folders.find((f) => f.id === id)?.items ?? []
+  commit({ ...state, folders: state.folders.filter((f) => f.id !== id) })
+  gone.forEach((x) => detach(x.id))
+}
 
 export const moveFolder = (id: string, delta: -1 | 1): void => {
   const i = state.folders.findIndex((f) => f.id === id)
@@ -99,8 +104,32 @@ export function addTerminalItem(folderId: string, params: TerminalParams, title:
   return item.id
 }
 
-export const deleteItem = (itemId: string): void =>
+export const getItem = (itemId: string): SidebarItem | undefined =>
+  state.folders.flatMap((f) => f.items).find((x) => x.id === itemId)
+export const itemExists = (itemId: string): boolean => !!getItem(itemId)
+
+// Item saiu da pasta: o terminal escondido morre; a aba aberta vira um terminal comum.
+function detach(itemId: string): void {
+  killParked(itemId)
+  setLive(itemId)
+  const p = panelForItem(itemId)
+  if (p) p.api.updateParameters({ ...(p.params as TerminalParams), itemId: undefined })
+}
+
+export const deleteItem = (itemId: string): void => {
   commit({ ...state, folders: state.folders.map((f) => ({ ...f, items: f.items.filter((x) => x.id !== itemId) })) })
+  detach(itemId)
+}
+
+// Fecha de vez o terminal do item (aberto ou escondido); o item continua na pasta.
+export function closeItemTerminal(itemId: string): void {
+  killParked(itemId)
+  const p = panelForItem(itemId)
+  if (p) {
+    discarded.add(p.id)
+    p.api.close()
+  }
+}
 
 // ---- agentes: como abrir/retomar a sessao de cada CLI ----
 export interface AgentPreset {
@@ -149,10 +178,12 @@ export async function openItem(item: SidebarItem): Promise<void> {
   const open = panelForItem(item.id)
   if (open) return open.api.setActive()
   let cmd = ''
-  if (item.kind === 'terminal') {
+  if (isParked(item.id)) {
+    // Aba escondida: o terminal continua vivo, so volta para a tela.
+  } else if (item.kind === 'terminal') {
     // Reabre onde parou: retoma a ultima sessao do Claude, senao so o shell na ultima pasta.
     if (item.sessionId && (await window.turno.sidebar.claudeSessionExists(item.sessionId)))
-      cmd = `claude --resume ${item.sessionId}${item.profile === 'qwen-local' ? ' --model qwen3.6:35b' : ''}`
+      cmd = `claude --resume ${item.sessionId} --chrome${item.profile === 'qwen-local' ? ' --model qwen3.6:35b' : ''}`
   } else cmd = await resolveCommand(item)
   openTerminal(
     undefined,

@@ -26,6 +26,9 @@ export interface TerminalParams {
   lastSession?: TermSession // sessao do Claude Code rodando aqui
 }
 
+// Paineis fechados de vez (nao escondidos), mesmo sendo de um item de pasta.
+export const discarded = new Set<string>()
+
 export function panelForItem(itemId: string) {
   return api?.panels.find((p) => (p.params as TerminalParams | undefined)?.itemId === itemId)
 }
@@ -94,7 +97,10 @@ export function restoreLayout(): boolean {
     if (!raw) return false
     api.fromJSON(JSON.parse(raw))
     // Abas de chat voltariam como shell vazio: fecha; um clique no item reabre a sessao.
-    for (const p of api.panels.filter((x) => x.id.startsWith('chat:') || (x.params as TerminalParams | undefined)?.itemId)) p.api.close()
+    for (const p of api.panels.filter((x) => x.id.startsWith('chat:') || (x.params as TerminalParams | undefined)?.itemId)) {
+      discarded.add(p.id)
+      p.api.close()
+    }
     return api.panels.length > 0
   } catch {
     api.clear()

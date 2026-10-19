@@ -369,6 +369,23 @@ input[type='range'] { padding: 0; accent-color: var(--accent); }
 .menu button { text-align: left; border: 0; background: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font: inherit; font-size: 12.5px; color: var(--text); text-transform: none; letter-spacing: 0; }
 .menu button:hover { background: var(--surface-3); }
 .menu button.danger { color: var(--err); }
+.context-menu { position: fixed; right: auto; z-index: 200; }
+
+/* item de pasta com terminal vivo: cheio = aba aberta, vazado = escondido rodando */
+.item-icon { position: relative; }
+.live-dot { position: absolute; right: -4px; bottom: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 2px var(--surface); }
+.live-dot.hidden { background: var(--surface); border: 1.5px solid var(--ok); }
+
+/* barra lateral: alca de redimensionar e botao de mostrar/esconder */
+.app { position: relative; }
+.sidebar-resizer { position: absolute; top: 0; bottom: 26px; width: 6px; z-index: 30; cursor: col-resize; -webkit-app-region: no-drag; }
+.sidebar-resizer:hover, body.resizing-x .sidebar-resizer { background: color-mix(in srgb, var(--accent) 45%, transparent); }
+body.resizing-x { cursor: col-resize; user-select: none; }
+body.resizing-x .dock { pointer-events: none; }
+.titlebar { display: flex; align-items: center; padding-left: 6px; }
+.sidebar-toggle { display: grid; place-items: center; width: 28px; height: 26px; border: 0; border-radius: 6px; background: none; color: var(--faint); cursor: pointer; }
+.sidebar-toggle:hover { background: var(--surface-3); color: var(--text); }
+.term-inner { width: 100%; height: 100%; }
 
 /* ---------- modal ---------- */
 .modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: rgba(0, 0, 0, .45); padding: 24px; }

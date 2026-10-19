@@ -208,6 +208,12 @@ ipcMain.handle('routines:setEnabled', (_e, id: string, enabled: boolean) => {
   setRoutineEnabled(getSettings().routinesDir, id, enabled)
   reload()
 })
+ipcMain.handle('routines:delete', async (_e, id: string) => {
+  const r = findRoutine(id)
+  if (!r) return
+  await shell.trashItem(r.dir)
+  reload()
+})
 ipcMain.handle('routines:openFolder', (_e, id?: string) =>
   shell.openPath(id ? (findRoutine(id)?.dir ?? getSettings().routinesDir) : getSettings().routinesDir),
 )

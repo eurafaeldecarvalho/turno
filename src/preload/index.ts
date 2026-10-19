@@ -35,6 +35,7 @@ const api: TurnoApi = {
     save: (d) => ipcRenderer.invoke('routines:save', d),
     setEnabled: (id, enabled) => ipcRenderer.invoke('routines:setEnabled', id, enabled),
     openFolder: (id) => ipcRenderer.invoke('routines:openFolder', id),
+    delete: (id) => ipcRenderer.invoke('routines:delete', id),
     template: () => ipcRenderer.invoke('routines:template'),
     onChanged: (cb) => listen<[Routine[]]>('routines:changed', cb),
   },
