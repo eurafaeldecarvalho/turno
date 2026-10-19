@@ -107,6 +107,18 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   }
   saveRef.current = save
 
+  async function remove(): Promise<void> {
+    if (!savedId || !confirm(`Delete the routine "${cfg!.name}"? Its folder goes to the Recycle Bin; past runs stay in the history.`)) return
+    try {
+      pendingRef.current = false // nao regravar no fechamento da aba
+      setDirty(false)
+      await window.turno.routines.delete(savedId)
+      api.close()
+    } catch (e) {
+      setMsg({ tone: 'err', text: String((e as Error).message) })
+    }
+  }
+
   async function runNow(): Promise<void> {
     if (dirty && !(await save())) return
     try {
@@ -157,6 +169,9 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
               </button>
               <button className="btn" onClick={() => void runNow()} disabled={!!existing?.error && !dirty}>
                 <IconPlay /> Run now
+              </button>
+              <button className="btn danger" onClick={() => void remove()} title="Delete routine (folder goes to the Recycle Bin)">
+                Delete
               </button>
             </>
           )}
