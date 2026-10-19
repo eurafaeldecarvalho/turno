@@ -6,6 +6,7 @@ import { IconChat, IconChevron, IconClose, IconFolder, IconHistory, IconLink, Ic
 import { addFolder, addTerminalItem, agentOf, closeItemTerminal, deleteFolder, deleteItem, getDragging, getItem, moveFolder, openItem, patchItem, renameFolder, saveItem, setDragging, toggleSection, useSidebar } from './sidebarStore'
 import { dockApi, type TerminalParams } from './layout'
 import { setLive, useLive } from './liveTerms'
+import { askConfirm } from './ConfirmDialog'
 import { FolderDialog, ItemDialog } from './ItemDialog'
 import type { SidebarFolder, SidebarItem } from '../../shared/types'
 
@@ -308,9 +309,11 @@ export function Sidebar() {
             {
               label: 'Delete routine',
               danger: true,
-              onClick: () => {
-                if (confirm(`Delete the routine "${r.config.name}"? Its folder goes to the Recycle Bin; past runs stay in the history.`))
-                  void window.turno.routines.delete(r.id).catch((e) => alert(String(e?.message ?? e)))
+              onClick: async () => {
+                const ok = await askConfirm({ title: 'Delete routine', message: `Delete the routine "${r.config.name}"? Its folder goes to the Recycle Bin; past runs stay in the history.` })
+                if (!ok) return
+                await window.turno.routines.delete(r.id).catch((e) => alert(String(e?.message ?? e)))
+                for (const pid of [`routine:${r.id}`, `session:${r.id}`]) dockApi()?.getPanel(pid)?.api.close()
               },
             },
           ]
@@ -360,7 +363,12 @@ export function Sidebar() {
 
       {folders.map((f, i) => {
         const delFolder = (): void => {
-          if (!f.items.length || confirm(`Delete the folder "${f.name}" and its ${f.items.length} item(s)? The sessions themselves are not deleted.`)) deleteFolder(f.id)
+          void askConfirm({
+            title: 'Delete folder',
+            message: f.items.length
+              ? `Delete the folder "${f.name}" and its ${f.items.length} item(s)? The sessions themselves are not deleted.`
+              : `Delete the folder "${f.name}"?`,
+          }).then((ok) => ok && deleteFolder(f.id))
         }
         const folderMenu: MenuItem[] = [
           { label: 'New chat or link', onClick: () => setDialog({ t: 'item', folderId: f.id }) },
@@ -397,7 +405,10 @@ export function Sidebar() {
             )}
             {f.items.map((it) => {
               const state = live.get(it.id)
-              const removeItem = (): void => void (confirm(`Remove "${it.name}" from the folder? The session is not deleted.`) && deleteItem(it.id))
+              const removeItem = (): void =>
+                void askConfirm({ title: 'Remove item', message: `Remove "${it.name}" from the folder? The session is not deleted.`, confirmLabel: 'Remove' }).then(
+                  (ok) => ok && deleteItem(it.id),
+                )
               const itemMenu: MenuItem[] = [
                 { label: it.kind === 'link' ? 'Open link' : state ? 'Show' : 'Open', onClick: () => void openItem(it) },
                 { label: 'Rename', onClick: () => setRenaming(`item:${it.id}`) },

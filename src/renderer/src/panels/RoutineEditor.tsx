@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { IDockviewPanelProps } from 'dockview-react'
 import { WEEKDAYS, type Effort, type PermissionMode, type RoutineConfig, type Weekday } from '../../../shared/types'
 import { useStore } from '../store'
+import { askConfirm } from '../ConfirmDialog'
 import { ModelSelect } from '../ModelSelect'
 import { openHistory, openRoutine } from '../layout'
 import { scheduleSummary, when } from '../fmt'
@@ -108,7 +109,9 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   saveRef.current = save
 
   async function remove(): Promise<void> {
-    if (!savedId || !confirm(`Delete the routine "${cfg!.name}"? Its folder goes to the Recycle Bin; past runs stay in the history.`)) return
+    if (!savedId) return
+    const ok = await askConfirm({ title: 'Delete routine', message: `Delete the routine "${cfg!.name}"? Its folder goes to the Recycle Bin; past runs stay in the history.` })
+    if (!ok) return
     try {
       pendingRef.current = false // nao regravar no fechamento da aba
       setDirty(false)

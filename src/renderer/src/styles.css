@@ -370,6 +370,8 @@ input[type='range'] { padding: 0; accent-color: var(--accent); }
 .menu button:hover { background: var(--surface-3); }
 .menu button.danger { color: var(--err); }
 .context-menu { position: fixed; right: auto; z-index: 200; }
+.confirm-modal { width: min(420px, 100%); }
+.confirm-text { margin: 0; line-height: 1.5; color: var(--muted); }
 
 /* item de pasta com terminal vivo: cheio = aba aberta, vazado = escondido rodando */
 .item-icon { position: relative; }

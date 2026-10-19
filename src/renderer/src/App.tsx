@@ -15,6 +15,7 @@ import { AdhocPanel } from './panels/AdhocPanel'
 import { SettingsPanel } from './panels/SettingsPanel'
 import { Sidebar } from './Sidebar'
 import { StatusBar } from './StatusBar'
+import { ConfirmHost } from './ConfirmDialog'
 import { dockApi, openAdhoc, openHistory, openRoutine, openRun, openSettings, openTerminal, restoreLayout, saveLayout, setDockApi } from './layout'
 import { initStore, useStore } from './store'
 import { addTerminalItem, openItem, setDragging } from './sidebarStore'
@@ -293,6 +294,7 @@ export function App() {
         />
       </main>
       <StatusBar />
+      <ConfirmHost />
     </div>
   )
 }
