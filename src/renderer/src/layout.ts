@@ -39,7 +39,7 @@ export function openTerminal(dir?: Dir, params: TerminalParams = {}, title?: str
     id: fixedId ?? uid('term'),
     component: 'terminal',
     tabComponent: 'tab',
-    title: title ?? (params.profile === 'qwen-local' ? `qwen ${termCount}` : `terminal ${termCount}`),
+    title: title ?? (params.profile === 'qwen-local' ? `qwen ${termCount}` : params.profile === 'claude-max' ? `claude ${termCount}` : `terminal ${termCount}`),
     params: { ...params, kind: 'terminal' },
     renderer: 'always', // mantem o xterm vivo quando a aba fica escondida
     ...place(dir, refId),

@@ -231,7 +231,11 @@ export function Sidebar() {
               <button className="routine-main" onClick={() => openRoutine(r.id, r.config.name)} title={r.config.description || r.config.name}>
                 <span className={`dot dot-${tone}`} />
                 <span className="routine-text">
-                  <span className="routine-name">{r.config.name}</span>
+                  <InlineName
+                    className="routine-name"
+                    value={r.config.name}
+                    onRename={(v) => void window.turno.routines.save({ id: r.id, originalId: r.id, config: { ...r.config, name: v }, prompt: r.prompt })}
+                  />
                   <span className="routine-sub">
                     {r.config.profile === 'qwen-local' && <span className="tag">qwen</span>}
                     {sub}

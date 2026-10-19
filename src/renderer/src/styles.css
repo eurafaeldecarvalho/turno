@@ -163,6 +163,7 @@ textarea { resize: vertical; }
 .tab { display: flex; align-items: center; gap: 7px; height: 100%; padding: 0 6px 0 12px; max-width: 220px; }
 .tab svg { flex: none; opacity: .75; }
 .tab-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tab-rename { width: 100px; max-width: 150px; }
 .tab-close { display: grid; place-items: center; width: 18px; height: 18px; border: 0; border-radius: 4px; background: none; color: var(--faint); cursor: pointer; opacity: 0; }
 .tab:hover .tab-close, .dv-active-tab .tab-close { opacity: 1; }
 .tab-close:hover { background: var(--surface-3); color: var(--text); }
@@ -170,6 +171,11 @@ textarea { resize: vertical; }
 .group-actions button { display: grid; place-items: center; width: 26px; height: 24px; border: 0; border-radius: 5px; background: none; color: var(--faint); cursor: pointer; }
 .group-actions button:hover { background: var(--surface-2); color: var(--text); }
 .dv-groupview:not(.dv-active-group) .group-actions { opacity: .5; }
+.new-term-wrap { position: relative; display: grid; }
+.new-term-overlay { position: fixed; inset: 0; z-index: 99; }
+.new-term-dropdown { position: absolute; top: calc(100% + 4px); right: 0; z-index: 100; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 7px; padding: 3px; min-width: 130px; display: flex; flex-direction: column; gap: 1px; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
+.new-term-dropdown button { display: flex; align-items: center; gap: 7px; width: 100%; height: auto; padding: 5px 9px; background: none; border: 0; border-radius: 5px; color: var(--text); cursor: pointer; white-space: nowrap; font-size: 13px; }
+.new-term-dropdown button:hover { background: var(--surface-3); color: var(--text); }
 
 .welcome { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px; }
 .welcome h1 { margin: 6px 0 0; font-size: 22px; font-weight: 600; letter-spacing: -.2px; }

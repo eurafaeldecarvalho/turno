@@ -57,13 +57,45 @@ const KIND_ICON: Record<string, (p: { size?: number }) => ReactElement> = {
 }
 
 function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string }>) {
-  const [title, setTitle] = useState(api.title)
+  const [title, setTitle] = useState(api.title ?? '')
+  const [renaming, setRenaming] = useState(false)
+  const [draft, setDraft] = useState(api.title ?? '')
   useEffect(() => api.onDidTitleChange((e) => setTitle(e.title)).dispose, [api])
   const Icon = KIND_ICON[params.kind ?? 'terminal'] ?? IconTerminal
+
+  const commitRename = (d: string): void => {
+    const v = d.trim()
+    if (v && v !== title) { api.setTitle(v); saveLayout() }
+    setRenaming(false)
+  }
+
   return (
-    <div className="tab" onAuxClick={(e) => e.button === 1 && api.close()} title={title}>
+    <div className="tab" onAuxClick={(e) => e.button === 1 && api.close()} title={renaming ? undefined : title}>
       <Icon size={13} />
-      <span className="tab-title">{title}</span>
+      {renaming ? (
+        <input
+          className="inline-rename tab-rename"
+          autoFocus
+          value={draft}
+          onFocus={(e) => e.target.select()}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => commitRename(draft)}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === 'Enter') commitRename(draft)
+            else if (e.key === 'Escape') setRenaming(false)
+          }}
+        />
+      ) : (
+        <span
+          className="tab-title"
+          title="Double-click to rename"
+          onDoubleClick={(e) => { e.stopPropagation(); setDraft(title); setRenaming(true) }}
+        >
+          {title}
+        </span>
+      )}
       <button
         className="tab-close"
         aria-label="Close"
@@ -82,13 +114,38 @@ function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string }>) {
 // Botoes no cabecalho de cada grupo, como no Orca: dividir a direita, abaixo e maximizar.
 function GroupActions({ group, containerApi }: IDockviewHeaderActionsProps) {
   const [max, setMax] = useState(containerApi.hasMaximizedGroup())
+  const [menu, setMenu] = useState(false)
   useEffect(() => containerApi.onDidMaximizedGroupChange(() => setMax(containerApi.hasMaximizedGroup())).dispose, [containerApi])
   const ref = group.activePanel?.id
+
+  const openNew = (params: import('./layout').TerminalParams) => {
+    setMenu(false)
+    openTerminal(undefined, params, undefined, ref)
+  }
+
   return (
     <div className="group-actions">
-      <button title="New terminal in this tab" onClick={() => group.activePanel && openTerminal(undefined, {}, undefined, ref) }>
-        <IconPlus size={14} />
-      </button>
+      <div className="new-term-wrap">
+        <button title="New terminal" onClick={() => setMenu((v) => !v)}>
+          <IconPlus size={14} />
+        </button>
+        {menu && (
+          <>
+            <div className="new-term-overlay" onClick={() => setMenu(false)} />
+            <div className="new-term-dropdown">
+              <button onClick={() => openNew({})}>
+                <IconTerminal size={13} /> Terminal
+              </button>
+              <button onClick={() => openNew({ profile: 'claude-max', initialCommand: 'claude --chrome' })}>
+                <IconChat size={13} /> Claude
+              </button>
+              <button onClick={() => openNew({ profile: 'qwen-local', initialCommand: 'claude --chrome' })}>
+                <IconChat size={13} /> Qwen
+              </button>
+            </div>
+          </>
+        )}
+      </div>
       <button title="Split right (Alt+Shift+=)" onClick={() => openTerminal('right', {}, undefined, ref)}>
         <IconSplitRight size={14} />
       </button>
