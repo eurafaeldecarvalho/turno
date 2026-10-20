@@ -255,6 +255,8 @@ export interface TurnoApi {
   }
   run: {
     start(req: RunRequest): Promise<string>
+    // Fan-out: roda o mesmo prompt em varias connections; devolve um runId por connection (ou erro).
+    fanout(prompt: string, connectionIds: string[], cwd?: string): Promise<Array<{ connId: string; runId?: string; error?: string }>>
     startRoutine(id: string): Promise<string>
     stop(runId: string): Promise<void>
     send(runId: string, text: string): Promise<{ runId: string; mode: 'live' | 'followup' }>
@@ -312,6 +314,7 @@ export interface TurnoApi {
   }
   smoke: {
     enabled: boolean
+    view?: string // abre um painel por nome (ex. 'fanout') p/ prova visual
     runRoutine?: string
     followup?: string
     theme?: string

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as RMouseEvent, type ReactNode } from 'react'
 import { useStore, isActive } from './store'
 import { scheduleSummary, statusTone, when, STATUS_LABEL } from './fmt'
-import { openAdhoc, openHistory, openRoutine, openSettings, openTerminal } from './layout'
+import { openAdhoc, openFanout, openHistory, openRoutine, openSettings, openTerminal } from './layout'
 import { IconChat, IconChevron, IconClose, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
 import { addFolder, addTerminalItem, agentOf, closeItemTerminal, deleteFolder, deleteItem, getDragging, getItem, moveFolder, openItem, patchItem, renameFolder, saveItem, setDragging, toggleSection, useSidebar } from './sidebarStore'
 import { dockApi, paramsOf } from './layout'
@@ -252,6 +252,9 @@ export function Sidebar() {
         </button>
         <button onClick={() => openAdhoc()}>
           <IconSpark /> Ad hoc run
+        </button>
+        <button onClick={() => openFanout()}>
+          <IconSpark /> Fan-out
         </button>
         <button onClick={() => openHistory()}>
           <IconHistory /> Runs

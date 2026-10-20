@@ -191,6 +191,15 @@ initRunner({
 registerPty(liveWc)
 
 ipcMain.handle('run:start', (_e, req: RunRequest) => startRun({ req, trigger: 'adhoc' }))
+ipcMain.handle('run:fanout', (_e, prompt: string, connectionIds: string[], cwd?: string) =>
+  connectionIds.map((profile) => {
+    try {
+      return { connId: profile, runId: startRun({ req: { profile, prompt, cwd }, trigger: 'adhoc' }) }
+    } catch (e) {
+      return { connId: profile, error: String((e as Error).message) }
+    }
+  }),
+)
 ipcMain.handle('run:startRoutine', async (_e, id: string) => {
   const runId = await runRoutine(id, 'manual')
   return runId ?? ''
@@ -296,6 +305,12 @@ async function finishSmoke(): Promise<void> {
   if (!win) return
   const outDir = join(process.cwd(), 'smoke')
   mkdirSync(outDir, { recursive: true })
+  // Captura a pagina inteira: redimensiona o conteudo (alto) via env TURNO_SMOKE_H antes do shot.
+  const smokeH = Number(process.env.TURNO_SMOKE_H)
+  if (smokeH > 0) {
+    win.setContentSize(1440, smokeH)
+    await new Promise((r) => setTimeout(r, 400))
+  }
   const img = await win.webContents.capturePage()
   writeFileSync(join(outDir, 'screenshot.png'), img.toPNG())
   console.log(`[smoke] screenshot salvo em ${join(outDir, 'screenshot.png')}`)

@@ -12,11 +12,12 @@ import { RoutineEditor } from './panels/RoutineEditor'
 import { RunViewer, RoutineSession } from './panels/RunViewer'
 import { HistoryPanel } from './panels/HistoryPanel'
 import { AdhocPanel } from './panels/AdhocPanel'
+import { FanoutPanel } from './panels/FanoutPanel'
 import { SettingsPanel } from './panels/SettingsPanel'
 import { Sidebar } from './Sidebar'
 import { StatusBar } from './StatusBar'
 import { ConfirmHost } from './ConfirmDialog'
-import { dockApi, openAdhoc, openHistory, openRoutine, openRun, openSettings, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi } from './layout'
+import { dockApi, openAdhoc, openFanout, openHistory, openRoutine, openRun, openSettings, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi } from './layout'
 import { initStore, useStore } from './store'
 import { addTerminalItem, openItem, patchItem, setDragging } from './sidebarStore'
 import type { TerminalParams } from './layout'
@@ -45,6 +46,7 @@ const components = {
   session: RoutineSession,
   history: HistoryPanel,
   adhoc: AdhocPanel,
+  fanout: FanoutPanel,
   settings: SettingsPanel,
 }
 
@@ -55,6 +57,7 @@ const KIND_ICON: Record<string, (p: { size?: number }) => ReactElement> = {
   session: IconChat,
   history: IconHistory,
   adhoc: IconSpark,
+  fanout: IconSpark,
   settings: IconSettings,
 }
 
@@ -365,6 +368,7 @@ async function runSmoke(): Promise<void> {
     await updateSettings({ theme: window.turno.smoke.theme })
     openSettings()
   }
+  if (window.turno.smoke.view === 'fanout') openFanout()
   if (window.turno.smoke.drag) {
     // Mesmo caminho do arrasto: terminal com claude interativo -> solta na 1a pasta.
     openTerminal('right', { initialCommand: 'claude --model haiku' }, 'claude here', undefined, 'smoke-claude')

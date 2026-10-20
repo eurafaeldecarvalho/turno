@@ -77,6 +77,7 @@ export const openHistory = (routine?: string): void =>
   openOnce(routine ? `history:${routine}` : 'history', 'history', routine ? `history · ${routine}` : 'Runs', { routine })
 export const openSettings = (): void => openOnce('settings', 'settings', 'Settings', {})
 export const openAdhoc = (): void => openOnce(uid('adhoc'), 'adhoc', 'Ad hoc run', {})
+export const openFanout = (): void => openOnce(uid('fanout'), 'fanout', 'Fan-out', {})
 
 // ---- persistencia do layout ----
 const KEY = 'turno.layout.v1'

@@ -20,6 +20,7 @@ interface Binding {
   itemId(): string | undefined
   onParams(cur: Cur): void
   onFind(): void
+  onAi(): void
 }
 
 // Terminal + pty desacoplados do painel: o mesmo terminal pode sair de uma aba e voltar em outra.
@@ -28,9 +29,12 @@ interface TermHandle {
   term: Terminal
   search: SearchAddon
   itemId?: string
+  profile?: string // connection p/ o NL->comando
   alive(): boolean
   bind(b?: Binding): void
   refit(): void
+  lastOutput(): string // ultimas linhas do buffer (contexto p/ o NL->comando)
+  runCommand(cmd: string): void // injeta um comando no pty
   dispose(): void
 }
 
@@ -57,6 +61,16 @@ function createTerm(params: TerminalParams): TermHandle {
     term,
     search,
     itemId: params.itemId,
+    profile: params.profile,
+    lastOutput() {
+      const buf = term.buffer.active
+      const out: string[] = []
+      for (let i = Math.max(0, buf.length - 40); i < buf.length; i++) out.push(buf.getLine(i)?.translateToString(true) ?? '')
+      return out.join('\n').trim().slice(-4000)
+    },
+    runCommand(cmd) {
+      if (ptyId) window.turno.pty.write(ptyId, cmd + '\r')
+    },
     alive: () => !dead && !disposed,
     bind(b) {
       if (!b && binding) h.itemId = binding.itemId() ?? h.itemId
@@ -195,6 +209,10 @@ function createTerm(params: TerminalParams): TermHandle {
       void navigator.clipboard.readText().then((t) => t && term.paste(t))
       return false
     }
+    if (e.code === 'KeyA') {
+      binding?.onAi() // Ctrl+Shift+A: NL -> comando
+      return false
+    }
     return true
   })
   return h
@@ -204,6 +222,7 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
   const host = useRef<HTMLDivElement>(null)
   const handle = useRef<TermHandle | undefined>(undefined)
   const [find, setFind] = useState<string | null>(null)
+  const [ai, setAi] = useState<{ ask: string; loading?: boolean; result?: { command: string | null; explanation: string } } | null>(null)
 
   useEffect(() => {
     const el = host.current!
@@ -224,6 +243,7 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
       itemId: itemIdNow,
       onParams: (cur) => api.updateParameters({ ...paramsOf({ params, api }), lastCwd: cur.lastCwd, lastSession: cur.lastSession }),
       onFind: () => setFind((f) => f ?? ''),
+      onAi: () => setAi((a) => a ?? { ask: '' }),
     })
     if (params.itemId) setLive(params.itemId, 'open')
     requestAnimationFrame(() => {
@@ -263,9 +283,48 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
     handle.current?.term.focus()
   }
   const search = (): SearchAddon | undefined => handle.current?.search
+  const closeAi = (): void => {
+    setAi(null)
+    handle.current?.term.focus()
+  }
+  const askAi = async (): Promise<void> => {
+    const h = handle.current
+    if (!ai?.ask.trim() || !h) return
+    setAi({ ...ai, loading: true })
+    const res = await window.turno.ai.suggestCommand(h.profile ?? 'claude-max', { ask: ai.ask, output: h.lastOutput() }).catch(() => ({ command: null, explanation: 'request failed' }))
+    setAi((cur) => (cur ? { ...cur, loading: false, result: res } : null))
+  }
+  const execAi = (): void => {
+    const cmd = ai?.result?.command
+    if (cmd) handle.current?.runCommand(cmd)
+    closeAi()
+  }
   return (
     <div className="term-wrap">
       <div ref={host} className="term-host" onMouseDown={() => api.setActive()} />
+      {ai !== null && (
+        <div className="term-find term-ai">
+          <input
+            autoFocus
+            value={ai.ask}
+            placeholder="Ask for a command… (Enter)"
+            onChange={(e) => setAi({ ...ai, ask: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') closeAi()
+              else if (e.key === 'Enter') void askAi()
+            }}
+          />
+          {ai.loading && <span className="muted">thinking…</span>}
+          {ai.result && ai.result.command && (
+            <>
+              <code className="mono" title={ai.result.explanation}>{ai.result.command}</code>
+              <button className="btn primary" onClick={execAi}>Execute</button>
+            </>
+          )}
+          {ai.result && !ai.result.command && <span className="muted">{ai.result.explanation || 'no command'}</span>}
+          <button className="icon-btn" title="Close (Esc)" onClick={closeAi}>✕</button>
+        </div>
+      )}
       {find !== null && (
         <div className="term-find">
           <input

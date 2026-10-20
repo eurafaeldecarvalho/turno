@@ -19,6 +19,7 @@ const api: TurnoApi = {
   },
   run: {
     start: (req) => ipcRenderer.invoke('run:start', req),
+    fanout: (prompt, connectionIds, cwd) => ipcRenderer.invoke('run:fanout', prompt, connectionIds, cwd),
     startRoutine: (id) => ipcRenderer.invoke('run:startRoutine', id),
     stop: (runId) => ipcRenderer.invoke('run:stop', runId),
     send: (runId, text) => ipcRenderer.invoke('run:send', runId, text),
@@ -74,6 +75,7 @@ const api: TurnoApi = {
   },
   smoke: {
     enabled: process.argv.includes('--turno-smoke'),
+    view: process.argv.find((a) => a.startsWith('--smoke-view='))?.slice('--smoke-view='.length),
     waitSec: Number(process.argv.find((a) => a.startsWith('--smoke-wait='))?.slice(13) ?? 0),
     followup: process.argv.find((a) => a.startsWith('--smoke-followup='))?.slice('--smoke-followup='.length),
     theme: process.argv.find((a) => a.startsWith('--smoke-theme='))?.slice('--smoke-theme='.length),
