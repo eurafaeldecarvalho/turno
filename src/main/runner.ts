@@ -12,7 +12,7 @@ import { getSettings } from './settings'
 import { effectiveModel, requireConnection, resolveProviderEnv } from './providers'
 import { evaluateThresholds, matchedRateLimit, parseRateLimit, type AbortPolicy } from './abort'
 import { wrapForSandbox } from './sandbox'
-import { canCleanup, createWorktree, removeWorktree, resolveRepoRoot, worktreeDecision, worktreeStatus } from './worktree'
+import { canCleanup, createWorktree, isManagedWorktreePath, removeWorktree, resolveRepoRoot, worktreeCwd, worktreeDecision, worktreeMainRoot, worktreeStatus } from './worktree'
 import { connectionToken } from './secrets'
 import { IS_WIN, homeDir } from './platform'
 
@@ -232,11 +232,21 @@ export function startRun(o: StartOptions): string {
   const runId = o.runId ?? newRunId()
   // Isolation por worktree (opt-in): cria um git worktree e roda a run LA, nunca no diretorio principal (sob o editor).
   // worktreeDecision LANCA se isolation='worktree' sem repo git -> runRoutine libera o lock e pula a run.
-  // resume continua na worktree ja existente (req.cwd aponta pra ela): nao cria outra.
+  // no resume NAO cria outra: followUp passa req.cwd = run.cwd (a worktree preservada), e o teardown abaixo a reconhece.
   const repoRoot = (o.isolation ?? 'none') === 'worktree' && !req.resume ? resolveRepoRoot(req.cwd) : undefined
   const wt = worktreeDecision({ isolation: o.isolation, resume: !!req.resume, repoRoot, routineId: o.routine ?? 'adhoc', runId })
   if (wt && repoRoot) createWorktree(repoRoot, wt.branch, wt.path)
-  const effectiveCwd = wt ? wt.path : req.cwd
+  // cwd efetivo: dentro do worktree, na MESMA subpasta que a rotina ocupa no repo (nao a raiz). Senao, o cwd pedido.
+  const effectiveCwd = wt && repoRoot && req.cwd ? worktreeCwd(wt.path, repoRoot, req.cwd) : req.cwd
+  // O que limpar no fim: o worktree recem-criado OU, no resume, o worktree gerenciado onde a run ja esta rodando
+  // (followUp passa req.cwd = run.cwd, que aponta pra worktree preservada). Assim o segmento retomado nao vaza.
+  let teardown: { path: string; repoRoot: string } | undefined
+  if (wt && repoRoot) teardown = { path: wt.path, repoRoot }
+  else if (isManagedWorktreePath(effectiveCwd)) {
+    const wtRoot = resolveRepoRoot(effectiveCwd) // raiz do proprio worktree (mesmo vindo de uma subpasta dele)
+    const mainRoot = worktreeMainRoot(effectiveCwd!) // raiz do repo principal, de onde se remove o worktree
+    if (wtRoot && mainRoot && mainRoot !== wtRoot) teardown = { path: wtRoot, repoRoot: mainRoot }
+  }
   const dir = join(runsDir, runId)
   mkdirSync(dir, { recursive: true })
   const raw = createWriteStream(join(dir, 'events.ndjson'))
@@ -384,20 +394,20 @@ export function startRun(o: StartOptions): string {
     else status = 'failed'
     emit('exit', err ? `failed to start: ${err}` : `process exited (exit=${code}) → ${status}`)
     // Teardown do worktree isolado — so quando a run REALMENTE terminou (pausada mantem a worktree pro resume).
-    // Limpo (sem mudancas) -> remove e aponta o cwd da run pro repo (resume futuro nao cai numa worktree removida).
-    // Com mudancas do agente -> PRESERVA e avisa o caminho (nunca apaga trabalho; removeWorktree nao usa --force).
+    // Limpo (nada nao commitado, incl. ignorados via --ignored) -> remove e aponta o cwd da run pro repo.
+    // Com qualquer mudanca do agente -> PRESERVA e avisa o caminho (nunca apaga trabalho; removeWorktree sem --force).
     let cwdOverride: string | undefined
-    if (wt && repoRoot && !a.pauseUntil) {
+    if (teardown && !a.pauseUntil) {
       try {
-        if (canCleanup(worktreeStatus(wt.path))) {
-          removeWorktree(repoRoot, wt.path)
-          cwdOverride = repoRoot
-          emit('text', `worktree limpo removido: ${wt.branch}`)
+        if (canCleanup(worktreeStatus(teardown.path))) {
+          removeWorktree(teardown.repoRoot, teardown.path)
+          cwdOverride = teardown.repoRoot // run.cwd deixa de apontar pra worktree removida (resume futuro cai no repo)
+          emit('text', `worktree limpo removido: ${teardown.path}`)
         } else {
-          emit('text', `worktree preservado (tem mudancas nao commitadas): ${wt.path} — branch ${wt.branch}`)
+          emit('text', `worktree preservado (tem mudancas nao commitadas/ignoradas): ${teardown.path}`)
         }
       } catch (e) {
-        emit('stderr', `falha ao limpar worktree ${wt.path}: ${(e as Error).message}`)
+        emit('stderr', `falha ao limpar worktree ${teardown.path}: ${(e as Error).message}`)
       }
     }
     const close = (s: WriteStream): void => void s.end()

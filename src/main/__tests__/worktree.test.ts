@@ -4,10 +4,10 @@ import { mkdtempSync, rmSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { writeFileSync } from 'node:fs'
-import { planWorktree, parseWorktrees, canCleanup, createWorktree, removeWorktree, worktreeDecision, worktreeStatus, resolveRepoRoot } from '../worktree'
+import { planWorktree, parseWorktrees, canCleanup, createWorktree, removeWorktree, worktreeDecision, worktreeStatus, resolveRepoRoot, worktreeCwd, isManagedWorktreePath, worktreeMainRoot } from '../worktree'
 
 describe('planWorktree (puro)', () => {
-  it('gera branch Conventional e caminho FORA do repo, deterministico por run', () => {
+  it('gera branch com prefixo turno/ e caminho FORA do repo, deterministico por run', () => {
     const repo = '/home/me/repo'
     const a = planWorktree(repo, 'minha-rotina', '2026-10-20T10-00-00-000Z-7')
     const b = planWorktree(repo, 'minha-rotina', '2026-10-20T10-00-00-000Z-7')
@@ -51,6 +51,23 @@ describe('worktreeDecision (puro) — quando criar um worktree para a run', () =
   })
 })
 
+describe('worktreeCwd (puro) — mapeia o cwd da run pra dentro do worktree', () => {
+  it('cwd na raiz do repo -> raiz do worktree', () => {
+    expect(worktreeCwd('/wt/r-1', '/repo', '/repo')).toBe('/wt/r-1')
+  })
+  it('cwd em subpasta -> MESMA subpasta dentro do worktree (nao a raiz)', () => {
+    expect(worktreeCwd('/wt/r-1', '/repo', '/repo/routines/a')).toBe(join('/wt/r-1', 'routines/a'))
+  })
+})
+
+describe('isManagedWorktreePath (puro) — reconhece worktree do Turno', () => {
+  it('true sob .turno-worktrees, false caso contrario', () => {
+    expect(isManagedWorktreePath('/x/.turno-worktrees/foo')).toBe(true)
+    expect(isManagedWorktreePath('/x/repo')).toBe(false)
+    expect(isManagedWorktreePath(undefined)).toBe(false)
+  })
+})
+
 describe('canCleanup (puro)', () => {
   it('so limpa quando o working tree esta limpo', () => {
     expect(canCleanup('')).toBe(true)
@@ -80,6 +97,33 @@ describe('createWorktree/removeWorktree (integracao git)', () => {
   it('resolveRepoRoot acha a raiz a partir do dir; undefined fora de repo', () => {
     expect(resolveRepoRoot(repo)).toBe(execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd: repo }).toString().trim())
     expect(resolveRepoRoot(tmpdir())).toBeUndefined() // tmpdir nao e repo git
+  })
+
+  it('worktreeMainRoot: de DENTRO do worktree, acha o repo principal (p/ teardown no resume)', () => {
+    const { branch, path } = planWorktree(repo, 'rota', 'run-main')
+    rmSync(path, { recursive: true, force: true })
+    createWorktree(repo, branch, path)
+    try {
+      // rodando de dentro da worktree, descobre a raiz do repo principal (nao a propria worktree)
+      const mainRoot = worktreeMainRoot(path)
+      expect(mainRoot).toBe(resolveRepoRoot(repo))
+      expect(mainRoot).not.toBe(path)
+    } finally {
+      removeWorktree(repo, path)
+    }
+  })
+
+  it('teardown NAO apaga saida ignorada (.gitignore) do agente', () => {
+    const { branch, path } = planWorktree(repo, 'rota', 'run-ign')
+    rmSync(path, { recursive: true, force: true })
+    createWorktree(repo, branch, path)
+    try {
+      writeFileSync(join(path, '.gitignore'), 'saida.log\n')
+      writeFileSync(join(path, 'saida.log'), 'relatorio gerado pela rotina') // ignorado pelo git
+      expect(canCleanup(worktreeStatus(path))).toBe(false) // ignorado conta como "sujo" -> PRESERVA (nao perde a saida)
+    } finally {
+      execFileSync('git', ['worktree', 'remove', '--force', path], { cwd: repo, stdio: 'pipe' })
+    }
   })
 
   // Prova a logica EXATA do teardown do finish(): worktree sujo -> preserva; limpo -> remove.

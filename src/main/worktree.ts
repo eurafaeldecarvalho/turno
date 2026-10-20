@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 
 export interface WorktreeEntry {
   path: string
@@ -7,8 +7,9 @@ export interface WorktreeEntry {
   branch?: string
 }
 
-// Caminho/branch deterministicos por run. Branch em Conventional (turno/...), worktree FORA da pasta do repo
-// (trocar a branch da pasta principal mexeria nos arquivos sob o editor do usuario).
+// Caminho/branch deterministicos por run. Branch com prefixo dedicado `turno/` (nao e um tipo Conventional;
+// so marca as branches criadas pelo Turno), worktree FORA da pasta do repo (trocar a branch da pasta
+// principal mexeria nos arquivos sob o editor do usuario).
 export function planWorktree(repoRoot: string, routineId: string, runId: string): { branch: string; path: string } {
   const slug = routineId.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-|-$/g, '') || 'routine'
   const short = (runId.match(/[a-z0-9]+/gi)?.join('') ?? runId).slice(-8).toLowerCase()
@@ -42,9 +43,32 @@ export function resolveRepoRoot(cwd: string | undefined): string | undefined {
   }
 }
 
-// Saida de `git status --porcelain` dentro do worktree (vazia = limpo). I/O isolado para o teardown.
+// Mapeia o cwd da run (sob o repo principal) pro caminho equivalente DENTRO do worktree.
+// Rotina na raiz -> raiz do worktree; rotina numa subpasta -> a mesma subpasta no worktree.
+export function worktreeCwd(wtPath: string, repoRoot: string, reqCwd: string): string {
+  return join(wtPath, relative(repoRoot, reqCwd))
+}
+
+// Caminho e um worktree gerenciado pelo Turno? (marcador `.turno-worktrees` — so removemos os nossos).
+export function isManagedWorktreePath(cwd: string | undefined): boolean {
+  return !!cwd && cwd.replace(/\\/g, '/').includes('/.turno-worktrees/')
+}
+
+// De dentro de um worktree, descobre a raiz do repositorio PRINCIPAL (p/ remover o worktree no resume).
+// `git worktree list` sempre lista o principal primeiro. undefined se nao for um repo/worktree.
+export function worktreeMainRoot(cwd: string): string | undefined {
+  try {
+    return parseWorktrees(execFileSync('git', ['worktree', 'list', '--porcelain'], { cwd, encoding: 'utf8', stdio: 'pipe' }))[0]?.path
+  } catch {
+    return undefined
+  }
+}
+
+// Saida de `git status --porcelain --ignored` dentro do worktree (vazia = limpo). I/O isolado para o teardown.
+// --ignored inclui arquivos ignorados pelo .gitignore: saida de uma rotina (ex. relatorio, dist/) NAO e apagada
+// no cleanup "limpo" (um worktree novo nasce sem ignorados; se ha algum, foi a run que gerou -> preserva).
 export function worktreeStatus(path: string): string {
-  return execFileSync('git', ['status', '--porcelain'], { cwd: path, encoding: 'utf8', stdio: 'pipe' })
+  return execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: path, encoding: 'utf8', stdio: 'pipe' })
 }
 
 // Parseia `git worktree list --porcelain` em entradas.

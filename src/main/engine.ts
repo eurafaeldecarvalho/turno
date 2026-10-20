@@ -301,7 +301,12 @@ export async function followUp(runId: string, text: string): Promise<{ runId: st
   const run = getRun(runId)
   if (!run) throw new Error('run not found')
   if (!run.session_id) throw new Error('this run has no session to continue (did it start?)')
-  const base: RunRequest = readRequest(runId) ?? { profile: run.profile as RunRequest['profile'], prompt: '', cwd: run.cwd ?? undefined }
+  // run.cwd e o cwd EFETIVO da run (worktree preservada no resume por limite; repo principal nos demais).
+  // request.json guarda o cwd ORIGINAL (r.dir) -> usa-lo faria o resume rodar FORA da worktree, no dir principal.
+  const saved = readRequest(runId)
+  const base: RunRequest = saved
+    ? { ...saved, cwd: run.cwd ?? saved.cwd }
+    : { profile: run.profile as RunRequest['profile'], prompt: '', cwd: run.cwd ?? undefined }
   // Connection da run original pode ter sido removida: falha cedo (antes do insert) em vez de cair no provedor pago.
   requireConnection(getSettings(), base.profile)
   const r = run.routine ? findRoutine(run.routine) : undefined

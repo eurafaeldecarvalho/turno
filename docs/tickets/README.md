@@ -15,7 +15,7 @@
 | T04 | Preflight / Diagnóstico de provider | Parte 0 | M | T01 (+T03) | ✅ (classifier+check+botão; modal install FEITO; sem claude doctor) |
 | T05 | Abort policy agnóstica (R4): cost_usd/steps/duration + limite sessão/semanal (pausa+retoma) | Rotinas | M | T00 | ✅ (abort.ts+runner+pause/resume; input no editor FEITO) |
 | T06 | Recipes (templates de rotina) (R1) | Rotinas | S | T00 (+T01) | ✅ (catalogo+materialize; picker UI pendente) |
-| T07 | Worktree por agente nativo (O1) | Orquestração | M | T00 | ✅ (primitivas + teste de integração git; wiring no engine/runner PENDENTE) |
+| T07 | Worktree por agente nativo (O1) | Orquestração | M | T00 | ✅ (wiring runner+engine+RoutineEditor + teardown; resume roda na worktree preservada) |
 | T08 | NL→comando no terminal (C1) | Companheiro | M | T01/T03 | ✅ (buildNlPrompt+parseSuggestion; card no terminal FEITO, Ctrl+Shift+A) |
 | T09 | Inbox de aprovação em lote (O3) | Orquestração | M | T00 | ✅ (matchAllowlist+fila; painel+wiring runner pendentes) |
 | T10 | Triggers de evento local + sub-horário (R2) | Rotinas | M | T00 | ✅ (debounce+shouldFireOnExit; sub-horário no cron; fs.watch no engine FEITO, anti-loop) |
