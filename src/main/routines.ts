@@ -36,6 +36,17 @@ const schema = z.object({
   timeout_min: z.number().int().positive().default(60),
   idle_timeout_min: z.number().int().positive().default(15),
   budget_usd: z.number().positive().optional(),
+  abort: z
+    .array(
+      z.discriminatedUnion('kind', [
+        z.object({ kind: z.literal('cost_usd'), limit: z.number().positive() }),
+        z.object({ kind: z.literal('steps'), limit: z.number().int().positive() }),
+        z.object({ kind: z.literal('duration_min'), limit: z.number().positive() }),
+        z.object({ kind: z.literal('session_limit') }),
+        z.object({ kind: z.literal('weekly_limit') }),
+      ]),
+    )
+    .optional(),
   sandbox: z.enum(['none', 'docker', 'wsl']).default('none'),
   isolation: z.enum(['none', 'worktree']).default('none'),
   catchup: z.boolean().default(true),

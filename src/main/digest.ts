@@ -17,9 +17,9 @@ export interface Digest {
   empty: boolean
 }
 
-// Falha de verdade: erro/timeout/limite/estouro de budget. 'skipped' (pulado) e 'stopped' (parado pelo
-// usuario) NAO contam como falha; 'ok'/'running'/'queued' tambem nao.
-const FAILURE: ReadonlySet<RunRecord['status']> = new Set(['failed', 'timeout', 'idle_timeout', 'rate_limited', 'over_budget'])
+// Falha de verdade: erro/timeout/rate-limit/estouro de policy de abort ('aborted'). 'skipped' (pulado),
+// 'stopped' (parado pelo usuario) e 'paused' (aguardando reset) NAO contam como falha; 'ok' tambem nao.
+const FAILURE: ReadonlySet<RunRecord['status']> = new Set(['failed', 'timeout', 'idle_timeout', 'rate_limited', 'aborted'])
 const isFailure = (s: RunRecord['status']): boolean => FAILURE.has(s)
 
 export function buildDigest(runs: RunRecord[], from: Date, to: Date): Digest {

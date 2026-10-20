@@ -6,7 +6,7 @@ const run = (over: Partial<RunRecord>): RunRecord => ({
   id: 'id', routine: 'r1', trigger: 'cron', status: 'ok',
   scheduled_at: null, started_at: '2026-10-20T08:00:00.000Z', ended_at: null,
   skip_reason: null, exit_code: 0, cost_usd: null, session_id: null,
-  result: null, profile: 'claude-max', model: null, cwd: null, parent_id: null,
+  result: null, profile: 'claude-max', model: null, cwd: null, parent_id: null, resume_at: null,
   ...over,
 })
 

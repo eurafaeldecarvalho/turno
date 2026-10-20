@@ -13,7 +13,7 @@
 | T02 | Secret storage (safeStorage) | Parte 0 | S | T00 | ✅ |
 | T03 | Aba "Conexões" + fluxo de login | Parte 0 | M | T01, T02 | ✅ (CRUD+login+token no cofre+seletores) |
 | T04 | Preflight / Diagnóstico de provider | Parte 0 | M | T01 (+T03) | ✅ (classifier+check por tipo+botão; NAO roda claude doctor; modal install pendente) |
-| T05 | Budget/token guard por rotina (R4) | Rotinas | S | T00 | ✅ (guard+persist; total_cost_usd e cumulativo = sem acumulador; cego p/ endpoint sem custo reportado; input no editor pendente) |
+| T05 | Abort policy agnóstica (R4): cost_usd/steps/duration + limite sessão/semanal (pausa+retoma) | Rotinas | M | T00 | ✅ (abort.ts + runner + pause/resume scheduler; input no editor pendente) |
 | T06 | Recipes (templates de rotina) (R1) | Rotinas | S | T00 (+T01) | ✅ (catalogo+materialize; picker UI pendente) |
 | T07 | Worktree por agente nativo (O1) | Orquestração | M | T00 | ✅ (primitivas + teste de integração git; wiring no engine/runner PENDENTE) |
 | T08 | NL→comando no terminal (C1) | Companheiro | M | T01/T03 | ✅ (buildNlPrompt+parseSuggestion; card no terminal pendente) |

@@ -46,7 +46,8 @@ export interface RoutineConfig {
   lock_policy: 'skip' | 'queue'
   timeout_min: number
   idle_timeout_min: number
-  budget_usd?: number // teto de custo por run (USD); run e morto ao ultrapassar. Ausente = sem teto.
+  budget_usd?: number // LEGADO/acucar: equivale a uma AbortPolicy cost_usd. Ausente = sem teto de custo.
+  abort?: AbortPolicy[] // politicas de parada agnosticas (custo/passos/duracao/limite de sessao/semanal)
   sandbox: SandboxMode // 'none' por padrao (sem sandbox)
   isolation: 'none' | 'worktree' // 'worktree' roda a rotina num git worktree isolado
   catchup: boolean
@@ -85,7 +86,17 @@ export interface RunRequest {
 }
 
 export type RunStatus =
-  | 'queued' | 'running' | 'ok' | 'failed' | 'skipped' | 'timeout' | 'idle_timeout' | 'rate_limited' | 'stopped' | 'over_budget'
+  | 'queued' | 'running' | 'ok' | 'failed' | 'skipped' | 'timeout' | 'idle_timeout' | 'rate_limited' | 'stopped'
+  | 'aborted' // bateu uma policy de threshold (custo/passos/duracao)
+  | 'paused' // bateu o limite de sessao/semanal; aguarda o reset para retomar (resume_at)
+
+// Politica de parada de uma run (ver src/main/abort.ts). Thresholds + gatilhos de limite da assinatura.
+export type AbortPolicy =
+  | { kind: 'cost_usd'; limit: number }
+  | { kind: 'steps'; limit: number }
+  | { kind: 'duration_min'; limit: number }
+  | { kind: 'session_limit' } // limite de 5h → pausa e retoma no reset
+  | { kind: 'weekly_limit' } // limite semanal → pausa e retoma no reset
 export type RunTrigger = 'manual' | 'cron' | 'catchup' | 'adhoc' | 'followup'
 
 export interface RunRecord {
@@ -105,6 +116,7 @@ export interface RunRecord {
   model: string | null
   cwd: string | null
   parent_id: string | null
+  resume_at: string | null // ISO; quando uma run 'paused' deve ser retomada (reset do limite)
 }
 
 export type RunEventKind =

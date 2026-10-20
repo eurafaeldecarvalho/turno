@@ -10,7 +10,7 @@ import { getRun, insertRun, pruneRuns, updateRun } from './db'
 import { release } from './locks'
 import { getSettings } from './settings'
 import { effectiveModel, requireConnection, resolveProviderEnv } from './providers'
-import { shouldAbortForBudget } from './budget'
+import { evaluateThresholds, matchedRateLimit, parseRateLimit, type AbortPolicy } from './abort'
 import { wrapForSandbox } from './sandbox'
 import { connectionToken } from './secrets'
 
@@ -91,7 +91,8 @@ export interface StartOptions {
   scheduledAt?: string
   timeoutMin?: number
   idleTimeoutMin?: number
-  budgetUsd?: number // teto de custo; ao ultrapassar, o run e morto com status 'over_budget'
+  policies?: AbortPolicy[] // politicas de parada (custo/passos/duracao/limite de sessao/semanal)
+  priorCostUsd?: number // custo ja gasto nos segmentos anteriores (resume): mantem o teto cost_usd CUMULATIVO
   sandbox?: import('../shared/types').SandboxMode // 'none' (default) roda sem sandbox
   runId?: string // ja inserido como 'queued' pelo agendador
   parentId?: string // run anterior da mesma conversa (follow-up)
@@ -100,6 +101,8 @@ export interface StartOptions {
 interface Active {
   child: ChildProcess
   stopReason?: RunStatus
+  stopDetail?: string // motivo textual do abort (policy que bateu) -> vai pro result/skip_reason
+  pauseUntil?: string // ISO; quando setado, a run termina como 'paused' e sera retomada no reset
   sent: number
   results: number
   emit: (kind: RunEventKind, text: string, ref?: string) => void
@@ -261,6 +264,11 @@ export function startRun(o: StartOptions): string {
 
   let result: any
   let rateLimited = false
+  const startedMs = Date.now()
+  let lastSessionId: string | undefined // p/ retomar (--resume) se pausar por limite
+  let maxCost = 0
+  let maxSteps = 0
+  const policies = o.policies ?? []
   const timers: Array<ReturnType<typeof setTimeout>> = []
   if (o.timeoutMin) timers.push(setTimeout(() => void stopRun(runId, 'timeout'), o.timeoutMin * 60_000))
   let idle: ReturnType<typeof setTimeout> | undefined
@@ -290,19 +298,37 @@ export function startRun(o: StartOptions): string {
           a.permissions.delete(e.request_id)
           emit('permission_reply', 'cancelled', { ref: e.request_id })
         }
+        if (typeof e.session_id === 'string') lastSessionId = e.session_id
         if (e.type === 'result') {
           result = e
           a.results++
-          // Estourou o teto de custo: mata o run (best-effort, no limite de cada turno).
-          if (typeof e.total_cost_usd === 'number' && shouldAbortForBudget(e.total_cost_usd, o.budgetUsd)) void stopRun(runId, 'over_budget')
-          // Respondeu tudo que foi enviado: fecha a entrada e o processo termina.
-          else if (a.results >= a.sent) child.stdin?.end()
+          if (typeof e.total_cost_usd === 'number') maxCost = Math.max(maxCost, e.total_cost_usd)
+          if (typeof e.num_turns === 'number') maxSteps = Math.max(maxSteps, e.num_turns)
+          // Avalia as policies de threshold (custo/passos/duracao) no limite de cada turno (best-effort).
+          // Custo e CUMULATIVO pela conversa (priorCostUsd dos resumes) p/ o teto nao reiniciar a cada retomada.
+          const t = evaluateThresholds({ costUsd: (o.priorCostUsd ?? 0) + maxCost, steps: maxSteps, durationMin: (Date.now() - startedMs) / 60_000 }, policies)
+          if (t.abort) {
+            a.stopDetail = t.reason
+            void stopRun(runId, 'aborted')
+          } else if (a.results >= a.sent) child.stdin?.end() // respondeu tudo: fecha a entrada
         }
       } catch {
         /* linha truncada */
       }
     }
     if (line.includes('"api_retry"') && /rate.?limit|429|overloaded/i.test(line)) rateLimited = true
+    // Bateu o limite da assinatura (5h / semanal) DE VERDADE (status rejected): se a rotina pede pausar,
+    // marca pra retomar no reset. Eventos 'allowed'/'allowed_warning' NAO param a run.
+    if (!a.pauseUntil) {
+      const rl = parseRateLimit(line)
+      const kind = rl?.rejected ? matchedRateLimit(rl.rateLimitType, policies) : undefined
+      if (kind) {
+        const fallbackMs = Date.now() + (kind === 'weekly_limit' ? 7 * 24 : 5) * 3_600_000
+        a.pauseUntil = new Date(rl!.resetsAt ? rl!.resetsAt * 1000 : fallbackMs).toISOString()
+        a.stopDetail = `${kind === 'weekly_limit' ? 'limite semanal' : 'limite de sessao (5h)'} atingido; retoma ${a.pauseUntil}`
+        void stopRun(runId, 'stopped')
+      }
+    }
     for (const x of summarize(line)) emit(x.kind, x.summary, { detail: x.detail, ref: x.ref })
   })
   child.stderr!.on('data', (d: Buffer) => {
@@ -320,7 +346,8 @@ export function startRun(o: StartOptions): string {
     updateBlocker()
     release(runId)
     let status: RunStatus
-    if (a.stopReason) status = a.stopReason
+    if (a.pauseUntil) status = 'paused'
+    else if (a.stopReason) status = a.stopReason
     else if (code === 0 && result && !result.is_error && result.subtype === 'success') status = 'ok'
     else if (rateLimited) status = 'rate_limited'
     else status = 'failed'
@@ -329,16 +356,19 @@ export function startRun(o: StartOptions): string {
     ;[raw, summary, errLog].forEach(close)
     updateRun(runId, {
       status,
-      ended_at: new Date().toISOString(),
+      // Run pausada nao "terminou": fica sem ended_at e com resume_at para o scheduler retomar no reset.
+      ended_at: a.pauseUntil ? null : new Date().toISOString(),
+      resume_at: a.pauseUntil ?? null,
       exit_code: code,
       cost_usd: typeof result?.total_cost_usd === 'number' ? result.total_cost_usd : null,
-      session_id: result?.session_id ?? null,
-      result: result?.result ? String(result.result).slice(0, 20000) : (err ?? null),
+      session_id: result?.session_id ?? lastSessionId ?? null,
+      result: a.stopDetail ?? (result?.result ? String(result.result).slice(0, 20000) : (err ?? null)),
     })
     const rec = getRun(runId)!
     emitChanged(rec)
     onFinished(rec)
-    if (rec.routine)
+    // Nao poda run pausada (ainda vai ser retomada). Poda so apos realmente terminar.
+    if (rec.routine && !a.pauseUntil)
       for (const id of pruneRuns(rec.routine)) rmSync(join(runsDir, id), { recursive: true, force: true })
   }
   child.on('error', (e) => finish(null, e.message))

@@ -409,7 +409,7 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
           {live && <LiveLine since={last.started_at} />}
           {!live && last.started_at && last.ended_at && last.status !== 'skipped' && (
             <div className="msg-sys">
-              {last.status === 'ok' ? 'Worked for' : last.status === 'stopped' ? 'Stopped after' : 'Failed after'} {fmtSecs(Math.round((Date.parse(last.ended_at) - Date.parse(last.started_at)) / 1000))}
+              {last.status === 'ok' ? 'Worked for' : last.status === 'stopped' || last.status === 'aborted' ? 'Stopped after' : 'Failed after'} {fmtSecs(Math.round((Date.parse(last.ended_at) - Date.parse(last.started_at)) / 1000))}
             </div>
           )}
           {total === 0 && !live && <div className="muted pad">No events recorded.</div>}

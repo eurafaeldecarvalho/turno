@@ -25,6 +25,8 @@ const MIGRATIONS = [
   CREATE INDEX runs_sched ON runs(routine, scheduled_at);`,
   `CREATE TABLE routine_state (routine TEXT PRIMARY KEY, armed_at TEXT);`,
   `ALTER TABLE runs ADD COLUMN parent_id TEXT;`,
+  `ALTER TABLE runs ADD COLUMN resume_at TEXT;`,
+  `UPDATE runs SET status='aborted' WHERE status='over_budget';`,
 ]
 
 export function openDb(file: string): void {
@@ -76,7 +78,7 @@ export function insertRun(r: {
   )
 }
 
-const UPDATABLE = ['status', 'started_at', 'ended_at', 'skip_reason', 'exit_code', 'cost_usd', 'session_id', 'result'] as const
+const UPDATABLE = ['status', 'started_at', 'ended_at', 'skip_reason', 'exit_code', 'cost_usd', 'session_id', 'result', 'resume_at'] as const
 type Patch = Partial<Pick<RunRecord, (typeof UPDATABLE)[number]>>
 
 export function updateRun(id: string, patch: Patch): void {
@@ -121,6 +123,11 @@ export function lastScheduledAt(routine: string): string | undefined {
   return r?.s ?? undefined
 }
 
+// Runs pausadas cujo reset do limite ja passou: prontas pra retomar.
+export function duePausedRuns(nowIso: string): RunRecord[] {
+  return db.prepare("SELECT * FROM runs WHERE status = 'paused' AND resume_at IS NOT NULL AND resume_at <= ? ORDER BY resume_at").all(nowIso) as unknown as RunRecord[]
+}
+
 export function getArmedAt(routine: string): string | undefined {
   const r = db.prepare('SELECT armed_at FROM routine_state WHERE routine = ?').get(routine) as { armed_at: string } | undefined
   return r?.armed_at ?? undefined
@@ -147,6 +154,7 @@ export function pruneRuns(routine: string, keep = 200): string[] {
   const old = db
     .prepare(
       `SELECT id FROM runs WHERE routine = ? AND status NOT IN ('running','queued')
+       AND NOT (status = 'paused' AND resume_at IS NOT NULL)
        ORDER BY COALESCE(started_at, ended_at) DESC LIMIT -1 OFFSET ?`,
     )
     .all(routine, keep) as Array<{ id: string }>

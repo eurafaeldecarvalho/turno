@@ -3,7 +3,8 @@ import { Cron } from 'croner'
 import type { FSWatcher } from 'node:fs'
 import type { Connection, Routine, RunRecord, RunRequest, RunTrigger } from '../shared/types'
 import { cronExpressions, loadRoutines, runsBetween, watchRoutines } from './routines'
-import { getArmedAt, getRun, hasRunFor, insertRun, lastRuns, setArmed, updateRun } from './db'
+import { duePausedRuns, getArmedAt, getRun, hasRunFor, insertRun, lastRuns, setArmed, threadOf, updateRun } from './db'
+import { policiesFromConfig, priorCost } from './abort'
 import { acquireWait, release, tryAcquire } from './locks'
 import { changed, isRoutineRunning, newRunId, readRequest, sendToRun, startRun } from './runner'
 import { childEnv } from './env'
@@ -34,6 +35,30 @@ export function findRoutine(id: string): Routine | undefined {
 export function startEngine(dir: string, onChanged: (rs: Routine[]) => void): void {
   onRoutinesChanged = onChanged
   setRoot(dir)
+  // Verifica periodicamente se alguma run pausada por limite ja pode retomar (o reset pode cair com o app aberto).
+  setInterval(() => void resumePaused(), 120_000)
+}
+
+// Retoma runs pausadas por limite de assinatura cujo reset ja passou (--resume automatico).
+export async function resumePaused(): Promise<void> {
+  for (const run of duePausedRuns(new Date().toISOString())) {
+    // Reivindica ANTES do await (zera resume_at): um 2o tick de resumePaused nao pega a mesma run -> sem retomada dupla.
+    updateRun(run.id, { resume_at: null })
+    changed(run.id)
+    try {
+      await followUp(run.id, 'Usage limit reset. Continue the task you were working on.')
+    } catch (e) {
+      const msg = String((e as Error).message)
+      if (/lock busy/i.test(msg)) {
+        // Transitorio (outra rotina segura o lock): reagenda pra tentar de novo em 5min, sem perder a run.
+        updateRun(run.id, { resume_at: new Date(Date.now() + 5 * 60_000).toISOString() })
+      } else {
+        // Permanente (ex. connection removida): encerra com motivo em vez de ficar 'paused' pra sempre.
+        updateRun(run.id, { status: 'failed', skip_reason: `nao retomou: ${msg}`, ended_at: new Date().toISOString() })
+      }
+      changed(run.id)
+    }
+  }
 }
 
 export function setRoot(dir: string): void {
@@ -80,6 +105,7 @@ export function catchUp(): void {
     const latest = missed.at(-1)
     if (latest && !hasRunFor(r.id, latest.toISOString())) void runRoutine(r.id, 'catchup', latest.toISOString())
   }
+  void resumePaused() // reset do limite pode ter passado enquanto o app estava fechado/dormindo
 }
 
 function skip(r: Routine, trigger: RunTrigger, scheduledAt: string | undefined, reason: string, existing?: string): void {
@@ -209,7 +235,7 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
       scheduledAt,
       timeoutMin: r.config.timeout_min,
       idleTimeoutMin: r.config.idle_timeout_min,
-      budgetUsd: r.config.budget_usd,
+      policies: policiesFromConfig(r.config),
       sandbox: r.config.sandbox,
       req: {
         profile: r.config.profile,
@@ -264,7 +290,8 @@ export async function followUp(runId: string, text: string): Promise<{ runId: st
     trigger: 'followup',
     timeoutMin: r?.config.timeout_min ?? 60,
     idleTimeoutMin: r?.config.idle_timeout_min ?? 15,
-    budgetUsd: r?.config.budget_usd,
+    policies: r ? policiesFromConfig(r.config) : [],
+    priorCostUsd: priorCost(threadOf(run.id)), // teto de custo cumulativo pela conversa (anti-overspend no resume)
     sandbox: r?.config.sandbox,
     req: { ...base, prompt: text, resume: run.session_id },
   })
