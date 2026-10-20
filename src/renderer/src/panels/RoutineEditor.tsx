@@ -418,8 +418,11 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
               <span>Isolation</span>
               <select value={cfg.isolation} onChange={(e) => up({ isolation: e.target.value as RoutineConfig['isolation'] })}>
                 <option value="none">none</option>
-                <option value="worktree" disabled>git worktree (coming soon)</option>
+                <option value="worktree">git worktree</option>
               </select>
+              {cfg.isolation === 'worktree' && (
+                <small className="muted">Runs in a dedicated git worktree (branch turno/…). Requires the working dir to be a git repo. Cleaned up afterwards; kept if the run left changes.</small>
+              )}
             </label>
           </div>
           <div className="field">

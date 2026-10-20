@@ -78,7 +78,7 @@ export function insertRun(r: {
   )
 }
 
-const UPDATABLE = ['status', 'started_at', 'ended_at', 'skip_reason', 'exit_code', 'cost_usd', 'session_id', 'result', 'resume_at'] as const
+const UPDATABLE = ['status', 'started_at', 'ended_at', 'skip_reason', 'exit_code', 'cost_usd', 'session_id', 'result', 'resume_at', 'cwd'] as const
 type Patch = Partial<Pick<RunRecord, (typeof UPDATABLE)[number]>>
 
 export function updateRun(id: string, patch: Patch): void {

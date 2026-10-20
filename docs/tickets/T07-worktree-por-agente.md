@@ -1,5 +1,7 @@
 # T07 — Worktree por agente nativo (O1)
 
+**Status:** ✅ FEITO — wiring no runner (`startRun`/`finish`) + engine (`runRoutine` passa `isolation`), opção habilitada no RoutineEditor. Decisão pura `worktreeDecision` (none/resume/sem-repo→erro) + teardown `worktreeStatus`+`canCleanup` (limpo→remove, sujo→preserva). 12 testes (unit + integração git). Resume/pausa mantêm a worktree (cleanup só na run terminal fresca).
+
 **Frente:** Orquestração · **Esforço:** M · **Depende de:** T00
 
 ## Objetivo

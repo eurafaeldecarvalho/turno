@@ -271,6 +271,7 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
       idleTimeoutMin: r.config.idle_timeout_min,
       policies: policiesFromConfig(r.config),
       sandbox: r.config.sandbox,
+      isolation: r.config.isolation,
       req: {
         profile: r.config.profile,
         prompt: buildPrompt(r, trigger, scheduledAt),

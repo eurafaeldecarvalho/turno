@@ -234,7 +234,7 @@ Yes. Set `chrome: true` to give it Claude in Chrome (requires the claude.ai logi
 Not for long browser flows or many tool calls. Start local models on read-and-summarize routines.
 
 **Linux and macOS?**
-Linux is supported: the runner, terminals, shell detection (bash/zsh/fish) and process control are cross-platform, and the installer builds as AppImage, `.deb` and `.rpm` (`pnpm dist:linux`). macOS should work too but isn't packaged yet. Still Windows-first in polish; git-worktree isolation and the docker/wsl sandbox image are follow-ups.
+Linux is supported: the runner, terminals, shell detection (bash/zsh/fish) and process control are cross-platform, and the installer builds as AppImage, `.deb` and `.rpm` (`pnpm dist:linux`). macOS should work too but isn't packaged yet. Still Windows-first in polish; the docker/wsl sandbox image is a follow-up.
 
 ## License
 

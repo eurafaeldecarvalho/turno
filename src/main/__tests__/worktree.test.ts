@@ -3,7 +3,8 @@ import { execFileSync } from 'node:child_process'
 import { mkdtempSync, rmSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { planWorktree, parseWorktrees, canCleanup, createWorktree, removeWorktree } from '../worktree'
+import { writeFileSync } from 'node:fs'
+import { planWorktree, parseWorktrees, canCleanup, createWorktree, removeWorktree, worktreeDecision, worktreeStatus, resolveRepoRoot } from '../worktree'
 
 describe('planWorktree (puro)', () => {
   it('gera branch Conventional e caminho FORA do repo, deterministico por run', () => {
@@ -32,6 +33,24 @@ describe('parseWorktrees (puro)', () => {
   })
 })
 
+describe('worktreeDecision (puro) — quando criar um worktree para a run', () => {
+  const base = { routineId: 'rota', runId: 'run-1' }
+  it('isolation none/ausente nao cria worktree', () => {
+    expect(worktreeDecision({ ...base, isolation: 'none', repoRoot: '/repo' })).toBeUndefined()
+    expect(worktreeDecision({ ...base, repoRoot: '/repo' })).toBeUndefined()
+  })
+  it('resume nao cria novo worktree (continua na worktree ja existente)', () => {
+    expect(worktreeDecision({ ...base, isolation: 'worktree', resume: true, repoRoot: '/repo' })).toBeUndefined()
+  })
+  it('isolation worktree SEM repo git lanca (nunca roda no diretorio principal)', () => {
+    expect(() => worktreeDecision({ ...base, isolation: 'worktree', repoRoot: undefined })).toThrow(/repositorio git/i)
+  })
+  it('isolation worktree com repo git devolve o plano (branch + path)', () => {
+    const plan = worktreeDecision({ ...base, isolation: 'worktree', repoRoot: '/repo' })
+    expect(plan).toEqual(planWorktree('/repo', 'rota', 'run-1'))
+  })
+})
+
 describe('canCleanup (puro)', () => {
   it('so limpa quando o working tree esta limpo', () => {
     expect(canCleanup('')).toBe(true)
@@ -56,5 +75,26 @@ describe('createWorktree/removeWorktree (integracao git)', () => {
     expect(list.some((w) => w.branch === branch)).toBe(true)
     removeWorktree(repo, path)
     expect(existsSync(path)).toBe(false)
+  })
+
+  it('resolveRepoRoot acha a raiz a partir do dir; undefined fora de repo', () => {
+    expect(resolveRepoRoot(repo)).toBe(execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd: repo }).toString().trim())
+    expect(resolveRepoRoot(tmpdir())).toBeUndefined() // tmpdir nao e repo git
+  })
+
+  // Prova a logica EXATA do teardown do finish(): worktree sujo -> preserva; limpo -> remove.
+  it('worktreeStatus+canCleanup: preserva quando o agente deixou mudancas, limpa quando vazio', () => {
+    const { branch, path } = planWorktree(repo, 'rota', 'run-dirty')
+    rmSync(path, { recursive: true, force: true }) // limpa orfao de uma run anterior que tenha falhado
+    createWorktree(repo, branch, path)
+    try {
+      expect(canCleanup(worktreeStatus(path))).toBe(true) // recem-criado: limpo
+      writeFileSync(join(path, 'novo.txt'), 'trabalho do agente') // agente escreveu algo
+      expect(canCleanup(worktreeStatus(path))).toBe(false) // sujo -> finish PRESERVA (nao remove)
+      expect(() => removeWorktree(repo, path)).toThrow() // sem --force, git recusa remover worktree sujo (nao perde trabalho)
+    } finally {
+      // Teste deixa o worktree sujo de proposito: limpa a forca so aqui pra nao vazar pro proximo run.
+      execFileSync('git', ['worktree', 'remove', '--force', path], { cwd: repo, stdio: 'pipe' })
+    }
   })
 })

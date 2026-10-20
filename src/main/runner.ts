@@ -12,6 +12,7 @@ import { getSettings } from './settings'
 import { effectiveModel, requireConnection, resolveProviderEnv } from './providers'
 import { evaluateThresholds, matchedRateLimit, parseRateLimit, type AbortPolicy } from './abort'
 import { wrapForSandbox } from './sandbox'
+import { canCleanup, createWorktree, removeWorktree, resolveRepoRoot, worktreeDecision, worktreeStatus } from './worktree'
 import { connectionToken } from './secrets'
 import { IS_WIN, homeDir } from './platform'
 
@@ -111,6 +112,7 @@ export interface StartOptions {
   policies?: AbortPolicy[] // politicas de parada (custo/passos/duracao/limite de sessao/semanal)
   priorCostUsd?: number // custo ja gasto nos segmentos anteriores (resume): mantem o teto cost_usd CUMULATIVO
   sandbox?: import('../shared/types').SandboxMode // 'none' (default) roda sem sandbox
+  isolation?: import('../shared/types').RoutineConfig['isolation'] // 'worktree' roda a run num git worktree isolado
   runId?: string // ja inserido como 'queued' pelo agendador
   parentId?: string // run anterior da mesma conversa (follow-up)
 }
@@ -228,6 +230,13 @@ export function startRun(o: StartOptions): string {
   const conn = requireConnection(getSettings(), req.profile)
   const model = effectiveModel(conn, req.model)
   const runId = o.runId ?? newRunId()
+  // Isolation por worktree (opt-in): cria um git worktree e roda a run LA, nunca no diretorio principal (sob o editor).
+  // worktreeDecision LANCA se isolation='worktree' sem repo git -> runRoutine libera o lock e pula a run.
+  // resume continua na worktree ja existente (req.cwd aponta pra ela): nao cria outra.
+  const repoRoot = (o.isolation ?? 'none') === 'worktree' && !req.resume ? resolveRepoRoot(req.cwd) : undefined
+  const wt = worktreeDecision({ isolation: o.isolation, resume: !!req.resume, repoRoot, routineId: o.routine ?? 'adhoc', runId })
+  if (wt && repoRoot) createWorktree(repoRoot, wt.branch, wt.path)
+  const effectiveCwd = wt ? wt.path : req.cwd
   const dir = join(runsDir, runId)
   mkdirSync(dir, { recursive: true })
   const raw = createWriteStream(join(dir, 'events.ndjson'))
@@ -241,7 +250,7 @@ export function startRun(o: StartOptions): string {
   }
 
   const now = new Date().toISOString()
-  if (o.runId) updateRun(runId, { status: 'running', started_at: now })
+  if (o.runId) updateRun(runId, { status: 'running', started_at: now, cwd: effectiveCwd ?? null })
   else
     insertRun({
       id: runId,
@@ -251,7 +260,7 @@ export function startRun(o: StartOptions): string {
       scheduled_at: o.scheduledAt ?? null,
       profile: req.profile,
       model: model ?? null,
-      cwd: req.cwd ?? null,
+      cwd: effectiveCwd ?? null,
       parent_id: o.parentId ?? null,
     })
   changed(runId)
@@ -268,10 +277,10 @@ export function startRun(o: StartOptions): string {
   // Sandbox (opt-in): repassa só ANTHROPIC_* + TURNO_RUN_ID (id, nao caminho) pro container/WSL.
   // TURNO_RUN_DIR e caminho do HOST e nao existe dentro do sandbox -> nao repassa. 'none' (default) nao altera nada.
   const sbKeys = Object.keys(providerEnv).filter((k) => k.startsWith('ANTHROPIC_') || k === 'TURNO_RUN_ID')
-  const sb = wrapForSandbox('claude', args, o.sandbox ?? 'none', { cwd: req.cwd, env: sbKeys })
-  emit('start', `${sb.cmd} ${sb.args.join(' ')}  [profile ${req.profile}${o.routine ? `, routine ${o.routine}` : ''}]`)
+  const sb = wrapForSandbox('claude', args, o.sandbox ?? 'none', { cwd: effectiveCwd, env: sbKeys })
+  emit('start', `${sb.cmd} ${sb.args.join(' ')}  [profile ${req.profile}${o.routine ? `, routine ${o.routine}` : ''}${wt ? `, worktree ${wt.branch}` : ''}]`)
   const child = spawn(sb.cmd, sb.args, {
-    cwd: req.cwd ?? homeDir(),
+    cwd: effectiveCwd ?? homeDir(),
     env: childEnv({ ...providerEnv, ...(sb.env ?? {}) }),
     windowsHide: true,
     detached: !IS_WIN, // POSIX: child lidera um grupo de processos, p/ matar a arvore ao parar
@@ -374,6 +383,23 @@ export function startRun(o: StartOptions): string {
     else if (rateLimited) status = 'rate_limited'
     else status = 'failed'
     emit('exit', err ? `failed to start: ${err}` : `process exited (exit=${code}) → ${status}`)
+    // Teardown do worktree isolado — so quando a run REALMENTE terminou (pausada mantem a worktree pro resume).
+    // Limpo (sem mudancas) -> remove e aponta o cwd da run pro repo (resume futuro nao cai numa worktree removida).
+    // Com mudancas do agente -> PRESERVA e avisa o caminho (nunca apaga trabalho; removeWorktree nao usa --force).
+    let cwdOverride: string | undefined
+    if (wt && repoRoot && !a.pauseUntil) {
+      try {
+        if (canCleanup(worktreeStatus(wt.path))) {
+          removeWorktree(repoRoot, wt.path)
+          cwdOverride = repoRoot
+          emit('text', `worktree limpo removido: ${wt.branch}`)
+        } else {
+          emit('text', `worktree preservado (tem mudancas nao commitadas): ${wt.path} — branch ${wt.branch}`)
+        }
+      } catch (e) {
+        emit('stderr', `falha ao limpar worktree ${wt.path}: ${(e as Error).message}`)
+      }
+    }
     const close = (s: WriteStream): void => void s.end()
     ;[raw, summary, errLog].forEach(close)
     updateRun(runId, {
@@ -385,6 +411,7 @@ export function startRun(o: StartOptions): string {
       cost_usd: typeof result?.total_cost_usd === 'number' ? result.total_cost_usd : null,
       session_id: result?.session_id ?? lastSessionId ?? null,
       result: a.stopDetail ?? (result?.result ? String(result.result).slice(0, 20000) : (err ?? null)),
+      ...(cwdOverride ? { cwd: cwdOverride } : {}),
     })
     const rec = getRun(runId)!
     emitChanged(rec)

@@ -16,6 +16,37 @@ export function planWorktree(repoRoot: string, routineId: string, runId: string)
   return { branch: `turno/${name}`, path: join(repoRoot, '..', '.turno-worktrees', name) }
 }
 
+// Decide se uma run deve rodar num git worktree isolado — e, se sim, qual branch/caminho.
+// Regras de seguranca: resume continua na worktree ja existente (nao cria outra); e isolation 'worktree'
+// SEM repositorio git LANCA, para a run ser pulada em vez de rodar no diretorio principal (sob o editor do usuario).
+export function worktreeDecision(o: {
+  isolation?: 'none' | 'worktree'
+  resume?: boolean
+  repoRoot?: string
+  routineId: string
+  runId: string
+}): { branch: string; path: string } | undefined {
+  if ((o.isolation ?? 'none') !== 'worktree') return undefined
+  if (o.resume) return undefined
+  if (!o.repoRoot) throw new Error('isolation "worktree" requer um repositorio git (nenhum encontrado a partir do diretorio da run)')
+  return planWorktree(o.repoRoot, o.routineId, o.runId)
+}
+
+// Raiz do repositorio git a partir de um diretorio (ou undefined se nao for um repo).
+export function resolveRepoRoot(cwd: string | undefined): string | undefined {
+  if (!cwd) return undefined
+  try {
+    return execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd, encoding: 'utf8', stdio: 'pipe' }).trim() || undefined
+  } catch {
+    return undefined
+  }
+}
+
+// Saida de `git status --porcelain` dentro do worktree (vazia = limpo). I/O isolado para o teardown.
+export function worktreeStatus(path: string): string {
+  return execFileSync('git', ['status', '--porcelain'], { cwd: path, encoding: 'utf8', stdio: 'pipe' })
+}
+
 // Parseia `git worktree list --porcelain` em entradas.
 export function parseWorktrees(porcelain: string): WorktreeEntry[] {
   const out: WorktreeEntry[] = []
