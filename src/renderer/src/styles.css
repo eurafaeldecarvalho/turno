@@ -446,3 +446,22 @@ body.resizing-x .dock { pointer-events: none; }
 .modal-wide .editor-body { overflow: auto; }
 .modal-x { position: absolute; top: 10px; right: 12px; z-index: 1; width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); cursor: pointer; }
 .modal-x:hover { color: var(--text); }
+
+/* Skeleton da lista enquanto carrega */
+.sk { display: inline-block; height: 10px; border-radius: 4px; background: var(--surface-3); }
+.sk-dot { width: 8px; height: 8px; border-radius: 50%; }
+@media (prefers-reduced-motion: no-preference) {
+  .sk { background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: sk-shimmer 1.2s ease-in-out infinite; }
+}
+@keyframes sk-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.sk-row td { padding-top: 9px; padding-bottom: 9px; }
+
+/* Flash na linha que mudou de status (atualizacao ao vivo) */
+@media (prefers-reduced-motion: no-preference) { .row-flash td { animation: row-flash 1s ease-out; } }
+@keyframes row-flash { from { background: var(--accent-soft); } to { background: transparent; } }
+
+/* Empty state desenhado */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 48px 16px; text-align: center; color: var(--muted); }
+.empty-icon { font-size: 30px; opacity: .7; }
+.empty-title { color: var(--text); font-weight: 600; font-size: 15px; }
+.empty-state .btn { margin-top: 6px; }

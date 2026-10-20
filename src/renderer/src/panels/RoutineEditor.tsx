@@ -40,6 +40,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   const [dirty, setDirty] = useState(false)
   const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string }>()
   const [newTime, setNewTime] = useState('09:00')
+  const [running, setRunning] = useState(false)
   const conns = useSettings()?.connections ?? []
 
   // Carrega do disco; recarrega se o arquivo mudar e nao houver edicao pendente.
@@ -126,12 +127,15 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
 
   async function runNow(): Promise<void> {
     if (dirty && !(await save())) return
+    setRunning(true)
     try {
       const runId = await window.turno.run.startRoutine(folder)
       if (runId) openRoutine(folder, cfg!.name)
       else setMsg({ tone: 'err', text: 'Did not run: see the reason in the history.' })
     } catch (e) {
       setMsg({ tone: 'err', text: String((e as Error).message) })
+    } finally {
+      setRunning(false)
     }
   }
 
@@ -176,8 +180,8 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
               <button className="btn ghost" onClick={() => void window.turno.routines.openFolder(folder)} title="Open folder">
                 <IconFolder /> Folder
               </button>
-              <button className="btn" onClick={() => void runNow()} disabled={!!existing?.error && !dirty}>
-                <IconPlay /> Run now
+              <button className="btn" onClick={() => void runNow()} disabled={(!!existing?.error && !dirty) || running}>
+                {running ? <span className="spinner sm" /> : <IconPlay />} Run now
               </button>
               <button className="btn danger" onClick={() => void remove()} title="Delete routine (folder goes to the Recycle Bin)">
                 Delete

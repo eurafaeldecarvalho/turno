@@ -17,9 +17,10 @@ const TOAST_TONE: Partial<Record<RunStatus, ToastTone>> = {
 interface State {
   routines: Routine[]
   runs: RunRecord[]
+  loaded: boolean // true apos a 1a carga (pra distinguir "carregando" de "vazio de verdade")
 }
 
-let state: State = { routines: [], runs: [] }
+let state: State = { routines: [], runs: [], loaded: false }
 const subs = new Set<() => void>()
 const set = (patch: Partial<State>): void => {
   state = { ...state, ...patch }
@@ -35,7 +36,7 @@ export function useStore<T>(sel: (s: State) => T): T {
 
 export async function initStore(): Promise<void> {
   const [routines, runs] = await Promise.all([window.turno.routines.list(), window.turno.run.list(undefined, 300)])
-  set({ routines, runs })
+  set({ routines, runs, loaded: true })
   window.turno.routines.onChanged((rs) => set({ routines: rs }))
   window.turno.run.onChanged((run) => {
     const prev = state.runs.find((r) => r.id === run.id)

@@ -12,11 +12,17 @@ export function FanoutPanel(_props: IDockviewPanelProps) {
   const [prompt, setPrompt] = useState('')
   const [picked, setPicked] = useState<string[]>([])
   const [runs, setRuns] = useState<FanoutRun[] | null>(null)
+  const [starting, setStarting] = useState(false)
 
   const toggle = (id: string): void => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
   const start = async (): Promise<void> => {
     if (!prompt.trim() || !picked.length) return
-    setRuns(await window.turno.run.fanout(prompt, picked))
+    setStarting(true)
+    try {
+      setRuns(await window.turno.run.fanout(prompt, picked))
+    } finally {
+      setStarting(false)
+    }
   }
 
   if (runs) {
@@ -57,8 +63,8 @@ export function FanoutPanel(_props: IDockviewPanelProps) {
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="Prompt to run across the selected connections…"
         />
-        <button className="btn primary" disabled={!prompt.trim() || !picked.length} onClick={() => void start()}>
-          <IconPlay /> Run {picked.length || ''}
+        <button className="btn primary" disabled={!prompt.trim() || !picked.length || starting} onClick={() => void start()}>
+          {starting ? <><span className="spinner sm" /> Running…</> : <><IconPlay /> Run {picked.length || ''}</>}
         </button>
       </div>
       <div className="panel-empty">Pick connections and a prompt, then run. Each one runs independently; results show side by side.</div>

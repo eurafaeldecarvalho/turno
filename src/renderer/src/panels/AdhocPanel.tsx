@@ -21,6 +21,7 @@ export function AdhocPanel({ params }: IDockviewPanelProps<AdhocParams>) {
   const [prompt, setPrompt] = useState(a?.prompt ?? '')
   const [runId, setRunId] = useState<string>()
   const [started, setStarted] = useState(false)
+  const [starting, setStarting] = useState(false)
   const conns = useSettings()?.connections ?? []
   const conn = conns.find((c) => c.id === profile)
   const isClaude = conn ? conn.kind === 'claude' : true
@@ -34,7 +35,12 @@ export function AdhocPanel({ params }: IDockviewPanelProps<AdhocParams>) {
       allowedTools: tools.split(/\s+/).filter(Boolean),
       prompt,
     }
-    setRunId(await window.turno.run.start(r))
+    setStarting(true)
+    try {
+      setRunId(await window.turno.run.start(r))
+    } finally {
+      setStarting(false)
+    }
   }
   if (a && !started) {
     setStarted(true)
@@ -67,8 +73,8 @@ export function AdhocPanel({ params }: IDockviewPanelProps<AdhocParams>) {
           placeholder="Prompt… (Ctrl+Enter runs)"
           onKeyDown={(e) => e.key === 'Enter' && e.ctrlKey && prompt.trim() && void start()}
         />
-        <button className="btn primary" disabled={!prompt.trim()} onClick={() => void start()}>
-          <IconPlay /> Run
+        <button className="btn primary" disabled={!prompt.trim() || starting} onClick={() => void start()}>
+          {starting ? <><span className="spinner sm" /> Running…</> : <><IconPlay /> Run</>}
         </button>
       </div>
       {runId ? <Conversation runId={runId} compact /> : <div className="panel-empty">Write a prompt and run it. It does not become a routine or get a schedule.</div>}

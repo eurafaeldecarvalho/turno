@@ -364,6 +364,11 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
           </div>
         </div>
         <div className="run-actions">
+          {routine && !live && ['failed', 'aborted', 'timeout', 'idle_timeout', 'rate_limited'].includes(last.status) && (
+            <button className="btn ghost" title="Run this routine again" onClick={() => void window.turno.run.startRoutine(routine.id)}>
+              ↻ Run again
+            </button>
+          )}
           {routine && !compact && (
             <button className="btn ghost" onClick={() => openRoutine(routine.id, routine.config.name, true)}>
               <IconRoutine /> Configure
