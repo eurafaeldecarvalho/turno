@@ -1,6 +1,6 @@
 {
   "name": "turno",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "private": true,
   "description": "Desktop app to schedule and run AI agent routines on your PC (Claude Code or local models via Ollama), with split terminals and a live chat with the running agent.",
   "main": "out/main/index.js",
@@ -64,7 +64,10 @@
     "vite": "8.3.4",
     "vitest": "^5.0.5"
   },
-  "author": "Rafael de Carvalho",
+  "author": {
+    "name": "Rafael de Carvalho",
+    "email": "eurafaeldecarvalho@users.noreply.github.com"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
