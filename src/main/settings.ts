@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { readFileSync, writeFileSync } from 'node:fs'
 import type { Settings } from '../shared/types'
 import { DEFAULT_CONNECTIONS } from './providers'
-import { defaultShell } from './platform'
+import { preferredShell } from './platform'
 
 const file = (): string => join(app.getPath('userData'), 'settings.json')
 
@@ -18,7 +18,7 @@ export const TERMINAL_DEFAULTS: Settings['terminal'] = {
   scrollback: 10000,
   copyOnSelect: true,
   rightClickPaste: true,
-  defaultShell: defaultShell(),
+  defaultShell: preferredShell(),
   drawBoldInBright: true,
   cursorWidth: 1,
   minimumContrastRatio: 1,

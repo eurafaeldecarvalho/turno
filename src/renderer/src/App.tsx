@@ -49,7 +49,7 @@ const components = {
   history: HistoryPanel,
   adhoc: AdhocPanel,
   fanout: FanoutPanel,
-  settings: SettingsPanel,
+  settings: SettingsPanel, // Settings abre em modal; registrado so p/ restaurar layouts salvos antigos com aba 'settings'
 }
 
 const KIND_ICON: Record<string, (p: { size?: number }) => ReactElement> = {

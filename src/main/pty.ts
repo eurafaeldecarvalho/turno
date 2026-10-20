@@ -6,7 +6,7 @@ import { childEnv } from './env'
 import { getConnection, resolveProviderEnv } from './providers'
 import { getSettings } from './settings'
 import { connectionToken } from './secrets'
-import { homeDir } from './platform'
+import { defaultShell, homeDir } from './platform'
 import { initTermSessions, trackPty, untrackPty } from './termsessions'
 
 const ptys = new Map<number, pty.IPty>()
@@ -38,7 +38,7 @@ export function registerPty(getWc: () => WebContents | undefined): void {
 
   ipcMain.handle('pty:create', (_e, opts: PtyCreateOptions) => {
     const id = nextId++
-    const shell = opts.shell || getSettings().terminal.defaultShell || 'pwsh.exe'
+    const shell = opts.shell || getSettings().terminal.defaultShell || defaultShell()
     const { args, env } = shellArgs(shell)
     const cwd = opts.cwd && existsSync(opts.cwd) ? opts.cwd : homeDir()
     const p = pty.spawn(shell, args, {

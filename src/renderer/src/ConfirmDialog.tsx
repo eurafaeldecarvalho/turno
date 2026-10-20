@@ -11,6 +11,10 @@ let current: Ask | undefined
 const subs = new Set<() => void>()
 const emit = (): void => subs.forEach((f) => f())
 
+export function isConfirmOpen(): boolean {
+  return !!current
+}
+
 export function askConfirm(o: { title: string; message: string; confirmLabel?: string }): Promise<boolean> {
   current?.resolve(false)
   return new Promise((resolve) => {
@@ -46,7 +50,7 @@ export function ConfirmHost() {
   }, [ask])
   if (!ask) return null
   return (
-    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && answer(false)}>
+    <div className="modal-backdrop modal-backdrop-top" onMouseDown={(e) => e.target === e.currentTarget && answer(false)}>
       <div className="modal confirm-modal" role="alertdialog" aria-label={ask.title}>
         <header className="modal-head">
           <h2>{ask.title}</h2>

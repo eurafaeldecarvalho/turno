@@ -42,7 +42,7 @@ export function detectShells(): ShellInfo[] {
     if (process.env.SHELL && existsSync(process.env.SHELL)) out.push({ id: 'user', name: `Default (${process.env.SHELL.split('/').pop()})`, path: process.env.SHELL })
     add('bash', 'Bash', existsSync('/bin/bash') ? '/bin/bash' : '/usr/bin/bash')
     add('zsh', 'Zsh', existsSync('/bin/zsh') ? '/bin/zsh' : '/usr/bin/zsh')
-    add('fish', 'Fish', '/usr/bin/fish')
+    add('fish', 'Fish', ['/usr/bin/fish', '/usr/local/bin/fish', '/opt/homebrew/bin/fish'].find(existsSync))
     add('sh', 'sh', '/bin/sh')
     // dedupe por path
     return out.filter((s, i) => out.findIndex((x) => x.path === s.path) === i)

@@ -19,7 +19,7 @@ export function prepareClaude(cwd: string | undefined, chrome: boolean): void {
     return // arquivo sendo gravado pelo Claude: melhor nao mexer
   }
   let changed = false
-  const dir = norm(cwd && existsSync(cwd) ? cwd : (process.env.USERPROFILE ?? homedir()))
+  const dir = norm(cwd && existsSync(cwd) ? cwd : homedir()) // homedir() ja e o USERPROFILE no Windows
   j.projects ??= {}
   const key = Object.keys(j.projects).find((k) => norm(k).toLowerCase() === dir.toLowerCase()) ?? dir
   const proj = (j.projects[key] ??= {

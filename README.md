@@ -1,9 +1,9 @@
 # Turno: scheduled AI agent routines on your own PC
 
-**A Windows desktop app that runs your AI agents on a schedule, unattended, with Claude Code (your subscription) or a local model through Ollama. Every routine is a folder with a `ROUTINE.md`. You can open any run as a live chat with the agent, approve its tool calls from a card, and keep working next to it in split terminals. Local, free, MIT.**
+**A Windows and Linux desktop app that runs your AI agents on a schedule, unattended, with Claude Code (your subscription) or a local model through Ollama. Every routine is a folder with a `ROUTINE.md`. You can open any run as a live chat with the agent, approve its tool calls from a card, and keep working next to it in split terminals. Local, free, MIT.**
 
 [![release](https://img.shields.io/github/v/release/eurafaeldecarvalho/turno)](https://github.com/eurafaeldecarvalho/turno/releases/latest)
-[![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)](https://github.com/eurafaeldecarvalho/turno/releases/latest)
+[![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-0078D4)](https://github.com/eurafaeldecarvalho/turno/releases/latest)
 [![electron](https://img.shields.io/badge/electron-44-47848F)](https://www.electronjs.org)
 [![typescript](https://img.shields.io/badge/TypeScript-5.9-3178C6)](https://www.typescriptlang.org)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
@@ -145,9 +145,9 @@ Prompt. Be explicit: nobody is watching to answer questions.
   - **Agent chat** (Claude Code, Claude Code on local Qwen, Codex, Gemini CLI, Qwen Code, OpenCode or a custom command): clicking it opens that exact session in a terminal tab. For Claude Code you pick from your recent sessions (CLI and Desktop app), or Turno creates a fixed `--session-id` for a new one.
   - **Link** (claude.ai, ChatGPT, anything with a URL): opens in the browser or the registered app.
 - **Settings:**
-  - 10 themes: Orca Dark/Light, Turno Dark/Light, Dracula, Nord, Catppuccin Mocha, Tokyo Night, One Dark, GitHub Light;
+  - 26 themes: Orca, Turno, Dracula, Nord, Tokyo Night, One Dark/Light, GitHub Dark/Light, Gruvbox, Solarized, Monokai Pro, Ayu, Catppuccin (Mocha/Latte/Frappé/Macchiato), Night Owl, Rosé Pine, Everforest, Kanagawa;
   - UI font and size, picked from the fonts installed on the system;
-  - terminal font, size, line height, weight, cursor, scrollback and default shell (PowerShell 7, Windows PowerShell, CMD, Git Bash, WSL are detected);
+  - terminal font, size, line height, weight, cursor, scrollback, padding, ligatures, window opacity and default shell (PowerShell 7 / CMD / Git Bash / WSL on Windows; bash / zsh / fish on Linux and macOS are detected);
   - start with Windows and the ntfy topic.
 
 | Shortcut | Action |
@@ -233,8 +233,8 @@ Yes. Set `chrome: true` to give it Claude in Chrome (requires the claude.ai logi
 **Will a local model be as good as Claude?**
 Not for long browser flows or many tool calls. Start local models on read-and-summarize routines.
 
-**macOS or Linux?**
-Not yet. The runner and the terminals are cross-platform, but process control (`taskkill`), shell detection and the installer are Windows-only for now.
+**Linux and macOS?**
+Linux is supported: the runner, terminals, shell detection (bash/zsh/fish) and process control are cross-platform, and the installer builds as AppImage, `.deb` and `.rpm` (`pnpm dist:linux`). macOS should work too but isn't packaged yet. Still Windows-first in polish; git-worktree isolation and the docker/wsl sandbox image are follow-ups.
 
 ## License
 

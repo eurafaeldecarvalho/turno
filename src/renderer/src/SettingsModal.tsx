@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { SettingsPanel } from './panels/SettingsPanel'
+import { isConfirmOpen } from './ConfirmDialog'
 
 // Settings como MODAL (nao aba): single-instancia por natureza (sem acumular abas) e bloqueia o fundo.
 let open = false
@@ -24,6 +25,7 @@ export function SettingsModalHost() {
     if (!isOpen) return
     const key = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape') return
+      if (isConfirmOpen()) return // um confirm aberto por cima: o Esc e dele, nao fecha o Settings
       e.preventDefault()
       e.stopPropagation()
       close()

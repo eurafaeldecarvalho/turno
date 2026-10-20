@@ -16,20 +16,19 @@ import { connectionToken } from './secrets'
 import { IS_WIN, homeDir } from './platform'
 
 // Mata a arvore de processos do run, por plataforma. Windows: taskkill /T. POSIX: mata o grupo (-pid).
-function killTree(pid: number): void {
-  if (IS_WIN) {
-    execFile('taskkill', ['/PID', String(pid), '/T', '/F'], () => {})
-  } else {
+// Devolve Promise p/ quem precisa esperar o kill concluir antes de prosseguir (ex. parar e reiniciar).
+function killTree(pid: number): Promise<void> {
+  if (IS_WIN) return new Promise((res) => execFile('taskkill', ['/PID', String(pid), '/T', '/F'], () => res()))
+  try {
+    process.kill(-pid, 'SIGKILL') // grupo inteiro (child foi spawnado detached)
+  } catch {
     try {
-      process.kill(-pid, 'SIGKILL') // grupo inteiro (child foi spawnado detached)
+      process.kill(pid, 'SIGKILL')
     } catch {
-      try {
-        process.kill(pid, 'SIGKILL')
-      } catch {
-        /* ja morreu */
-      }
+      /* ja morreu */
     }
   }
+  return Promise.resolve()
 }
 
 export function buildArgs(req: RunRequest, model?: string): string[] {
@@ -400,7 +399,7 @@ export function startRun(o: StartOptions): string {
 }
 
 // Primeiro pede interrupcao limpa (control_request interrupt, como o Orca); se nao sair em 8s,
-// taskkill /T derruba a arvore (no Windows child.kill() nao mata os netos: MCPs, node).
+// killTree derruba a arvore inteira (netos: MCPs, node): Windows via taskkill /T, POSIX via kill do grupo (-pid).
 export function stopRun(runId: string, reason: RunStatus = 'stopped'): Promise<void> {
   const a = active.get(runId)
   if (!a?.child.pid) return Promise.resolve()
@@ -409,8 +408,8 @@ export function stopRun(runId: string, reason: RunStatus = 'stopped'): Promise<v
   a.child.stdin?.end()
   return new Promise((res) => {
     const kill = (): void => {
-      if (active.has(runId) && a.child.pid) killTree(a.child.pid)
-      res()
+      if (active.has(runId) && a.child.pid) void killTree(a.child.pid).then(res)
+      else res()
     }
     a.killTimer = setTimeout(kill, 8000)
     a.child.once('close', () => {
@@ -421,7 +420,7 @@ export function stopRun(runId: string, reason: RunStatus = 'stopped'): Promise<v
 }
 
 export function forceKillAll(): void {
-  for (const a of active.values()) if (a.child.pid) killTree(a.child.pid)
+  for (const a of active.values()) if (a.child.pid) void killTree(a.child.pid)
 }
 
 export async function stopAllRuns(): Promise<void> {
