@@ -65,13 +65,56 @@ export function worktreeMainRoot(cwd: string): string | undefined {
   }
 }
 
-// Saida de `git status --porcelain` dentro do worktree (vazia = limpo). I/O isolado para o teardown.
+// Saida de `git status --porcelain --untracked-files=all` dentro do worktree (vazia = limpo). I/O p/ o teardown.
 // SEM --ignored de proposito: arquivos ignorados (node_modules, dist/, .cache) sao regeneraveis, entao NAO
 // bloqueiam a limpeza — senao uma rotina que builda vazaria GBs de worktree por run. Mudanca em arquivo
-// RASTREADO ou arquivo novo NAO-ignorado aparece (` M`/`??`) e PRESERVA a worktree (trabalho de verdade,
-// ou commite na branch turno/ que sobrevive a remocao). Saida que importa deve ir pra path rastreado/commit.
+// RASTREADO ou arquivo novo NAO-ignorado aparece (` M`/`??`) e PRESERVA a worktree. --untracked-files=all forca
+// listar untracked mesmo com `status.showUntrackedFiles=no` no gitconfig do usuario (senao a saida sumiria calada).
 export function worktreeStatus(path: string): string {
-  return execFileSync('git', ['status', '--porcelain'], { cwd: path, encoding: 'utf8', stdio: 'pipe' })
+  return execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], { cwd: path, encoding: 'utf8', stdio: 'pipe' })
+}
+
+// HEAD / base (commit de origem, gravado na criacao) / branch atual do worktree. undefined se nao der pra ler.
+export function worktreeHead(path: string): string | undefined {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: path, encoding: 'utf8', stdio: 'pipe' }).trim() || undefined
+  } catch {
+    return undefined
+  }
+}
+export function worktreeBase(path: string): string | undefined {
+  try {
+    return execFileSync('git', ['config', '--get', 'turno.base'], { cwd: path, encoding: 'utf8', stdio: 'pipe' }).trim() || undefined
+  } catch {
+    return undefined
+  }
+}
+export function worktreeBranch(path: string): string | undefined {
+  try {
+    return execFileSync('git', ['branch', '--show-current'], { cwd: path, encoding: 'utf8', stdio: 'pipe' }).trim() || undefined
+  } catch {
+    return undefined
+  }
+}
+
+// Apaga a branch do worktree (so no caminho de remocao da worktree VAZIA; branch com commits e preservada).
+// Best-effort: ignora erro (ex. branch ja some, ou -D recusa).
+export function deleteBranch(repoRoot: string, branch: string): void {
+  try {
+    execFileSync('git', ['branch', '-D', branch], { cwd: repoRoot, stdio: 'pipe' })
+  } catch {
+    /* ja apagada / nao existe */
+  }
+}
+
+// Decisao de teardown: so REMOVE a worktree (e apaga a branch) se ela esta vazia DE VERDADE — nada nao-commitado
+// E sem commits alem do base (branch nao avancou). Com trabalho (mudanca nao-commitada OU commits) -> PRESERVA:
+// o trabalho vive na worktree+branch p/ o usuario revisar/mergear e p/ um follow-up continuar nela (nao recria do HEAD).
+// base desconhecida -> preserva (nao arrisca). Mata o vazamento de branches E a incoerencia do recria-do-HEAD.
+export function worktreeTeardown(o: { uncommitted: boolean; base?: string; head?: string }): 'preserve' | 'remove' {
+  if (o.uncommitted) return 'preserve'
+  if (!o.base || !o.head) return 'preserve'
+  return o.base === o.head ? 'remove' : 'preserve'
 }
 
 // Parseia `git worktree list --porcelain` em entradas.
@@ -98,6 +141,9 @@ export function canCleanup(statusPorcelain: string): boolean {
 
 export function createWorktree(repoRoot: string, branch: string, path: string): void {
   execFileSync('git', ['worktree', 'add', '-b', branch, path], { cwd: repoRoot, stdio: 'pipe' })
+  // Grava o commit de origem p/ o teardown saber depois se a branch avancou (tem commits) ou esta vazia.
+  const base = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: path, encoding: 'utf8', stdio: 'pipe' }).trim()
+  execFileSync('git', ['config', 'turno.base', base], { cwd: path, stdio: 'pipe' })
 }
 
 // Sem --force de proposito: o git recusa remover um worktree com mudancas nao commitadas,

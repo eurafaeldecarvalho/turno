@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, existsSync, mkdirSync, symlinkSync, realpathSync }
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { writeFileSync } from 'node:fs'
-import { planWorktree, parseWorktrees, canCleanup, createWorktree, removeWorktree, worktreeDecision, worktreeStatus, resolveRepoRoot, worktreeCwd, isManagedWorktreePath, worktreeMainRoot } from '../worktree'
+import { planWorktree, parseWorktrees, canCleanup, createWorktree, removeWorktree, worktreeDecision, worktreeStatus, resolveRepoRoot, worktreeCwd, isManagedWorktreePath, worktreeMainRoot, worktreeTeardown, worktreeHead, worktreeBase, worktreeBranch, deleteBranch } from '../worktree'
 
 describe('planWorktree (puro)', () => {
   it('gera branch com prefixo turno/ e caminho FORA do repo, deterministico por run', () => {
@@ -68,6 +68,21 @@ describe('isManagedWorktreePath (puro) — reconhece worktree do Turno', () => {
   })
 })
 
+describe('worktreeTeardown (puro) — preservar (tem trabalho) vs remover (vazia de verdade)', () => {
+  it('mudanca nao commitada -> preserva', () => {
+    expect(worktreeTeardown({ uncommitted: true, base: 'a', head: 'a' })).toBe('preserve')
+  })
+  it('branch avancou (tem commits) -> preserva (trabalho vive na branch+worktree)', () => {
+    expect(worktreeTeardown({ uncommitted: false, base: 'a', head: 'b' })).toBe('preserve')
+  })
+  it('limpo e sem commits (HEAD == base) -> remove', () => {
+    expect(worktreeTeardown({ uncommitted: false, base: 'a', head: 'a' })).toBe('remove')
+  })
+  it('base desconhecida -> preserva (nao arrisca apagar trabalho)', () => {
+    expect(worktreeTeardown({ uncommitted: false, base: undefined, head: 'a' })).toBe('preserve')
+  })
+})
+
 describe('canCleanup (puro)', () => {
   it('so limpa quando o working tree esta limpo', () => {
     expect(canCleanup('')).toBe(true)
@@ -115,6 +130,62 @@ describe('createWorktree/removeWorktree (integracao git)', () => {
       expect(eff).toBe(join(wtPath, 'sub'))
     } finally {
       rmSync(base, { recursive: true, force: true })
+    }
+  })
+
+  it('createWorktree grava base; worktreeHead/Base/Branch leem; deleteBranch apaga', () => {
+    const { branch, path } = planWorktree(repo, 'rota', 'run-base')
+    rmSync(path, { recursive: true, force: true })
+    createWorktree(repo, branch, path)
+    try {
+      expect(worktreeBase(path)).toBe(worktreeHead(path)) // recem-criado: base == HEAD (sem commits)
+      expect(worktreeBranch(path)).toBe(branch)
+    } finally {
+      removeWorktree(repo, path)
+      expect(execFileSync('git', ['branch', '--list', branch], { cwd: repo }).toString().trim()).toBe(branch) // sobra sem deleteBranch
+      deleteBranch(repo, branch)
+      expect(execFileSync('git', ['branch', '--list', branch], { cwd: repo }).toString().trim()).toBe('') // apagada
+    }
+  })
+
+  it('worktree vazia (sem commits) -> teardown REMOVE; com commit -> PRESERVA (fix #2 + vazamento de branch)', () => {
+    // vazia: HEAD == base -> remove
+    const w1 = planWorktree(repo, 'rota', 'run-empty')
+    rmSync(w1.path, { recursive: true, force: true })
+    createWorktree(repo, w1.branch, w1.path)
+    expect(worktreeTeardown({ uncommitted: !canCleanup(worktreeStatus(w1.path)), base: worktreeBase(w1.path), head: worktreeHead(w1.path) })).toBe('remove')
+    removeWorktree(repo, w1.path)
+    deleteBranch(repo, w1.branch)
+
+    // com commit: HEAD != base -> preserva (trabalho na branch; nao vira recria-do-HEAD incoerente)
+    const w2 = planWorktree(repo, 'rota', 'run-commit')
+    rmSync(w2.path, { recursive: true, force: true })
+    createWorktree(repo, w2.branch, w2.path)
+    try {
+      writeFileSync(join(w2.path, 'feito.txt'), 'trabalho')
+      const gitq = (...a: string[]): void => void execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...a], { cwd: w2.path, stdio: 'pipe' })
+      gitq('add', '.')
+      gitq('commit', '-q', '-m', 'trabalho do agente')
+      expect(worktreeTeardown({ uncommitted: !canCleanup(worktreeStatus(w2.path)), base: worktreeBase(w2.path), head: worktreeHead(w2.path) })).toBe('preserve')
+    } finally {
+      execFileSync('git', ['worktree', 'remove', '--force', w2.path], { cwd: repo, stdio: 'pipe' })
+      deleteBranch(repo, w2.branch)
+    }
+  })
+
+  it('worktreeStatus usa --untracked-files=all (pega untracked mesmo com showUntrackedFiles=no)', () => {
+    const { branch, path } = planWorktree(repo, 'rota', 'run-uall')
+    rmSync(path, { recursive: true, force: true })
+    createWorktree(repo, branch, path)
+    try {
+      execFileSync('git', ['config', 'status.showUntrackedFiles', 'no'], { cwd: path, stdio: 'pipe' })
+      writeFileSync(join(path, 'novo.txt'), 'trabalho untracked')
+      expect(canCleanup(worktreeStatus(path))).toBe(false) // ainda detecta o untracked -> preserva (nao perde)
+    } finally {
+      // config local de worktree e compartilhada com o repo: desfaz p/ nao vazar pros outros testes.
+      execFileSync('git', ['config', '--unset', 'status.showUntrackedFiles'], { cwd: path, stdio: 'pipe' })
+      execFileSync('git', ['worktree', 'remove', '--force', path], { cwd: repo, stdio: 'pipe' })
+      deleteBranch(repo, branch)
     }
   })
 

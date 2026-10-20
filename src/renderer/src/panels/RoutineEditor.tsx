@@ -421,7 +421,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
                 <option value="worktree">git worktree</option>
               </select>
               {cfg.isolation === 'worktree' && (
-                <small className="muted">Runs in a dedicated git worktree (branch turno/…). Requires the working dir to be a git repo. Cleaned up afterwards; kept if the run left changes.</small>
+                <small className="muted">Runs in a dedicated git worktree (branch turno/…). Requires the working dir to be a git repo. An empty worktree is removed afterwards; if the run left changes or commits, the worktree and its branch are kept for you to review.</small>
               )}
             </label>
           </div>
