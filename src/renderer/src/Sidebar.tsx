@@ -1,15 +1,50 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as RMouseEvent, type ReactNode } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as RMouseEvent, type ReactNode } from 'react'
 import { useStore, isActive } from './store'
 import { scheduleSummary, statusTone, when, STATUS_LABEL } from './fmt'
-import { openAdhoc, openFanout, openHistory, openRoutine, openTerminal } from './layout'
+import { openAdhoc, openFanout, openHistory, openRoutine, openRoutineEditorModal, openTerminal, useOpenTabs, focusTab, closeTab } from './layout'
 import { openSettingsModal } from './SettingsModal'
-import { IconChat, IconChevron, IconClose, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
+import { IconChat, IconChevron, IconClock, IconClose, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconRoutine, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
 import { addFolder, addTerminalItem, agentOf, closeItemTerminal, deleteFolder, deleteItem, getDragging, getItem, moveFolder, openItem, patchItem, renameFolder, saveItem, setDragging, toggleSection, useSidebar } from './sidebarStore'
 import { dockApi, paramsOf } from './layout'
 import { setLive, useLive } from './liveTerms'
 import { askConfirm } from './ConfirmDialog'
 import { FolderDialog, ItemDialog } from './ItemDialog'
-import type { SidebarFolder, SidebarItem } from '../../shared/types'
+import type { AgentId, Connection, SidebarFolder, SidebarItem } from '../../shared/types'
+
+// Deriva um label curto do LLM a partir da connection e model.
+function llmLabel(connections: Connection[], profile: string, model: string): string {
+  const conn = connections.find((c) => c.id === profile)
+  if (conn?.kind === 'claude') return 'Claude'
+  const m = (conn?.model ?? model ?? '').toLowerCase()
+  const p = profile.toLowerCase()
+  if (/qwen/i.test(m) || /qwen/i.test(p)) return 'Qwen'
+  if (/codex/i.test(m) || /codex/i.test(p)) return 'Codex'
+  if (/gemini/i.test(m) || /gemini/i.test(p)) return 'Gemini'
+  if (/gpt|openai/i.test(m)) return 'OpenAI'
+  if (/llama/i.test(m)) return 'Llama'
+  if (/mistral/i.test(m)) return 'Mistral'
+  if (/claude/i.test(m) || /claude/i.test(p)) return 'Claude'
+  return conn?.name ?? 'Claude'
+}
+
+// 'claude-sonnet-4-5' → 'sonnet', 'claude-3-opus-20240229' → 'opus', custom → truncated
+function shortModel(model: string): string {
+  const m = model.replace(/^claude-/, '')
+  const match = m.match(/\b(opus|sonnet|haiku|fable)\b/)
+  if (match) return match[1]
+  return m.split(/[-/:]/)[0]
+}
+
+// Nome curto do agent preset para os itens de pasta.
+const AGENT_SHORT: Record<AgentId, string> = {
+  claude: 'Claude',
+  'claude-qwen': 'Claude',
+  codex: 'Codex',
+  gemini: 'Gemini',
+  'qwen-code': 'Qwen',
+  opencode: 'OpenCode',
+  custom: 'Custom',
+}
 
 // Nome editavel no lugar: duplo clique (ou F2) abre o campo; Enter salva, Esc cancela.
 function InlineName({ value, onRename, className, startEdit, onEditStarted }: {
@@ -237,8 +272,16 @@ export function Sidebar() {
   const renameProps = (key: string) => ({ startEdit: renaming === key, onEditStarted: () => setRenaming(undefined) })
   const routines = useStore((s) => s.routines)
   const runs = useStore((s) => s.runs)
+  const connections = useStore((s) => s.settings?.connections ?? [])
   const running = runs.filter(isActive)
   const problems = runs.filter((r) => Date.now() - Date.parse(r.ended_at ?? r.started_at ?? '0') < 86_400_000 && !['ok', 'running', 'queued', 'skipped'].includes(r.status))
+  const openTabs = useOpenTabs()
+  type IconComp = (p: { size?: number }) => React.ReactElement
+  const KIND_ICON_SIDEBAR: Record<string, IconComp> = {
+    terminal: IconTerminal as IconComp, routine: IconRoutine as IconComp, run: IconClock as IconComp,
+    session: IconChat as IconComp, history: IconHistory as IconComp, adhoc: IconSpark as IconComp,
+    fanout: IconSpark as IconComp, settings: IconSettings as IconComp,
+  }
 
   return (
     <aside className="sidebar">
@@ -250,6 +293,9 @@ export function Sidebar() {
       <nav className="nav">
         <button onClick={() => openTerminal()}>
           <IconTerminal /> New terminal
+        </button>
+        <button onClick={() => openTerminal(undefined, { profile: 'claude-max', initialCommand: 'claude --chrome' })}>
+          <IconChat /> Claude
         </button>
         <button onClick={() => openAdhoc()}>
           <IconSpark /> Ad hoc run
@@ -297,13 +343,14 @@ export function Sidebar() {
                 : r.nextRuns[0]
                   ? `next ${when(r.nextRuns[0])}`
                   : scheduleSummary(r.config)
+          const modelLabel = shortModel(r.config.model) || r.config.model
           const runNow = async (): Promise<void> => {
             const id = await window.turno.run.startRoutine(r.id).catch(() => '')
             if (id) openRoutine(r.id, r.config.name)
           }
           const routineMenu: MenuItem[] = [
             { label: 'Open', onClick: () => openRoutine(r.id, r.config.name) },
-            { label: 'Configure', onClick: () => openRoutine(r.id, r.config.name, true) },
+            { label: 'Configure', onClick: () => openRoutineEditorModal(r.id) },
             active
               ? { label: 'Stop', onClick: () => void window.turno.run.stop(last!.id) }
               : { label: 'Run now', onClick: () => void runNow() },
@@ -333,14 +380,14 @@ export function Sidebar() {
                     {...renameProps(`routine:${r.id}`)}
                   />
                   <span className="routine-sub">
-                    {r.config.profile === 'qwen-local' && <span className="tag">qwen</span>}
-                    {sub}
+                    <span className="sb-dim">{llmLabel(connections, r.config.profile, r.config.model)}{modelLabel ? ` · ${modelLabel}` : ''} · {r.config.effort}</span>
+                    {sub && <span> · {sub}</span>}
                     {last && !active && last.status !== 'ok' && <span className={`tone-${statusTone(last.status)}`}> · {STATUS_LABEL[last.status]}</span>}
                   </span>
                 </span>
               </button>
               <span className="routine-actions">
-                <button className="icon-btn" title="Configure" aria-label="Configure" onClick={() => openRoutine(r.id, r.config.name, true)}>
+                <button className="icon-btn" title="Configure" aria-label="Configure" onClick={() => openRoutineEditorModal(r.id)}>
                   <IconSettings size={14} />
                 </button>
                 {active ? (
@@ -364,6 +411,31 @@ export function Sidebar() {
         })}
       </ul>
       </Section>
+
+      {openTabs.length > 0 && (
+        <Section id="open-tabs" title="Open tabs" count={openTabs.length}>
+          <ul className="routines">
+            {openTabs.map((tab) => {
+              const Icon = KIND_ICON_SIDEBAR[tab.kind] ?? (IconTerminal as IconComp)
+              return (
+                <li key={tab.id} className="routine">
+                  <button className="routine-main" onClick={() => focusTab(tab.id)} title={tab.title}>
+                    <span className="item-icon"><Icon size={14} /></span>
+                    <span className="routine-text">
+                      <span className="routine-name">{tab.title || tab.kind}</span>
+                    </span>
+                  </button>
+                  <span className="routine-actions">
+                    <button className="icon-btn" title="Close tab" aria-label="Close tab" onClick={() => closeTab(tab.id)}>
+                      <IconClose size={14} />
+                    </button>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </Section>
+      )}
 
       {folders.map((f, i) => {
         const delFolder = (): void => {
@@ -433,8 +505,8 @@ export function Sidebar() {
                       {it.kind === 'link'
                         ? (it.url ?? '').replace(/^https?:[/][/]/, '').slice(0, 40)
                         : it.kind === 'terminal'
-                          ? `${it.sessionId ? 'Claude session' : 'terminal'}${it.cwd ? ` · ${lastPart(it.cwd)}` : ''}`
-                          : `${agentOf(it.agent).name}${it.cwd ? ` · ${lastPart(it.cwd)}` : ''}`}
+                          ? `${it.sessionId ? 'session' : 'terminal'}${it.cwd ? ` · ${lastPart(it.cwd)}` : ''}`
+                          : `${AGENT_SHORT[it.agent as AgentId] ?? agentOf(it.agent).name}${it.cwd ? ` · ${lastPart(it.cwd)}` : ''}`}
                     </span>
                   </span>
                 </button>

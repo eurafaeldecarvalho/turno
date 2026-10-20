@@ -1,6 +1,7 @@
 import { ipcMain, WebContents } from 'electron'
 import * as pty from 'node-pty'
 import { existsSync } from 'node:fs'
+import { execFile } from 'node:child_process'
 import type { PtyCreateOptions } from '../shared/types'
 import { childEnv } from './env'
 import { getConnection, resolveProviderEnv } from './providers'
@@ -68,6 +69,35 @@ export function registerPty(getWc: () => WebContents | undefined): void {
     safeKill(ptys.get(id))
     ptys.delete(id)
     untrackPty(id)
+  })
+  ipcMain.handle('pty:memory', () => {
+    const items = Array.from(ptys.entries()).map(([id, p]) => ({ ptyId: id, pid: p.pid }))
+    if (!items.length) return Promise.resolve([])
+    const pidList = items.map((x) => x.pid).join(',')
+    return new Promise((resolve) => {
+      execFile(
+        'powershell',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `Try{Get-Process -Id @(${pidList}) -EA SilentlyContinue|Select Id,@{N='K';E={[int]($_.WorkingSet64/1KB)}}|ConvertTo-Json -Compress}Catch{'[]'}`,
+        ],
+        { timeout: 3000 },
+        (_err, stdout) => {
+          try {
+            const raw = (stdout ?? '').trim()
+            const arr: Array<{ Id: number; K: number }> = JSON.parse(
+              raw.startsWith('[') ? raw : raw ? `[${raw}]` : '[]',
+            )
+            const memMap = new Map(arr.map((x) => [x.Id, x.K]))
+            resolve(items.map(({ ptyId, pid }) => ({ ptyId, pid, memKb: memMap.get(pid) ?? 0 })))
+          } catch {
+            resolve(items.map(({ ptyId, pid }) => ({ ptyId, pid, memKb: 0 })))
+          }
+        },
+      )
+    })
   })
 }
 

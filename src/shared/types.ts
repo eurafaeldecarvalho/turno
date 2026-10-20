@@ -312,6 +312,9 @@ export interface TurnoApi {
     // NL -> comando no terminal: devolve { command, explanation }. command=null => UI nao oferece Execute.
     suggestCommand(connId: string, ctx: { ask: string; lastCommand?: string; output?: string }): Promise<{ command: string | null; explanation: string }>
   }
+  stats: {
+    ptyMemory(): Promise<Array<{ ptyId: number; pid: number; memKb: number }>>
+  }
   smoke: {
     enabled: boolean
     view?: string // abre um painel por nome (ex. 'fanout') p/ prova visual

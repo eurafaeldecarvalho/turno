@@ -1,9 +1,77 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AwakeMode, AwakeStatus } from '../../shared/types'
 import { useStore, isActive } from './store'
 import { updateSettings } from './appearance'
-import { openHistory } from './layout'
+import { openHistory, useOpenTabs } from './layout'
 import { IconCoffee } from './icons'
+
+function fmtMb(kb: number): string {
+  const mb = kb / 1024
+  return mb >= 1000 ? `${(mb / 1024).toFixed(1)} GB` : `${Math.round(mb)} MB`
+}
+
+function fmtUsd(v: number): string {
+  return v < 0.01 ? '<$0.01' : `$${v.toFixed(2)}`
+}
+
+// Segmento de terminais abertos + RAM total dos processos pty.
+function TerminalSegment() {
+  const tabs = useOpenTabs()
+  const termCount = tabs.filter((t) => t.kind === 'terminal' || t.kind === 'session').length
+  const [totalKb, setTotalKb] = useState(0)
+
+  useEffect(() => {
+    if (!termCount) { setTotalKb(0); return }
+    let cancelled = false
+    const poll = (): void => {
+      void window.turno.stats.ptyMemory()
+        .then((items) => {
+          if (cancelled) return
+          setTotalKb(items.reduce((s, x) => s + x.memKb, 0))
+        })
+        .catch(() => { if (!cancelled) setTotalKb(0) })
+    }
+    poll()
+    const id = setInterval(poll, 5000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [termCount])
+
+  if (!termCount) return null
+  return (
+    <span className="sb-item sb-static">
+      {termCount} {termCount === 1 ? 'terminal' : 'terminais'}
+      {totalKb > 0 && <span className="sb-dim"> · {fmtMb(totalKb)}</span>}
+    </span>
+  )
+}
+
+// Segmento de uso do Claude: custo hoje e na semana.
+function ClaudeUsageSegment() {
+  const runs = useStore((s) => s.runs)
+
+  const { todayCost, weekCost, hasCost } = useMemo(() => {
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const weekStart = new Date(todayStart)
+    weekStart.setDate(todayStart.getDate() - ((todayStart.getDay() + 6) % 7)) // segunda-feira
+    const todayCost = runs
+      .filter((r) => r.started_at && new Date(r.started_at) >= todayStart && r.cost_usd != null)
+      .reduce((s, r) => s + (r.cost_usd ?? 0), 0)
+    const weekCost = runs
+      .filter((r) => r.started_at && new Date(r.started_at) >= weekStart && r.cost_usd != null)
+      .reduce((s, r) => s + (r.cost_usd ?? 0), 0)
+    return { todayCost, weekCost, hasCost: runs.some((r) => r.cost_usd != null) }
+  }, [runs])
+
+  if (!hasCost) return null
+
+  return (
+    <span className="sb-item sb-static" title="Custo Claude hoje e nesta semana">
+      {fmtUsd(todayCost)} hoje
+      <span className="sb-dim"> · {fmtUsd(weekCost)} semana</span>
+    </span>
+  )
+}
 
 const MODES: Array<{ v: AwakeMode; t: string; d: string }> = [
   { v: 'on', t: 'On', d: 'Keeps the computer awake all the time' },
@@ -82,6 +150,8 @@ export function StatusBar() {
       <span className="sb-item sb-static">
         {on}/{routines.length} routines on
       </span>
+      <TerminalSegment />
+      <ClaudeUsageSegment />
       <span className="sb-spacer" />
       <AwakeSegment />
     </footer>

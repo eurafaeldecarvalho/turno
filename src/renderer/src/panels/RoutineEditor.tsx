@@ -152,6 +152,13 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   const hasPolicy = (k: 'session_limit' | 'weekly_limit'): boolean => (cfg.abort ?? []).some((p) => p.kind === k)
   const togglePolicy = (k: 'session_limit' | 'weekly_limit'): void =>
     up({ abort: hasPolicy(k) ? (cfg.abort ?? []).filter((p) => p.kind !== k) : [...(cfg.abort ?? []), { kind: k }] })
+  type NumericPolicyKind = 'cost_usd' | 'steps' | 'duration_min'
+  const getNumericPolicy = (k: NumericPolicyKind): number | undefined =>
+    (cfg.abort ?? []).find((p): p is Extract<typeof p, { limit: number }> => p.kind === k)?.limit
+  const setNumericPolicy = (k: NumericPolicyKind, limit: number | undefined): void =>
+    up({ abort: limit !== undefined
+      ? [...(cfg.abort ?? []).filter((p) => p.kind !== k), { kind: k, limit }]
+      : (cfg.abort ?? []).filter((p) => p.kind !== k) })
 
   return (
     <div className="editor">
@@ -403,17 +410,19 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
         <section className="card">
           <h3>Limits &amp; safety</h3>
           <div className="grid2">
-            <label className="field">
-              <span>Budget per conversation (USD)</span>
-              <input
-                type="number"
-                min={0}
-                step={0.5}
-                value={cfg.budget_usd ?? ''}
-                placeholder="no limit"
-                onChange={(e) => up({ budget_usd: e.target.value ? Number(e.target.value) : undefined })}
-              />
-            </label>
+            {!isClaude && (
+              <label className="field">
+                <span>Budget per conversation (USD)</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={cfg.budget_usd ?? ''}
+                  placeholder="no limit"
+                  onChange={(e) => up({ budget_usd: e.target.value ? Number(e.target.value) : undefined })}
+                />
+              </label>
+            )}
             <label className="field">
               <span>Isolation</span>
               <select value={cfg.isolation} onChange={(e) => up({ isolation: e.target.value as RoutineConfig['isolation'] })}>
@@ -425,14 +434,65 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
               )}
             </label>
           </div>
+          {isClaude && (
+            <div className="field">
+              <span>Pause when the subscription limit is hit (resumes after reset)</span>
+              <div className="row">
+                <label className="row small muted">
+                  <Switch checked={hasPolicy('session_limit')} onChange={() => togglePolicy('session_limit')} /> 5h session
+                </label>
+                <label className="row small muted">
+                  <Switch checked={hasPolicy('weekly_limit')} onChange={() => togglePolicy('weekly_limit')} /> weekly
+                </label>
+              </div>
+            </div>
+          )}
           <div className="field">
-            <span>Pause when the subscription limit is hit (resumes after reset)</span>
-            <div className="row">
-              <label className="row small muted">
-                <Switch checked={hasPolicy('session_limit')} onChange={() => togglePolicy('session_limit')} /> 5h session
+            <span>Abort conversation when it reaches</span>
+            <div className="row" style={{ flexWrap: 'wrap', gap: 12 }}>
+              {!isClaude && (
+                <label className="row small muted" style={{ gap: 4 }}>
+                  <Switch
+                    checked={getNumericPolicy('cost_usd') !== undefined}
+                    onChange={(v) => setNumericPolicy('cost_usd', v ? 1 : undefined)}
+                  />
+                  <input
+                    type="number" min={0.1} step={0.5}
+                    value={getNumericPolicy('cost_usd') ?? ''}
+                    disabled={getNumericPolicy('cost_usd') === undefined}
+                    style={{ width: 56 }}
+                    onChange={(e) => e.target.value && setNumericPolicy('cost_usd', Number(e.target.value) || 1)}
+                  />
+                  USD
+                </label>
+              )}
+              <label className="row small muted" style={{ gap: 4 }}>
+                <Switch
+                  checked={getNumericPolicy('steps') !== undefined}
+                  onChange={(v) => setNumericPolicy('steps', v ? 100 : undefined)}
+                />
+                <input
+                  type="number" min={1} step={10}
+                  value={getNumericPolicy('steps') ?? ''}
+                  disabled={getNumericPolicy('steps') === undefined}
+                  style={{ width: 64 }}
+                  onChange={(e) => e.target.value && setNumericPolicy('steps', Number(e.target.value) || 10)}
+                />
+                steps
               </label>
-              <label className="row small muted">
-                <Switch checked={hasPolicy('weekly_limit')} onChange={() => togglePolicy('weekly_limit')} /> weekly
+              <label className="row small muted" style={{ gap: 4 }}>
+                <Switch
+                  checked={getNumericPolicy('duration_min') !== undefined}
+                  onChange={(v) => setNumericPolicy('duration_min', v ? 30 : undefined)}
+                />
+                <input
+                  type="number" min={1}
+                  value={getNumericPolicy('duration_min') ?? ''}
+                  disabled={getNumericPolicy('duration_min') === undefined}
+                  style={{ width: 56 }}
+                  onChange={(e) => e.target.value && setNumericPolicy('duration_min', Number(e.target.value) || 1)}
+                />
+                min
               </label>
             </div>
           </div>

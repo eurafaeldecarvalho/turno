@@ -118,13 +118,16 @@ export function SettingsPanel() {
         </div>
       </header>
       <div className="editor-body">
-        <section className="card grow">
+        <section className="card">
           <h3>Theme</h3>
-          <div className="theme-grid">
-            {THEMES.map((th) => (
-              <ThemeCard key={th.id} t={th} active={s.theme === th.id} onPick={() => void patch({ theme: th.id })} />
-            ))}
-          </div>
+          <label className="field">
+            <span>Color theme</span>
+            <select value={s.theme} onChange={(e) => void patch({ theme: e.target.value as Settings['theme'] })}>
+              {THEMES.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </label>
         </section>
 
         <ConnectionsSection />

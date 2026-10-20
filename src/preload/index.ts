@@ -73,6 +73,9 @@ const api: TurnoApi = {
   ai: {
     suggestCommand: (connId, ctx) => ipcRenderer.invoke('ai:suggestCommand', connId, ctx),
   },
+  stats: {
+    ptyMemory: () => ipcRenderer.invoke('pty:memory'),
+  },
   smoke: {
     enabled: process.argv.includes('--turno-smoke'),
     view: process.argv.find((a) => a.startsWith('--smoke-view='))?.slice('--smoke-view='.length),

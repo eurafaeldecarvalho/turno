@@ -18,6 +18,8 @@ import { Sidebar } from './Sidebar'
 import { StatusBar } from './StatusBar'
 import { ConfirmHost } from './ConfirmDialog'
 import { SettingsModalHost, openSettingsModal } from './SettingsModal'
+import { RoutineEditorModalHost } from './RoutineEditorModal'
+import { PanelModalHost } from './PanelModal'
 import { ToastHost } from './Toast'
 import { dockApi, openAdhoc, openFanout, openHistory, openRoutine, openRun, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi } from './layout'
 import { initStore, useStore } from './store'
@@ -189,6 +191,9 @@ function Welcome(_: IWatermarkPanelProps) {
         <button className="btn" onClick={() => openTerminal()}>
           <IconTerminal /> Terminal
         </button>
+        <button className="btn" onClick={() => openTerminal(undefined, { profile: 'claude-max', initialCommand: 'claude --chrome' })}>
+          <IconChat /> Claude
+        </button>
         <button className="btn" onClick={() => openHistory()}>
           <IconHistory /> Runs
         </button>
@@ -306,6 +311,8 @@ export function App() {
       <StatusBar />
       <ConfirmHost />
       <SettingsModalHost />
+      <RoutineEditorModalHost />
+      <PanelModalHost />
       <ToastHost />
     </div>
   )
