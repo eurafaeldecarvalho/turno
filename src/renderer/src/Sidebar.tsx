@@ -255,6 +255,9 @@ function useTerminalDrop(): string | undefined {
   return hover
 }
 
+// Referencia estavel: um `[]` novo a cada getSnapshot faz o useSyncExternalStore entrar em loop (React #185).
+const NO_CONNECTIONS: never[] = []
+
 export function Sidebar() {
   const { folders } = useSidebar()
   const [dialog, setDialog] = useState<Dialog>()
@@ -272,7 +275,7 @@ export function Sidebar() {
   const renameProps = (key: string) => ({ startEdit: renaming === key, onEditStarted: () => setRenaming(undefined) })
   const routines = useStore((s) => s.routines)
   const runs = useStore((s) => s.runs)
-  const connections = useStore((s) => s.settings?.connections ?? [])
+  const connections = useStore((s) => s.settings?.connections ?? NO_CONNECTIONS)
   const running = runs.filter(isActive)
   const problems = runs.filter((r) => Date.now() - Date.parse(r.ended_at ?? r.started_at ?? '0') < 86_400_000 && !['ok', 'running', 'queued', 'skipped'].includes(r.status))
   const openTabs = useOpenTabs()

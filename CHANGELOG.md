@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1 (2026-10-20)
+
+- Fix: the installed app opened to a blank window. The sidebar's connections selector returned a new empty array on every snapshot before settings loaded, which sent `useSyncExternalStore` into an update loop (React error #185) and unmounted the UI.
+- Fix: the installer ignored `electron-builder.yml` because `package.json` also had a `build` block, so the app and tray icons were missing from installed builds. The config now lives only in `electron-builder.yml` (Windows and Linux).
+
 ## 0.2.0 (2026-10-18)
 
 - Drag a terminal tab onto a sidebar folder to keep it as an item. The item follows the terminal's current folder (shell integration via OSC 9;9) and the Claude Code session running in it. Clicking the item reopens `claude --resume <last session>` in that folder, or a shell there.
