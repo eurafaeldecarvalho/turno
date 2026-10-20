@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
 export interface WorktreeEntry {
@@ -82,9 +83,14 @@ export function worktreeHead(path: string): string | undefined {
     return undefined
   }
 }
+// base gravada POR-WORKTREE (arquivo no git-dir da propria worktree), nao em config compartilhada:
+// com rotinas isoladas concorrentes + main se movendo, uma config unica `turno.base` seria sobrescrita entre criacoes.
+function baseFile(path: string): string {
+  return join(execFileSync('git', ['rev-parse', '--absolute-git-dir'], { cwd: path, encoding: 'utf8', stdio: 'pipe' }).trim(), 'turno-base')
+}
 export function worktreeBase(path: string): string | undefined {
   try {
-    return execFileSync('git', ['config', '--get', 'turno.base'], { cwd: path, encoding: 'utf8', stdio: 'pipe' }).trim() || undefined
+    return readFileSync(baseFile(path), 'utf8').trim() || undefined
   } catch {
     return undefined
   }
@@ -141,9 +147,9 @@ export function canCleanup(statusPorcelain: string): boolean {
 
 export function createWorktree(repoRoot: string, branch: string, path: string): void {
   execFileSync('git', ['worktree', 'add', '-b', branch, path], { cwd: repoRoot, stdio: 'pipe' })
-  // Grava o commit de origem p/ o teardown saber depois se a branch avancou (tem commits) ou esta vazia.
+  // Grava o commit de origem (POR-WORKTREE, no git-dir) p/ o teardown saber se a branch avancou (tem commits) ou esta vazia.
   const base = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: path, encoding: 'utf8', stdio: 'pipe' }).trim()
-  execFileSync('git', ['config', 'turno.base', base], { cwd: path, stdio: 'pipe' })
+  writeFileSync(baseFile(path), base + '\n')
 }
 
 // Sem --force de proposito: o git recusa remover um worktree com mudancas nao commitadas,

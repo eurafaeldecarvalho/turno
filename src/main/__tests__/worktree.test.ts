@@ -148,6 +148,27 @@ describe('createWorktree/removeWorktree (integracao git)', () => {
     }
   })
 
+  it('base e POR-WORKTREE (nao compartilhada): worktrees concorrentes tem bases independentes', () => {
+    const a = planWorktree(repo, 'rota', 'run-pwa')
+    rmSync(a.path, { recursive: true, force: true })
+    createWorktree(repo, a.branch, a.path)
+    // main avanca ENTRE as duas criacoes
+    execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '--allow-empty', '-q', '-m', 'avanca main'], { cwd: repo, stdio: 'pipe' })
+    const b = planWorktree(repo, 'rota', 'run-pwb')
+    rmSync(b.path, { recursive: true, force: true })
+    createWorktree(repo, b.branch, b.path)
+    try {
+      expect(worktreeBase(a.path)).toBe(worktreeHead(a.path)) // cada worktree guarda a SUA base (nao a da outra)
+      expect(worktreeBase(b.path)).toBe(worktreeHead(b.path))
+      expect(worktreeBase(a.path)).not.toBe(worktreeBase(b.path)) // bases distintas (main moveu entre as criacoes)
+    } finally {
+      removeWorktree(repo, a.path)
+      deleteBranch(repo, a.branch)
+      removeWorktree(repo, b.path)
+      deleteBranch(repo, b.branch)
+    }
+  })
+
   it('worktree vazia (sem commits) -> teardown REMOVE; com commit -> PRESERVA (fix #2 + vazamento de branch)', () => {
     // vazia: HEAD == base -> remove
     const w1 = planWorktree(repo, 'rota', 'run-empty')

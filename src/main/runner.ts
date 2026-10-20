@@ -429,7 +429,8 @@ export function startRun(o: StartOptions): string {
         if (worktreeTeardown({ uncommitted, base: worktreeBase(teardown.path), head: worktreeHead(teardown.path) }) === 'remove') {
           const branch = worktreeBranch(teardown.path) // ler ANTES de remover o worktree
           removeWorktree(teardown.repoRoot, teardown.path)
-          if (branch) deleteBranch(teardown.repoRoot, branch)
+          // So apaga branch NOSSA (prefixo turno/): se o agente deu `git switch` p/ outra branch, nao apagamos a dele.
+          if (branch?.startsWith('turno/')) deleteBranch(teardown.repoRoot, branch)
           // run.cwd deixa de apontar pra worktree removida: mapeia de volta pra MESMA subpasta no repo principal
           // (preserva o subdir da rotina; um follow-up com isolamento recria uma worktree a partir dai).
           cwdOverride = effectiveCwd ? join(teardown.repoRoot, relative(teardown.path, effectiveCwd)) : teardown.repoRoot
