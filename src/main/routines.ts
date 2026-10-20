@@ -25,7 +25,7 @@ const schema = z.object({
     })
     .default({ days: [...WEEKDAYS], times: [] }),
   timezone: z.string().default('America/Sao_Paulo'),
-  profile: z.enum(['claude-max', 'qwen-local']).default('claude-max'),
+  profile: z.string().default('claude-max'),
   model: z.string().default('sonnet'),
   effort: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).default('medium'),
   permission_mode: z.enum(['manual', 'acceptEdits', 'auto', 'dontAsk', 'bypassPermissions']).default('dontAsk'),
@@ -35,6 +35,9 @@ const schema = z.object({
   lock_policy: z.enum(['skip', 'queue']).default('queue'),
   timeout_min: z.number().int().positive().default(60),
   idle_timeout_min: z.number().int().positive().default(15),
+  budget_usd: z.number().positive().optional(),
+  sandbox: z.enum(['none', 'docker', 'wsl']).default('none'),
+  isolation: z.enum(['none', 'worktree']).default('none'),
   catchup: z.boolean().default(true),
   catchup_window_h: z.number().positive().default(12),
   precheck: z.string().optional(),
@@ -43,6 +46,11 @@ const schema = z.object({
 
 export function defaultConfig(): RoutineConfig {
   return schema.parse({ name: 'New routine' }) as RoutineConfig
+}
+
+// Valida/preenche defaults de um config parcial (usado por recipes e pela importacao do frontmatter).
+export function parseConfig(input: unknown): RoutineConfig {
+  return schema.parse(input) as RoutineConfig
 }
 
 // dias + horarios -> uma expressao cron por horario. "cron" avancado tem prioridade.
@@ -112,6 +120,7 @@ export function loadRoutines(root: string): Routine[] {
 export function serialize(config: RoutineConfig, prompt: string): string {
   const clean: Record<string, unknown> = { ...config }
   if (!config.precheck) delete clean.precheck
+  if (config.budget_usd == null) delete clean.budget_usd
   clean.schedule = config.schedule.cron
     ? { days: config.schedule.days, times: config.schedule.times, cron: config.schedule.cron }
     : { days: config.schedule.days, times: config.schedule.times }

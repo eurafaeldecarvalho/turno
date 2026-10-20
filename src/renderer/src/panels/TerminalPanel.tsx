@@ -8,6 +8,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { discarded, paramsOf, type TerminalParams } from '../layout'
 import { onSettings } from '../appearance'
+import { terminalOptions } from '../terminalOptions'
 import { itemExists, patchItem } from '../sidebarStore'
 import { killParked, park, setLive, unpark } from '../liveTerms'
 import type { TermSession } from '../../../shared/types'
@@ -111,15 +112,9 @@ function createTerm(params: TerminalParams): TermHandle {
 
   const offSettings = onSettings((st) => {
     const t = st.terminal
-    term.options.fontFamily = t.fontFamily
-    term.options.fontSize = t.fontSize
-    term.options.lineHeight = t.lineHeight
-    term.options.letterSpacing = t.letterSpacing
-    term.options.fontWeight = t.fontWeight
-    term.options.cursorStyle = t.cursorStyle
-    term.options.cursorBlink = t.cursorBlink
-    term.options.scrollback = t.scrollback
+    Object.assign(term.options, terminalOptions(t))
     term.options.theme = themeById(st.theme).term
+    el.style.padding = `${t.padding}px`
     copyOnSelect = t.copyOnSelect
     rightClickPaste = t.rightClickPaste
     requestAnimationFrame(() => h.refit())

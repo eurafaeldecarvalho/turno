@@ -14,6 +14,10 @@ import { awakeStatus, initAwake, setAwakeMode } from './awake'
 import { themeById } from '../shared/themes'
 import { detectShells, listFonts } from './shells'
 import { prepareClaude } from './claudeprep'
+import { claudeLogin, claudeLogout, claudeStatus } from './provider-auth'
+import { setSecret, deleteSecret } from './secrets'
+import { getConnection } from './providers'
+import { checkConnection } from './doctor'
 
 const smoke = process.argv.includes('--smoke')
 const startHidden = process.argv.includes('--hidden')
@@ -231,6 +235,21 @@ ipcMain.handle('sidebar:get', () => getSidebar())
 ipcMain.handle('sidebar:save', (_e, s: SidebarState) => saveSidebar(s))
 ipcMain.handle('sidebar:claudeSessions', () => listClaudeSessions())
 ipcMain.handle('sidebar:claudeSessionExists', (_e, id: string) => claudeSessionExists(id))
+
+const tokenKey = (connId: string): string => `conn:${connId}`
+ipcMain.handle('provider:claudeStatus', () => claudeStatus())
+ipcMain.handle('provider:claudeLogin', () => claudeLogin())
+ipcMain.handle('provider:claudeLogout', () => claudeLogout())
+ipcMain.handle('provider:setToken', (_e, connId: string, token: string) => {
+  const ref = tokenKey(connId)
+  setSecret(ref, token)
+  return ref
+})
+ipcMain.handle('provider:deleteToken', (_e, connId: string) => deleteSecret(tokenKey(connId)))
+ipcMain.handle('provider:preflight', (_e, connId: string) => {
+  const conn = getConnection(getSettings(), connId)
+  return checkConnection(conn)
+})
 ipcMain.handle('ui:openExternal', (_e, url: string) => {
   // So abre esquemas conhecidos (http/https e protocolos de apps), nunca arquivo local.
   if (!/^(https?|claude|vscode|cursor|chatgpt|slack|notion|obsidian):/i.test(url)) throw new Error('unsupported link')

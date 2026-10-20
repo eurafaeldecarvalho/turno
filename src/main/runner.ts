@@ -4,36 +4,22 @@ import { randomUUID } from 'node:crypto'
 import { createInterface } from 'node:readline'
 import { mkdirSync, createWriteStream, existsSync, readFileSync, rmSync, writeFileSync, WriteStream } from 'node:fs'
 import { join } from 'node:path'
-import type { ProfileId, RunEvent, RunEventKind, RunRecord, RunRequest, RunStatus, RunTrigger } from '../shared/types'
+import type { RunEvent, RunEventKind, RunRecord, RunRequest, RunStatus, RunTrigger } from '../shared/types'
 import { childEnv } from './env'
 import { getRun, insertRun, pruneRuns, updateRun } from './db'
 import { release } from './locks'
+import { getSettings } from './settings'
+import { effectiveModel, requireConnection, resolveProviderEnv } from './providers'
+import { shouldAbortForBudget } from './budget'
+import { wrapForSandbox } from './sandbox'
+import { connectionToken } from './secrets'
 
-export const QWEN_MODEL = 'qwen3.6:35b'
-export const PROFILE_ENV: Record<ProfileId, Record<string, string>> = {
-  'claude-max': {},
-  'qwen-local': {
-    ANTHROPIC_BASE_URL: 'http://localhost:11434',
-    ANTHROPIC_AUTH_TOKEN: 'ollama',
-    ANTHROPIC_API_KEY: '',
-    ANTHROPIC_MODEL: QWEN_MODEL,
-    ANTHROPIC_DEFAULT_OPUS_MODEL: QWEN_MODEL,
-    ANTHROPIC_DEFAULT_SONNET_MODEL: QWEN_MODEL,
-    ANTHROPIC_DEFAULT_HAIKU_MODEL: QWEN_MODEL,
-    CLAUDE_CODE_SUBAGENT_MODEL: QWEN_MODEL,
-    CLAUDE_CODE_MAX_CONTEXT_TOKENS: '131072',
-    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
-    API_TIMEOUT_MS: '1800000',
-  },
-}
-
-export function buildArgs(req: RunRequest): string[] {
+export function buildArgs(req: RunRequest, model?: string): string[] {
   // stream-json na entrada: o processo aceita novas mensagens do usuario enquanto roda.
   const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--replay-user-messages']
   // Sem isso os blocos de pensamento chegam vazios neste modo (achado no codigo do Orca).
   args.push('--thinking-display', 'summarized')
   if (req.resume) args.push('--resume', req.resume)
-  const model = req.profile === 'qwen-local' ? QWEN_MODEL : req.model
   if (model) args.push('--model', model)
   if (req.effort) args.push('--effort', req.effort)
   const mode = req.permissionMode ?? 'dontAsk'
@@ -105,6 +91,8 @@ export interface StartOptions {
   scheduledAt?: string
   timeoutMin?: number
   idleTimeoutMin?: number
+  budgetUsd?: number // teto de custo; ao ultrapassar, o run e morto com status 'over_budget'
+  sandbox?: import('../shared/types').SandboxMode // 'none' (default) roda sem sandbox
   runId?: string // ja inserido como 'queued' pelo agendador
   parentId?: string // run anterior da mesma conversa (follow-up)
 }
@@ -215,6 +203,10 @@ function updateBlocker(): void {
 
 export function startRun(o: StartOptions): string {
   const { req } = o
+  // Guard central: recusa profile de connection inexistente (nunca cai no provedor pago em silencio).
+  // Cobre runRoutine, followUp e adhoc, que todos passam por aqui.
+  const conn = requireConnection(getSettings(), req.profile)
+  const model = effectiveModel(conn, req.model)
   const runId = o.runId ?? newRunId()
   const dir = join(runsDir, runId)
   mkdirSync(dir, { recursive: true })
@@ -238,7 +230,7 @@ export function startRun(o: StartOptions): string {
       status: 'running',
       scheduled_at: o.scheduledAt ?? null,
       profile: req.profile,
-      model: req.profile === 'qwen-local' ? QWEN_MODEL : (req.model ?? null),
+      model: model ?? null,
       cwd: req.cwd ?? null,
       parent_id: o.parentId ?? null,
     })
@@ -246,12 +238,13 @@ export function startRun(o: StartOptions): string {
 
   // Guardado para continuar a conversa depois (follow-up com --resume).
   writeFileSync(join(dir, 'request.json'), JSON.stringify({ ...req, prompt: undefined }, null, 2))
-  const args = buildArgs(req)
-  emit('start', `claude ${args.join(' ')}  [profile ${req.profile}${o.routine ? `, routine ${o.routine}` : ''}]`)
-  const child = spawn('claude', args, {
+  const args = buildArgs(req, model)
+  const sb = wrapForSandbox('claude', args, o.sandbox ?? 'none', { cwd: req.cwd })
+  emit('start', `${sb.cmd} ${sb.args.join(' ')}  [profile ${req.profile}${o.routine ? `, routine ${o.routine}` : ''}]`)
+  const child = spawn(sb.cmd, sb.args, {
     cwd: req.cwd ?? process.env.USERPROFILE,
     env: childEnv({
-      ...PROFILE_ENV[req.profile],
+      ...resolveProviderEnv(conn, connectionToken(conn)),
       TURNO_RUN_ID: runId,
       TURNO_RUN_DIR: dir,
       ...(o.scheduledAt ? { TURNO_SCHEDULED_AT: o.scheduledAt } : {}),
@@ -300,8 +293,10 @@ export function startRun(o: StartOptions): string {
         if (e.type === 'result') {
           result = e
           a.results++
+          // Estourou o teto de custo: mata o run (best-effort, no limite de cada turno).
+          if (typeof e.total_cost_usd === 'number' && shouldAbortForBudget(e.total_cost_usd, o.budgetUsd)) void stopRun(runId, 'over_budget')
           // Respondeu tudo que foi enviado: fecha a entrada e o processo termina.
-          if (a.results >= a.sent) child.stdin?.end()
+          else if (a.results >= a.sent) child.stdin?.end()
         }
       } catch {
         /* linha truncada */

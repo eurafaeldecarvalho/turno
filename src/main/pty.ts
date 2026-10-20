@@ -3,8 +3,9 @@ import * as pty from 'node-pty'
 import { existsSync } from 'node:fs'
 import type { PtyCreateOptions } from '../shared/types'
 import { childEnv } from './env'
-import { PROFILE_ENV } from './runner'
+import { getConnection, resolveProviderEnv } from './providers'
 import { getSettings } from './settings'
+import { connectionToken } from './secrets'
 import { initTermSessions, trackPty, untrackPty } from './termsessions'
 
 const ptys = new Map<number, pty.IPty>()
@@ -17,6 +18,12 @@ const PWSH_INTEGRATION = [
   'function global:prompt { $loc = $executionContext.SessionState.Path.CurrentLocation.ProviderPath; "$([char]27)]9;9;`"$loc`"$([char]27)\\" + (& $global:__turnoPrompt) }',
 ].join('; ')
 const encoded = (s: string): string => Buffer.from(s, 'utf16le').toString('base64')
+
+// Env do provedor para um terminal interativo aberto sob um profile (connection id).
+const providerEnv = (profile: string): Record<string, string> => {
+  const conn = getConnection(getSettings(), profile)
+  return resolveProviderEnv(conn, connectionToken(conn))
+}
 
 function shellArgs(shell: string): { args: string[]; env: Record<string, string> } {
   if (/pwsh|powershell/i.test(shell)) return { args: ['-NoLogo', '-NoExit', '-EncodedCommand', encoded(PWSH_INTEGRATION)], env: {} }
@@ -38,7 +45,7 @@ export function registerPty(getWc: () => WebContents | undefined): void {
       cols: opts.cols,
       rows: opts.rows,
       cwd,
-      env: childEnv({ ...(opts.profile ? PROFILE_ENV[opts.profile] : {}), ...env }),
+      env: childEnv({ ...(opts.profile ? providerEnv(opts.profile) : {}), ...env }),
       useConpty: true,
     })
     ptys.set(id, p)

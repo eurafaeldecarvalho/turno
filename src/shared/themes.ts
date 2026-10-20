@@ -53,6 +53,51 @@ const ansi = (a: string[]) => ({
   brightBlack: a[8], brightRed: a[9], brightGreen: a[10], brightYellow: a[11], brightBlue: a[12], brightMagenta: a[13], brightCyan: a[14], brightWhite: a[15],
 })
 
+// Mistura linear de duas cores hex de 6 digitos (t=0 => a, t=1 => b).
+const toRgb = (h: string): [number, number, number] => {
+  const n = parseInt(h.slice(1, 7), 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+const toHex = (r: number, g: number, b: number): string =>
+  '#' + [r, g, b].map((x) => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, '0')).join('')
+const mix = (a: string, b: string, t: number): string => {
+  const [r1, g1, b1] = toRgb(a)
+  const [r2, g2, b2] = toRgb(b)
+  return toHex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t)
+}
+
+// Deriva os tokens da UI a partir da paleta do terminal, mantendo o mesmo "peso" visual em todos os temas.
+// Evita escrever 14 cores de UI a mao por tema (DRY): a paleta ANSI autoritativa manda, a UI acompanha.
+// Se a cor "bright" coincidir com o texto (ex. Solarized, onde bright* sao tons de cinza = fg),
+// cai na cor base, que tem contraste. Evita accent/estado invisiveis.
+const distinct = (c: string, fg: string, base: string): string => (c.toLowerCase() === fg.toLowerCase() ? base : c)
+
+const deriveUi = (p: TermPalette, dark: boolean): UiTokens => {
+  const { background: bg, foreground: fg } = p
+  return {
+    bg,
+    surface: mix(bg, fg, dark ? 0.05 : 0.04),
+    surface2: mix(bg, fg, dark ? 0.09 : 0.07),
+    surface3: mix(bg, fg, dark ? 0.14 : 0.11),
+    border: mix(bg, fg, dark ? 0.13 : 0.14),
+    borderStrong: mix(bg, fg, dark ? 0.22 : 0.24),
+    text: fg,
+    muted: mix(fg, bg, 0.35),
+    faint: mix(fg, bg, 0.55),
+    accent: distinct(dark ? p.brightBlue : p.blue, fg, p.blue),
+    ok: distinct(dark ? p.brightGreen : p.green, fg, p.green),
+    run: distinct(dark ? p.brightBlue : p.blue, fg, p.blue),
+    warn: distinct(dark ? p.brightYellow : p.yellow, fg, p.yellow),
+    err: distinct(dark ? p.brightRed : p.red, fg, p.red),
+  }
+}
+
+// Monta um tema a partir da paleta do terminal; a UI e derivada.
+const mk = (id: string, name: string, dark: boolean, bg: string, fg: string, cursor: string, sel: string, a: string[]): Theme => {
+  const term: TermPalette = { background: bg, foreground: fg, cursor, cursorAccent: bg, selectionBackground: sel, ...ansi(a) }
+  return { id, name, dark, term, ui: deriveUi(term, dark) }
+}
+
 export const THEMES: Theme[] = [
   {
     id: 'orca-dark',
@@ -184,6 +229,39 @@ export const THEMES: Theme[] = [
       ...ansi(['#24292f', '#cf222e', '#116329', '#4d2d00', '#0969da', '#8250df', '#1b7c83', '#6e7781', '#57606a', '#a40e26', '#1a7f37', '#633c01', '#218bff', '#a475f9', '#3192aa', '#8c959f']),
     },
   },
+  // ---- Temas populares (paletas de fonte autoritativa: iTerm2-Color-Schemes / Windows Terminal) ----
+  mk('gruvbox-dark', 'Gruvbox Dark', true, '#282828', '#ebdbb2', '#ebdbb2', '#665c54',
+    ['#282828', '#cc241d', '#98971a', '#d79921', '#458588', '#b16286', '#689d6a', '#a89984', '#928374', '#fb4934', '#b8bb26', '#fabd2f', '#83a598', '#d3869b', '#8ec07c', '#ebdbb2']),
+  mk('gruvbox-light', 'Gruvbox Light', false, '#fbf1c7', '#3c3836', '#3c3836', '#d5c4a1',
+    ['#fbf1c7', '#cc241d', '#98971a', '#d79921', '#458588', '#b16286', '#689d6a', '#7c6f64', '#928374', '#9d0006', '#79740e', '#b57614', '#076678', '#8f3f71', '#427b58', '#3c3836']),
+  mk('solarized-dark', 'Solarized Dark', true, '#002b36', '#839496', '#ffffff', '#073642',
+    ['#002b36', '#dc322f', '#859900', '#b58900', '#268bd2', '#d33682', '#2aa198', '#eee8d5', '#073642', '#cb4b16', '#586e75', '#657b83', '#839496', '#6c71c4', '#93a1a1', '#fdf6e3']),
+  mk('solarized-light', 'Solarized Light', false, '#fdf6e3', '#657b83', '#002b36', '#268bd233',
+    ['#002b36', '#dc322f', '#859900', '#b58900', '#268bd2', '#d33682', '#2aa198', '#eee8d5', '#073642', '#cb4b16', '#586e75', '#657b83', '#839496', '#6c71c4', '#93a1a1', '#fdf6e3']),
+  mk('monokai-pro', 'Monokai Pro', true, '#2d2a2e', '#fcfcfa', '#c1c0c0', '#5b595c',
+    ['#2d2a2e', '#ff6188', '#a9dc76', '#ffd866', '#fc9867', '#ab9df2', '#78dce8', '#fcfcfa', '#727072', '#ff6188', '#a9dc76', '#ffd866', '#fc9867', '#ab9df2', '#78dce8', '#fcfcfa']),
+  mk('one-light', 'One Light', false, '#f9f9f9', '#2a2c33', '#bbbbbb', '#d0dffc',
+    ['#000000', '#de3e35', '#3f953a', '#d2b67c', '#2f5af3', '#950095', '#3f953a', '#bbbbbb', '#000000', '#de3e35', '#3f953a', '#d2b67c', '#2f5af3', '#a00095', '#3f953a', '#ffffff']),
+  mk('github-dark', 'GitHub Dark', true, '#0d1117', '#e6edf3', '#2f81f7', '#58a6ff40',
+    ['#484f58', '#ff7b72', '#3fb950', '#d29922', '#58a6ff', '#bc8cff', '#39c5cf', '#b1bac4', '#6e7681', '#ffa198', '#56d364', '#e3b341', '#79c0ff', '#d2a8ff', '#56d4dd', '#ffffff']),
+  mk('catppuccin-latte', 'Catppuccin Latte', false, '#eff1f5', '#4c4f69', '#dc8a78', '#1e66f533',
+    ['#bcc0cc', '#d20f39', '#40a02b', '#df8e1d', '#1e66f5', '#ea76cb', '#179299', '#5c5f77', '#acb0be', '#e7103f', '#46b02f', '#e49931', '#3878f6', '#ef95d7', '#19a1a8', '#6c6f85']),
+  mk('catppuccin-frappe', 'Catppuccin Frappé', true, '#303446', '#c6d0f5', '#f2d5cf', '#626880',
+    ['#51576d', '#e78284', '#a6d189', '#e5c890', '#8caaee', '#f4b8e4', '#81c8be', '#b5bfe2', '#626880', '#eda0a2', '#b9dba2', '#ecd7ae', '#adc2f3', '#f38ed8', '#98d2ca', '#a5adce']),
+  mk('catppuccin-macchiato', 'Catppuccin Macchiato', true, '#24273a', '#cad3f5', '#f4dbd6', '#5b6078',
+    ['#494d64', '#ed8796', '#a6da95', '#eed49f', '#8aadf4', '#f5bde6', '#8bd5ca', '#b8c0e0', '#5b6078', '#f2a7b2', '#bde3b0', '#f4e3c1', '#adc5f7', '#f493da', '#a5ded6', '#a5adcb']),
+  mk('night-owl', 'Night Owl', true, '#011627', '#d6deeb', '#7e57c2', '#5f7e97',
+    ['#011627', '#ef5350', '#22da6e', '#addb67', '#82aaff', '#c792ea', '#21c7a8', '#ffffff', '#575656', '#ef5350', '#22da6e', '#ffeb95', '#82aaff', '#c792ea', '#7fdbca', '#ffffff']),
+  mk('ayu-dark', 'Ayu Dark', true, '#0b0e14', '#bfbdb6', '#e6b450', '#409fff',
+    ['#11151c', '#ea6c73', '#7fd962', '#f9af4f', '#53bdfa', '#cda1fa', '#90e1c6', '#c7c7c7', '#686868', '#f07178', '#aad94c', '#ffb454', '#59c2ff', '#d2a6ff', '#95e6cb', '#ffffff']),
+  mk('ayu-mirage', 'Ayu Mirage', true, '#1f2430', '#cccac2', '#ffcc66', '#409fff',
+    ['#171b24', '#ed8274', '#87d96c', '#facc6e', '#6dcbfa', '#dabafa', '#90e1c6', '#c7c7c7', '#686868', '#f28779', '#d5ff80', '#ffd173', '#73d0ff', '#dfbfff', '#95e6cb', '#ffffff']),
+  mk('rose-pine', 'Rosé Pine', true, '#191724', '#e0def4', '#e0def4', '#403d52',
+    ['#26233a', '#eb6f92', '#31748f', '#f6c177', '#9ccfd8', '#c4a7e7', '#ebbcba', '#e0def4', '#6e6a86', '#eb6f92', '#31748f', '#f6c177', '#9ccfd8', '#c4a7e7', '#ebbcba', '#e0def4']),
+  mk('everforest-dark', 'Everforest Dark', true, '#1e2326', '#d3c6aa', '#e69875', '#4c3743',
+    ['#7a8478', '#e67e80', '#a7c080', '#dbbc7f', '#7fbbb3', '#d699b6', '#83c092', '#f2efdf', '#a6b0a0', '#f85552', '#8da101', '#dfa000', '#3a94c5', '#df69ba', '#35a77c', '#fffbef']),
+  mk('kanagawa-wave', 'Kanagawa Wave', true, '#1f1f28', '#dcd7ba', '#dcd7ba', '#2d4f67',
+    ['#090618', '#c34043', '#76946a', '#c0a36e', '#7e9cd8', '#957fb8', '#6a9589', '#c8c093', '#727169', '#e82424', '#98bb6c', '#e6c384', '#7fb4ca', '#938aa9', '#7aa89f', '#dcd7ba']),
 ]
 
 export const themeById = (id: string): Theme => THEMES.find((t) => t.id === id) ?? THEMES[0]

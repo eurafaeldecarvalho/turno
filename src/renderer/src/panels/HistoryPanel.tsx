@@ -86,7 +86,7 @@ export function HistoryPanel({ params }: IDockviewPanelProps<{ routine?: string 
                   <td>{when(r.started_at ?? r.ended_at)}</td>
                   <td className="muted">{duration(r)}</td>
                   <td className="muted">{TRIGGER_LABEL[r.trigger]}</td>
-                  <td className="muted">{r.profile === 'qwen-local' ? 'qwen' : r.model ?? '—'}</td>
+                  <td className="muted">{r.model ?? '—'}</td>
                   <td className="muted clip">{r.skip_reason ?? (r.result ?? '').replace(/\s+/g, ' ').slice(0, 140)}</td>
                 </tr>
               )

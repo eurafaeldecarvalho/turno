@@ -10,6 +10,8 @@
     "start": "electron-vite preview",
     "smoke": "electron-vite build && electron . --smoke",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "dist": "electron-vite build && electron-builder --win",
     "dist:dir": "electron-vite build && electron-builder --win --dir"
   },
@@ -45,7 +47,8 @@
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "typescript": "~5.9.3",
-    "vite": "8.3.4"
+    "vite": "8.3.4",
+    "vitest": "^5.0.5"
   },
   "author": "Rafael de Carvalho",
   "license": "MIT",

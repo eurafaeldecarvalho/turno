@@ -1,12 +1,17 @@
-import { spawn, execFile } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { Cron } from 'croner'
 import type { FSWatcher } from 'node:fs'
-import type { Routine, RunRecord, RunRequest, RunTrigger } from '../shared/types'
+import type { Connection, Routine, RunRecord, RunRequest, RunTrigger } from '../shared/types'
 import { cronExpressions, loadRoutines, runsBetween, watchRoutines } from './routines'
 import { getArmedAt, getRun, hasRunFor, insertRun, lastRuns, setArmed, updateRun } from './db'
-import { acquireWait, tryAcquire } from './locks'
+import { acquireWait, release, tryAcquire } from './locks'
 import { changed, isRoutineRunning, newRunId, readRequest, sendToRun, startRun } from './runner'
 import { childEnv } from './env'
+import { findConnection, getConnection, requireConnection } from './providers'
+import { getSettings } from './settings'
+import { claudeStatus } from './provider-auth'
+
+const connOf = (profile: string): Connection => getConnection(getSettings(), profile)
 
 // Agendador: carrega as pastas, cria um cron por horario e dispara rotinas com travas e prechecks.
 let routines: Routine[] = []
@@ -99,39 +104,32 @@ function skip(r: Routine, trigger: RunTrigger, scheduledAt: string | undefined, 
 function requiredLocks(r: Routine): string[] {
   const s = new Set(r.config.locks)
   if (r.config.chrome) s.add('chrome')
-  if (r.config.profile === 'qwen-local') s.add('gpu')
+  // Provedor com servidor local (bootCommand) disputa a GPU: trava exclusiva.
+  if (connOf(r.config.profile).bootCommand) s.add('gpu')
   return [...s]
 }
 
-async function ollamaUp(): Promise<boolean> {
+async function endpointUp(url: string): Promise<boolean> {
   try {
-    const res = await fetch('http://localhost:11434/api/version', { signal: AbortSignal.timeout(4000) })
+    const res = await fetch(url, { signal: AbortSignal.timeout(4000) })
     return res.ok
   } catch {
     return false
   }
 }
 
-async function ensureOllama(): Promise<boolean> {
-  if (await ollamaUp()) return true
-  spawn('ollama', ['serve'], { detached: true, stdio: 'ignore', windowsHide: true, env: childEnv() }).unref()
+// Sobe o servidor local do provedor (ex. `ollama serve`) se ele tiver bootCommand/healthUrl e nao estiver de pe.
+// Provedor remoto (sem bootCommand) nao tem o que subir: segue direto.
+async function ensureProvider(conn: Connection): Promise<boolean> {
+  if (!conn.bootCommand || !conn.healthUrl) return true
+  if (await endpointUp(conn.healthUrl)) return true
+  // shell:true (como no precheck): aceita caminho com espaco (ex. "C:\Program Files\...") sem quebrar no split.
+  spawn(conn.bootCommand, { detached: true, stdio: 'ignore', windowsHide: true, shell: true, env: childEnv() }).unref()
   for (let i = 0; i < 10; i++) {
     await new Promise((r) => setTimeout(r, 3000))
-    if (await ollamaUp()) return true
+    if (await endpointUp(conn.healthUrl)) return true
   }
   return false
-}
-
-function claudeLoggedIn(): Promise<boolean> {
-  return new Promise((res) =>
-    execFile('claude', ['auth', 'status'], { env: childEnv(), timeout: 30_000, windowsHide: true }, (err, out) => {
-      try {
-        res(!err && JSON.parse(out).loggedIn === true)
-      } catch {
-        res(false)
-      }
-    }),
-  )
 }
 
 function runPrecheck(cmd: string, cwd: string): Promise<{ ok: boolean; out: string }> {
@@ -181,9 +179,12 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
   })
   changed(runId)
 
-  if (r.config.profile === 'qwen-local' && !(await ensureOllama()))
-    return void skip(r, trigger, scheduledAt, 'Ollama is not running (tried to start it, it did not come up)', runId)
-  if (r.config.profile === 'claude-max' && !(await claudeLoggedIn()))
+  // Connection inexistente (removida/typo no frontmatter): PULA com motivo. Nunca cai no provedor pago em silencio.
+  const conn = findConnection(getSettings(), r.config.profile)
+  if (!conn) return void skip(r, trigger, scheduledAt, `connection "${r.config.profile}" nao existe (verifique em Conexoes)`, runId)
+  if (conn.bootCommand && !(await ensureProvider(conn)))
+    return void skip(r, trigger, scheduledAt, `${conn.name} is not running (tried to start it, it did not come up)`, runId)
+  if (conn.kind === 'claude' && !(await claudeStatus()))
     return void skip(r, trigger, scheduledAt, 'Claude Code is not logged in (run "claude" and use /login)', runId)
   if (r.config.precheck) {
     const p = await runPrecheck(r.config.precheck, r.dir)
@@ -198,24 +199,33 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
   } else busy = await acquireWait(locks, runId, QUEUE_WAIT_MS)
   if (busy) return void skip(r, trigger, scheduledAt, busy, runId)
 
-  startRun({
-    runId,
-    routine: id,
-    trigger,
-    scheduledAt,
-    timeoutMin: r.config.timeout_min,
-    idleTimeoutMin: r.config.idle_timeout_min,
-    req: {
-      profile: r.config.profile,
-      prompt: buildPrompt(r, trigger, scheduledAt),
-      cwd: r.dir,
-      model: r.config.model,
-      effort: r.config.effort,
-      permissionMode: r.config.permission_mode,
-      allowedTools: r.config.allowed_tools,
-      chrome: r.config.chrome,
-    },
-  })
+  // startRun pode lancar (ex. connection removida na janela de await acima): libera o lock ja adquirido
+  // e marca a run como skipped, em vez de vazar o lock (travaria runs futuros) e deixar a run presa em 'queued'.
+  try {
+    startRun({
+      runId,
+      routine: id,
+      trigger,
+      scheduledAt,
+      timeoutMin: r.config.timeout_min,
+      idleTimeoutMin: r.config.idle_timeout_min,
+      budgetUsd: r.config.budget_usd,
+      sandbox: r.config.sandbox,
+      req: {
+        profile: r.config.profile,
+        prompt: buildPrompt(r, trigger, scheduledAt),
+        cwd: r.dir,
+        model: r.config.model,
+        effort: r.config.effort,
+        permissionMode: r.config.permission_mode,
+        allowedTools: r.config.allowed_tools,
+        chrome: r.config.chrome,
+      },
+    })
+  } catch (e) {
+    release(runId)
+    return void skip(r, trigger, scheduledAt, `nao iniciou: ${(e as Error).message}`, runId)
+  }
   onRoutinesChanged(getRoutines())
   return runId
 }
@@ -231,6 +241,8 @@ export async function followUp(runId: string, text: string): Promise<{ runId: st
   if (!run) throw new Error('run not found')
   if (!run.session_id) throw new Error('this run has no session to continue (did it start?)')
   const base: RunRequest = readRequest(runId) ?? { profile: run.profile as RunRequest['profile'], prompt: '', cwd: run.cwd ?? undefined }
+  // Connection da run original pode ter sido removida: falha cedo (antes do insert) em vez de cair no provedor pago.
+  requireConnection(getSettings(), base.profile)
   const r = run.routine ? findRoutine(run.routine) : undefined
   const locks = r ? requiredLocks(r) : base.chrome ? ['chrome'] : []
   const newId = newRunId()
@@ -252,6 +264,8 @@ export async function followUp(runId: string, text: string): Promise<{ runId: st
     trigger: 'followup',
     timeoutMin: r?.config.timeout_min ?? 60,
     idleTimeoutMin: r?.config.idle_timeout_min ?? 15,
+    budgetUsd: r?.config.budget_usd,
+    sandbox: r?.config.sandbox,
     req: { ...base, prompt: text, resume: run.session_id },
   })
   return { runId: newId, mode: 'followup' }

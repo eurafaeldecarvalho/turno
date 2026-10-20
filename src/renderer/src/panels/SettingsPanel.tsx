@@ -3,6 +3,7 @@ import type { CursorStyle, Settings, ShellInfo, TerminalSettings } from '../../.
 import { THEMES, type Theme } from '../../../shared/themes'
 import { updateSettings, useSettings } from '../appearance'
 import { Switch } from './RoutineEditor'
+import { ConnectionsSection } from './ConnectionsSection'
 
 const UI_FONTS = [
   { v: '"Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif', l: 'Segoe UI (Windows)' },
@@ -126,6 +127,8 @@ export function SettingsPanel() {
           </div>
         </section>
 
+        <ConnectionsSection />
+
         <section className="card">
           <h3>Interface</h3>
           <label className="field">
@@ -183,6 +186,24 @@ export function SettingsPanel() {
               </label>
             </div>
           </div>
+          <div className="grid3">
+            <label className="field">
+              <span>Padding</span>
+              <input type="number" min={0} max={40} value={t.padding} onChange={(e) => void term({ padding: Number(e.target.value) || 0 })} />
+            </label>
+            <label className="field">
+              <span>Cursor width</span>
+              <input type="number" min={1} max={5} value={t.cursorWidth} onChange={(e) => void term({ cursorWidth: Number(e.target.value) || 1 })} />
+            </label>
+            <label className="field">
+              <span>Min. contrast</span>
+              <input type="number" min={1} max={21} step={0.5} value={t.minimumContrastRatio} onChange={(e) => void term({ minimumContrastRatio: Number(e.target.value) || 1 })} />
+            </label>
+          </div>
+          <label className="field toggle-field">
+            <span>Bold text uses bright colors</span>
+            <Switch checked={t.drawBoldInBright} onChange={(v) => void term({ drawBoldInBright: v })} />
+          </label>
           <div className="term-sample" style={{ fontFamily: t.fontFamily, fontSize: t.fontSize, lineHeight: t.lineHeight, letterSpacing: t.letterSpacing, fontWeight: t.fontWeight as never }}>
             PS C:\routines&gt; claude -p "summarize the day" <span className="cursor-demo" data-style={t.cursorStyle} />
           </div>

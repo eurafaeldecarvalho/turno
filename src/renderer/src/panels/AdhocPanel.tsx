@@ -4,6 +4,7 @@ import type { Effort, PermissionMode, ProfileId, RunRequest } from '../../../sha
 import { Conversation } from './RunViewer'
 import { ModelSelect } from '../ModelSelect'
 import { IconPlay } from '../icons'
+import { useSettings } from '../appearance'
 
 export interface AdhocParams {
   autoStart?: RunRequest
@@ -20,11 +21,14 @@ export function AdhocPanel({ params }: IDockviewPanelProps<AdhocParams>) {
   const [prompt, setPrompt] = useState(a?.prompt ?? '')
   const [runId, setRunId] = useState<string>()
   const [started, setStarted] = useState(false)
+  const conns = useSettings()?.connections ?? []
+  const conn = conns.find((c) => c.id === profile)
+  const isClaude = conn ? conn.kind === 'claude' : true
 
   async function start(req?: RunRequest): Promise<void> {
     const r: RunRequest = req ?? {
       profile,
-      model: profile === 'claude-max' ? model : undefined,
+      model: isClaude ? model : undefined,
       effort,
       permissionMode: perm,
       allowedTools: tools.split(/\s+/).filter(Boolean),
@@ -41,10 +45,9 @@ export function AdhocPanel({ params }: IDockviewPanelProps<AdhocParams>) {
     <div className="adhoc">
       <div className="adhoc-form">
         <select value={profile} onChange={(e) => setProfile(e.target.value as ProfileId)} aria-label="Profile">
-          <option value="claude-max">Claude</option>
-          <option value="qwen-local">Local Qwen</option>
+          {conns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        {profile === 'qwen-local' ? <input value="qwen3.6:35b" disabled aria-label="Model" /> : <ModelSelect value={model} onChange={setModel} />}
+        {isClaude ? <ModelSelect value={model} onChange={setModel} /> : <input value={conn?.model ?? ''} disabled aria-label="Model" />}
         <select value={effort} onChange={(e) => setEffort(e.target.value as Effort)} aria-label="Effort">
           {['low', 'medium', 'high', 'xhigh', 'max'].map((x) => <option key={x}>{x}</option>)}
         </select>

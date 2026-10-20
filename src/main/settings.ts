@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { join } from 'node:path'
 import { readFileSync, writeFileSync } from 'node:fs'
 import type { Settings } from '../shared/types'
+import { DEFAULT_CONNECTIONS } from './providers'
 
 const file = (): string => join(app.getPath('userData'), 'settings.json')
 
@@ -14,9 +15,13 @@ export const TERMINAL_DEFAULTS: Settings['terminal'] = {
   cursorStyle: 'block',
   cursorBlink: true,
   scrollback: 10000,
-  copyOnSelect: false,
+  copyOnSelect: true,
   rightClickPaste: true,
   defaultShell: 'pwsh.exe',
+  drawBoldInBright: true,
+  cursorWidth: 1,
+  minimumContrastRatio: 1,
+  padding: 8,
 }
 
 const defaults = (): Settings => ({
@@ -29,6 +34,7 @@ const defaults = (): Settings => ({
   uiFontFamily: '"Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif',
   uiFontSize: 13,
   terminal: TERMINAL_DEFAULTS,
+  connections: DEFAULT_CONNECTIONS,
 })
 
 let cache: Settings | undefined

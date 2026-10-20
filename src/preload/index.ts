@@ -61,6 +61,14 @@ const api: TurnoApi = {
     claudeSessions: () => ipcRenderer.invoke('sidebar:claudeSessions'),
     claudeSessionExists: (id) => ipcRenderer.invoke('sidebar:claudeSessionExists', id),
   },
+  provider: {
+    claudeStatus: () => ipcRenderer.invoke('provider:claudeStatus'),
+    claudeLogin: () => ipcRenderer.invoke('provider:claudeLogin'),
+    claudeLogout: () => ipcRenderer.invoke('provider:claudeLogout'),
+    setToken: (connId, token) => ipcRenderer.invoke('provider:setToken', connId, token),
+    deleteToken: (connId) => ipcRenderer.invoke('provider:deleteToken', connId),
+    preflight: (connId) => ipcRenderer.invoke('provider:preflight', connId),
+  },
   smoke: {
     enabled: process.argv.includes('--turno-smoke'),
     waitSec: Number(process.argv.find((a) => a.startsWith('--smoke-wait='))?.slice(13) ?? 0),

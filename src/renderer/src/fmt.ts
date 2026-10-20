@@ -10,13 +10,14 @@ export const STATUS_LABEL: Record<RunStatus, string> = {
   idle_timeout: 'stalled (idle)',
   rate_limited: 'usage limit',
   stopped: 'stopped',
+  over_budget: 'over budget',
 }
 
 export function statusTone(s: RunStatus | undefined): 'ok' | 'run' | 'warn' | 'err' | 'idle' {
   if (!s) return 'idle'
   if (s === 'ok') return 'ok'
   if (s === 'running' || s === 'queued') return 'run'
-  if (s === 'skipped' || s === 'stopped' || s === 'rate_limited') return 'warn'
+  if (s === 'skipped' || s === 'stopped' || s === 'rate_limited' || s === 'over_budget') return 'warn'
   return 'err'
 }
 

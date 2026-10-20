@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { IDockviewPanelProps } from 'dockview-react'
 import { WEEKDAYS, type Effort, type PermissionMode, type RoutineConfig, type Weekday } from '../../../shared/types'
 import { useStore } from '../store'
+import { useSettings } from '../appearance'
 import { askConfirm } from '../ConfirmDialog'
 import { ModelSelect } from '../ModelSelect'
 import { openHistory, openRoutine } from '../layout'
@@ -39,6 +40,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   const [dirty, setDirty] = useState(false)
   const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string }>()
   const [newTime, setNewTime] = useState('09:00')
+  const conns = useSettings()?.connections ?? []
 
   // Carrega do disco; recarrega se o arquivo mudar e nao houver edicao pendente.
   useEffect(() => {
@@ -141,7 +143,8 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
     if (!newTime || cfg.schedule.times.includes(newTime)) return
     upSched({ times: [...cfg.schedule.times, newTime].sort() })
   }
-  const qwen = cfg.profile === 'qwen-local'
+  const conn = conns.find((c) => c.id === cfg.profile)
+  const isClaude = conn ? conn.kind === 'claude' : true
 
   return (
     <div className="editor">
@@ -284,22 +287,21 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
         </section>
 
         <section className="card">
-          <h3>Model</h3>
+          <h3>Connection</h3>
           <div className="seg">
-            <button className={!qwen ? 'on' : ''} onClick={() => up({ profile: 'claude-max' })}>
-              Claude <small>subscription</small>
-            </button>
-            <button className={qwen ? 'on' : ''} onClick={() => up({ profile: 'qwen-local', chrome: cfg.chrome })}>
-              Local Qwen <small>Ollama</small>
-            </button>
+            {conns.map((c) => (
+              <button key={c.id} className={cfg.profile === c.id ? 'on' : ''} onClick={() => up({ profile: c.id })}>
+                {c.name} <small>{c.kind === 'claude' ? 'subscription' : 'endpoint'}</small>
+              </button>
+            ))}
           </div>
           <div className="grid2">
             <label className="field">
               <span>Model</span>
-              {qwen ? (
-                <input value="qwen3.6:35b" disabled />
-              ) : (
+              {isClaude ? (
                 <ModelSelect value={cfg.model} onChange={(v) => up({ model: v })} />
+              ) : (
+                <input value={conn?.model ?? ''} disabled />
               )}
             </label>
             <div className="field">

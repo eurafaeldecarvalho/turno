@@ -344,7 +344,7 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
   const resume = (): void =>
     openTerminal('right', {
       cwd: last.cwd ?? undefined,
-      profile: last.profile === 'qwen-local' ? 'qwen-local' : 'claude-max',
+      profile: last.profile, // preserva a connection real (custom inclusive); nao colapsa em claude-max
       initialCommand: `claude --resume ${last.session_id}`,
     }, `resume · ${routine?.config.name ?? 'session'}`)
 
@@ -358,7 +358,7 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
             <span className={`pill pill-${tone}`}>{STATUS_LABEL[last.status]}</span>
           </div>
           <div className="muted small">
-            {TRIGGER_LABEL[first.trigger]} · {last.profile === 'qwen-local' ? 'qwen3.6:35b' : last.model ?? 'default'} · {when(first.started_at ?? first.ended_at)}
+            {TRIGGER_LABEL[first.trigger]} · {last.model ?? 'default'} · {when(first.started_at ?? first.ended_at)}
             {first.started_at && ` · ${duration(last)}`}
             {runs.length > 1 && ` · ${runs.length - 1} follow-up(s)`}
           </div>

@@ -1,8 +1,28 @@
-export type ProfileId = 'claude-max' | 'qwen-local'
+// id de uma Connection (ver Settings.connections). String aberta: o conjunto de provedores
+// e configuravel pelo usuario, nao um union fixo. 'claude-max' e 'qwen-local' sao apenas os ids
+// das connections semeadas por padrao.
+export type ProfileId = string
+
+// Um provedor de IA configurado. kind 'claude' = login do CLI (sem segredo guardado pelo app);
+// kind 'endpoint' = endpoint Anthropic-compativel (Ollama, OpenAI-compat via shim, proxy).
+export interface Connection {
+  id: string
+  name: string
+  kind: 'claude' | 'endpoint'
+  baseUrl?: string
+  model?: string
+  tokenRef?: string // referencia ao cofre (safeStorage); nunca o valor em claro
+  token?: string // token inline (legado/local, ex. 'ollama'); preferir tokenRef
+  extraEnv?: Record<string, string>
+  bootCommand?: string // ex. "ollama serve": sobe o servidor local antes de usar
+  healthUrl?: string // ex. "http://localhost:11434/api/version": checa se esta de pe
+}
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 // Modos do `claude --permission-mode`. bypassPermissions = --dangerously-skip-permissions.
 export type PermissionMode = 'manual' | 'acceptEdits' | 'auto' | 'dontAsk' | 'bypassPermissions'
 export type Weekday = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'
+// Sandbox opcional por rotina; 'none' = DEFAULT (sem sandbox). 'docker'/'wsl' sao opt-in.
+export type SandboxMode = 'none' | 'docker' | 'wsl'
 export const WEEKDAYS: Weekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
 // Configuracao de uma rotina = frontmatter do ROUTINE.md.
@@ -26,6 +46,9 @@ export interface RoutineConfig {
   lock_policy: 'skip' | 'queue'
   timeout_min: number
   idle_timeout_min: number
+  budget_usd?: number // teto de custo por run (USD); run e morto ao ultrapassar. Ausente = sem teto.
+  sandbox: SandboxMode // 'none' por padrao (sem sandbox)
+  isolation: 'none' | 'worktree' // 'worktree' roda a rotina num git worktree isolado
   catchup: boolean
   catchup_window_h: number
   precheck?: string
@@ -62,7 +85,7 @@ export interface RunRequest {
 }
 
 export type RunStatus =
-  | 'queued' | 'running' | 'ok' | 'failed' | 'skipped' | 'timeout' | 'idle_timeout' | 'rate_limited' | 'stopped'
+  | 'queued' | 'running' | 'ok' | 'failed' | 'skipped' | 'timeout' | 'idle_timeout' | 'rate_limited' | 'stopped' | 'over_budget'
 export type RunTrigger = 'manual' | 'cron' | 'catchup' | 'adhoc' | 'followup'
 
 export interface RunRecord {
@@ -120,6 +143,16 @@ export interface TerminalSettings {
   copyOnSelect: boolean
   rightClickPaste: boolean
   defaultShell: string
+  drawBoldInBright: boolean // negrito usa a cor "bright" da paleta
+  cursorWidth: number // largura do cursor (bar)
+  minimumContrastRatio: number // 1 = desligado; >1 forca contraste minimo (acessibilidade)
+  padding: number // respiro interno (px) entre o texto e a borda
+}
+
+export type PreflightState = 'ok' | 'missing_binary' | 'not_logged_in' | 'unhealthy' | 'endpoint_unreachable' | 'bad_token'
+export interface PreflightResult {
+  state: PreflightState
+  message: string
 }
 
 export type AwakeMode = 'on' | 'auto' | 'off'
@@ -140,6 +173,7 @@ export interface Settings {
   uiFontFamily: string
   uiFontSize: number
   terminal: TerminalSettings
+  connections: Connection[]
 }
 
 export interface ShellInfo {
@@ -245,6 +279,14 @@ export interface TurnoApi {
     save(s: SidebarState): Promise<SidebarState>
     claudeSessions(): Promise<ClaudeSession[]>
     claudeSessionExists(id: string): Promise<boolean>
+  }
+  provider: {
+    claudeStatus(): Promise<boolean>
+    claudeLogin(): Promise<boolean>
+    claudeLogout(): Promise<void>
+    setToken(connId: string, token: string): Promise<string> // guarda no cofre, devolve o tokenRef
+    deleteToken(connId: string): Promise<void>
+    preflight(connId: string): Promise<PreflightResult>
   }
   smoke: {
     enabled: boolean
