@@ -163,6 +163,8 @@ export interface TerminalSettings {
   cursorWidth: number // largura do cursor (bar)
   minimumContrastRatio: number // 1 = desligado; >1 forca contraste minimo (acessibilidade)
   padding: number // respiro interno (px) entre o texto e a borda
+  ligatures: boolean // ligaduras de fonte (=>, !=); OFF por padrao (divisivo + custo). Aplica em terminal novo.
+  windowOpacity: number // opacidade da janela do app (0.3–1); 1 = opaco
 }
 
 export type PreflightState = 'ok' | 'missing_binary' | 'not_logged_in' | 'unhealthy' | 'endpoint_unreachable' | 'bad_token'

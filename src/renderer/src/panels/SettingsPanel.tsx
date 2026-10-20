@@ -232,6 +232,14 @@ export function SettingsPanel() {
             <span>Right-click copies/pastes</span>
             <Switch checked={t.rightClickPaste} onChange={(v) => void term({ rightClickPaste: v })} />
           </label>
+          <label className="field toggle-field">
+            <span>Font ligatures (=&gt;, !=) — applies to new terminals</span>
+            <Switch checked={t.ligatures} onChange={(v) => void term({ ligatures: v })} />
+          </label>
+          <label className="field">
+            <span>Window opacity: {Math.round(t.windowOpacity * 100)}%</span>
+            <input type="range" min={0.3} max={1} step={0.05} value={t.windowOpacity} onChange={(e) => void term({ windowOpacity: Number(e.target.value) })} />
+          </label>
           <small className="muted">Ctrl+Shift+C / Ctrl+Shift+V always copy and paste.</small>
         </section>
 

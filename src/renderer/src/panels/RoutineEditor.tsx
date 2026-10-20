@@ -145,6 +145,9 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   }
   const conn = conns.find((c) => c.id === cfg.profile)
   const isClaude = conn ? conn.kind === 'claude' : true
+  const hasPolicy = (k: 'session_limit' | 'weekly_limit'): boolean => (cfg.abort ?? []).some((p) => p.kind === k)
+  const togglePolicy = (k: 'session_limit' | 'weekly_limit'): void =>
+    up({ abort: hasPolicy(k) ? (cfg.abort ?? []).filter((p) => p.kind !== k) : [...(cfg.abort ?? []), { kind: k }] })
 
   return (
     <div className="editor">
@@ -391,6 +394,60 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
           <small className="muted">
             Automatic locks: <code>chrome</code> when using Chrome, <code>gpu</code> for Qwen. Two routines with the same lock never run at the same time.
           </small>
+        </section>
+
+        <section className="card">
+          <h3>Limits &amp; safety</h3>
+          <div className="grid2">
+            <label className="field">
+              <span>Budget per conversation (USD)</span>
+              <input
+                type="number"
+                min={0}
+                step={0.5}
+                value={cfg.budget_usd ?? ''}
+                placeholder="no limit"
+                onChange={(e) => up({ budget_usd: e.target.value ? Number(e.target.value) : undefined })}
+              />
+            </label>
+            <label className="field">
+              <span>Isolation</span>
+              <select value={cfg.isolation} onChange={(e) => up({ isolation: e.target.value as RoutineConfig['isolation'] })}>
+                <option value="none">none</option>
+                <option value="worktree">git worktree (isolated)</option>
+              </select>
+            </label>
+          </div>
+          <div className="field">
+            <span>Pause when the subscription limit is hit (resumes after reset)</span>
+            <div className="row">
+              <label className="row small muted">
+                <Switch checked={hasPolicy('session_limit')} onChange={() => togglePolicy('session_limit')} /> 5h session
+              </label>
+              <label className="row small muted">
+                <Switch checked={hasPolicy('weekly_limit')} onChange={() => togglePolicy('weekly_limit')} /> weekly
+              </label>
+            </div>
+          </div>
+          <div className="grid2">
+            <label className="field">
+              <span>Sandbox (opt-in)</span>
+              <select value={cfg.sandbox} onChange={(e) => up({ sandbox: e.target.value as RoutineConfig['sandbox'] })}>
+                <option value="none">none (default)</option>
+                <option value="docker">docker</option>
+                <option value="wsl">wsl</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Run on file change (path)</span>
+              <input
+                className="mono"
+                value={cfg.triggers?.[0]?.path ?? ''}
+                placeholder="src/ (relative to routine)"
+                onChange={(e) => up({ triggers: e.target.value ? [{ kind: 'watch', path: e.target.value }] : undefined })}
+              />
+            </label>
+          </div>
         </section>
 
         <section className="card grow">

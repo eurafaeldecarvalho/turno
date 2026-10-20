@@ -6,6 +6,7 @@ const base: TerminalSettings = {
   fontFamily: 'Consolas', fontSize: 13, lineHeight: 1.2, letterSpacing: 0, fontWeight: 'normal',
   cursorStyle: 'block', cursorBlink: true, scrollback: 10000, copyOnSelect: true, rightClickPaste: true,
   defaultShell: 'pwsh.exe', drawBoldInBright: true, cursorWidth: 1, minimumContrastRatio: 1, padding: 8,
+  ligatures: false, windowOpacity: 1,
 }
 
 describe('terminalOptions', () => {

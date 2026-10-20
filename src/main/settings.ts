@@ -22,6 +22,8 @@ export const TERMINAL_DEFAULTS: Settings['terminal'] = {
   cursorWidth: 1,
   minimumContrastRatio: 1,
   padding: 8,
+  ligatures: false,
+  windowOpacity: 1,
 }
 
 const defaults = (): Settings => ({

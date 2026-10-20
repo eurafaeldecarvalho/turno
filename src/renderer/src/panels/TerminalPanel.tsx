@@ -6,6 +6,7 @@ import { WebglAddon } from '@xterm/addon-webgl'
 import { SearchAddon } from '@xterm/addon-search'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
+import { LigaturesAddon } from '@xterm/addon-ligatures'
 import { discarded, paramsOf, type TerminalParams } from '../layout'
 import { onSettings } from '../appearance'
 import { terminalOptions } from '../terminalOptions'
@@ -40,6 +41,7 @@ function createTerm(params: TerminalParams): TermHandle {
   let binding: Binding | undefined
   let copyOnSelect = false
   let rightClickPaste = true
+  let ligaturesLoaded = false
   let ptyId: number | undefined
   let disposed = false
   let dead = false
@@ -117,6 +119,15 @@ function createTerm(params: TerminalParams): TermHandle {
     el.style.padding = `${t.padding}px`
     copyOnSelect = t.copyOnSelect
     rightClickPaste = t.rightClickPaste
+    // Ligaduras (opt-in): carrega o addon uma vez quando ligado. Desligar exige reabrir o terminal.
+    if (t.ligatures && !ligaturesLoaded) {
+      ligaturesLoaded = true
+      try {
+        term.loadAddon(new LigaturesAddon())
+      } catch {
+        /* sem suporte: ignora */
+      }
+    }
     requestAnimationFrame(() => h.refit())
   })
   const sel = term.onSelectionChange(() => {

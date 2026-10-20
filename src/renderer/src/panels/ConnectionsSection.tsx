@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import type { Connection, PreflightResult } from '../../../shared/types'
 import { updateSettings, useSettings } from '../appearance'
 import { connectionsReducer, newConnectionId, validateConnectionForm } from '../connectionsStore'
+import { openTerminal } from '../layout'
+
+// Comando de bootstrap do Claude Code (quando o binario nao existe). Editavel; confirme em docs.claude.com.
+const CLAUDE_INSTALL_CMD = 'npm install -g @anthropic-ai/claude-code'
 
 // Aba Conexoes: gerencia os provedores de IA. Claude = login OAuth do CLI (sem segredo guardado aqui).
 // Endpoint = Anthropic-compativel (Ollama, OpenAI-compat via shim): baseUrl + model + token (cofre).
@@ -81,6 +85,13 @@ export function ConnectionsSection() {
               {c.kind === 'endpoint' && <div className="muted small mono">{c.baseUrl} · {c.model}{c.tokenRef ? ' · token saved' : ''}</div>}
               {c.kind === 'claude' && <div className="muted small">{claudeOk == null ? 'checking…' : claudeOk ? 'connected' : 'not connected'}</div>}
               {checks[c.id] && <div className={`small ${checks[c.id] !== 'checking' && (checks[c.id] as PreflightResult).state === 'ok' ? 'tone-ok' : 'tone-warn'}`}>{checks[c.id] === 'checking' ? 'checking…' : (checks[c.id] as PreflightResult).message}</div>}
+              {checks[c.id] !== 'checking' && (checks[c.id] as PreflightResult | undefined)?.state === 'missing_binary' && (
+                <div className="row small">
+                  <code className="mono">{CLAUDE_INSTALL_CMD}</code>
+                  <button className="btn ghost" onClick={() => openTerminal('right', { initialCommand: CLAUDE_INSTALL_CMD }, 'Install Claude Code')}>Install in terminal</button>
+                  <button className="btn ghost" onClick={() => void navigator.clipboard.writeText(CLAUDE_INSTALL_CMD)}>Copy</button>
+                </div>
+              )}
             </div>
             <button className="btn ghost" onClick={() => void check(c)}>Check</button>
             {c.kind === 'claude' ? (

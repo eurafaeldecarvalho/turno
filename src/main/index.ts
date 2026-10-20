@@ -70,6 +70,7 @@ function createWindow(): void {
     },
   })
   win.once('ready-to-show', () => {
+    win?.setOpacity(getSettings().terminal.windowOpacity)
     if (!startHidden || smoke) win?.show()
   })
   // Fechar a janela so esconde: as rotinas continuam rodando na bandeja.
@@ -270,6 +271,7 @@ ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
   if (patch.routinesDir && patch.routinesDir !== before.routinesDir) setRoot(s.routinesDir)
   if (patch.theme) applyTitleBar()
   if (patch.keepAwake) setAwakeMode(patch.keepAwake)
+  if (patch.terminal?.windowOpacity !== undefined) win?.setOpacity(patch.terminal.windowOpacity)
   send('settings:changed', s)
   return s
 })

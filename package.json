@@ -12,8 +12,28 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dist": "electron-vite build && electron-builder --win",
-    "dist:dir": "electron-vite build && electron-builder --win --dir"
+    "dist": "electron-vite build && electron-builder",
+    "dist:win": "electron-vite build && electron-builder --win",
+    "dist:linux": "electron-vite build && electron-builder --linux",
+    "dist:all": "electron-vite build && electron-builder --win --linux",
+    "dist:dir": "electron-vite build && electron-builder --dir"
+  },
+  "build": {
+    "appId": "io.github.eurafaeldecarvalho.turno",
+    "productName": "Turno",
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
+      "category": "Development"
+    }
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -24,6 +44,7 @@
     ]
   },
   "dependencies": {
+    "@xterm/addon-ligatures": "^0.10.0",
     "croner": "^10.0.1",
     "node-pty": "1.1.0",
     "yaml": "^2.9.1",
