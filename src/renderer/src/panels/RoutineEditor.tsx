@@ -418,7 +418,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
               <span>Isolation</span>
               <select value={cfg.isolation} onChange={(e) => up({ isolation: e.target.value as RoutineConfig['isolation'] })}>
                 <option value="none">none</option>
-                <option value="worktree">git worktree (isolated)</option>
+                <option value="worktree" disabled>git worktree (coming soon)</option>
               </select>
             </label>
           </div>
@@ -441,6 +441,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
                 <option value="docker">docker</option>
                 <option value="wsl">wsl</option>
               </select>
+              <small className="muted">docker/wsl need a sandbox image with the <code>claude</code> CLI installed.</small>
             </label>
             <label className="field">
               <span>Run on file change (path)</span>

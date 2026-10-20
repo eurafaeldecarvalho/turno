@@ -3,6 +3,7 @@ import type { IDockviewPanelProps } from 'dockview-react'
 import { useSettings } from '../appearance'
 import { Conversation } from './RunViewer'
 import { IconPlay } from '../icons'
+import { askConfirm } from '../ConfirmDialog'
 
 type FanoutRun = { connId: string; runId?: string; error?: string }
 
@@ -17,6 +18,13 @@ export function FanoutPanel(_props: IDockviewPanelProps) {
   const toggle = (id: string): void => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
   const start = async (): Promise<void> => {
     if (!prompt.trim() || !picked.length) return
+    // Cada connection vira uma run real (e cobranca). Confirma antes de disparar N de uma vez.
+    const ok = await askConfirm({
+      title: 'Run fan-out',
+      message: `This starts ${picked.length} independent run(s) — one per connection. Each one runs (and bills) on its own. Continue?`,
+      confirmLabel: `Run ${picked.length}`,
+    })
+    if (!ok) return
     setStarting(true)
     try {
       setRuns(await window.turno.run.fanout(prompt, picked))

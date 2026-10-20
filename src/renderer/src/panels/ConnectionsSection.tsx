@@ -3,6 +3,8 @@ import type { Connection, PreflightResult } from '../../../shared/types'
 import { updateSettings, useSettings } from '../appearance'
 import { connectionsReducer, newConnectionId, validateConnectionForm } from '../connectionsStore'
 import { openTerminal } from '../layout'
+import { useStore } from '../store'
+import { askConfirm } from '../ConfirmDialog'
 
 // Comando de bootstrap do Claude Code (quando o binario nao existe). Editavel; confirme em docs.claude.com.
 const CLAUDE_INSTALL_CMD = 'npm install -g @anthropic-ai/claude-code'
@@ -11,6 +13,7 @@ const CLAUDE_INSTALL_CMD = 'npm install -g @anthropic-ai/claude-code'
 // Endpoint = Anthropic-compativel (Ollama, OpenAI-compat via shim): baseUrl + model + token (cofre).
 export function ConnectionsSection() {
   const s = useSettings()
+  const routines = useStore((st) => st.routines)
   const [claudeOk, setClaudeOk] = useState<boolean | null>(null)
   const [busy, setBusy] = useState(false)
   const [draft, setDraft] = useState<Connection | null>(null)
@@ -69,6 +72,15 @@ export function ConnectionsSection() {
     setDraft(null)
   }
   const remove = async (c: Connection): Promise<void> => {
+    const using = routines.filter((r) => r.config.profile === c.id).length
+    if (using > 0) {
+      const ok = await askConfirm({
+        title: 'Remove connection',
+        message: `${using} routine(s) use "${c.name}" and will be skipped until pointed at another connection. Remove anyway?`,
+        confirmLabel: 'Remove',
+      })
+      if (!ok) return
+    }
     if (c.tokenRef) await window.turno.provider.deleteToken(c.id).catch(() => {})
     await saveList(connectionsReducer(conns, { type: 'remove', id: c.id }))
   }

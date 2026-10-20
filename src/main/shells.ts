@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import type { ShellInfo } from '../shared/types'
+import { IS_WIN } from './platform'
 
 function which(exe: string): string | undefined {
   try {
@@ -16,6 +17,7 @@ let fontsCache: string[] | undefined
 // Fontes instaladas (mesmo metodo do Orca: InstalledFontCollection via PowerShell).
 export function listFonts(): string[] {
   if (fontsCache) return fontsCache
+  if (!IS_WIN) return (fontsCache = []) // fora do Windows: sem enumeracao (as fontes sugeridas ainda funcionam)
   try {
     const out = execFileSync(
       'powershell.exe',
@@ -29,11 +31,21 @@ export function listFonts(): string[] {
   return fontsCache
 }
 
-// Shells disponiveis no Windows, na ordem de preferencia.
+// Shells disponiveis, na ordem de preferencia (Windows e POSIX).
 export function detectShells(): ShellInfo[] {
   const out: ShellInfo[] = []
   const add = (id: string, name: string, path: string | undefined): void => {
     if (path && existsSync(path)) out.push({ id, name, path })
+  }
+  if (!IS_WIN) {
+    // POSIX: o shell do usuario ($SHELL) primeiro, depois os comuns.
+    if (process.env.SHELL && existsSync(process.env.SHELL)) out.push({ id: 'user', name: `Default (${process.env.SHELL.split('/').pop()})`, path: process.env.SHELL })
+    add('bash', 'Bash', existsSync('/bin/bash') ? '/bin/bash' : '/usr/bin/bash')
+    add('zsh', 'Zsh', existsSync('/bin/zsh') ? '/bin/zsh' : '/usr/bin/zsh')
+    add('fish', 'Fish', '/usr/bin/fish')
+    add('sh', 'sh', '/bin/sh')
+    // dedupe por path
+    return out.filter((s, i) => out.findIndex((x) => x.path === s.path) === i)
   }
   add('pwsh', 'PowerShell 7', which('pwsh.exe'))
   add('powershell', 'Windows PowerShell', join(process.env.SystemRoot ?? 'C:\\Windows', 'System32\\WindowsPowerShell\\v1.0\\powershell.exe'))

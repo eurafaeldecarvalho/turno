@@ -6,6 +6,7 @@ import { childEnv } from './env'
 import { getConnection, resolveProviderEnv } from './providers'
 import { getSettings } from './settings'
 import { connectionToken } from './secrets'
+import { homeDir } from './platform'
 import { initTermSessions, trackPty, untrackPty } from './termsessions'
 
 const ptys = new Map<number, pty.IPty>()
@@ -28,7 +29,7 @@ const providerEnv = (profile: string): Record<string, string> => {
 function shellArgs(shell: string): { args: string[]; env: Record<string, string> } {
   if (/pwsh|powershell/i.test(shell)) return { args: ['-NoLogo', '-NoExit', '-EncodedCommand', encoded(PWSH_INTEGRATION)], env: {} }
   if (/cmd\.exe$/i.test(shell)) return { args: [], env: { PROMPT: '$E]9;9;$P$E\\$P$G' } }
-  if (/bash\.exe$/i.test(shell) && !/system32/i.test(shell)) return { args: ['--login', '-i'], env: {} }
+  if (/bash(\.exe)?$/i.test(shell) && !/system32/i.test(shell)) return { args: ['--login', '-i'], env: {} }
   return { args: [], env: {} }
 }
 
@@ -39,7 +40,7 @@ export function registerPty(getWc: () => WebContents | undefined): void {
     const id = nextId++
     const shell = opts.shell || getSettings().terminal.defaultShell || 'pwsh.exe'
     const { args, env } = shellArgs(shell)
-    const cwd = opts.cwd && existsSync(opts.cwd) ? opts.cwd : process.env.USERPROFILE
+    const cwd = opts.cwd && existsSync(opts.cwd) ? opts.cwd : homeDir()
     const p = pty.spawn(shell, args, {
       name: 'xterm-256color',
       cols: opts.cols,

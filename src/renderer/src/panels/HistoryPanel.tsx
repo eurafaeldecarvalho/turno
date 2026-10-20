@@ -38,7 +38,7 @@ export function HistoryPanel({ params }: IDockviewPanelProps<{ routine?: string 
 
   const list = source.filter((r) => {
     if (routine === '__adhoc' ? r.routine !== null : routine && r.routine !== routine) return false
-    if (filter === 'problemas') return !['ok', 'running', 'queued'].includes(r.status)
+    if (filter === 'problemas') return !['ok', 'running', 'queued', 'paused'].includes(r.status)
     if (filter === 'rodando') return r.status === 'running' || r.status === 'queued'
     return true
   })

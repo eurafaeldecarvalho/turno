@@ -13,6 +13,24 @@ import { effectiveModel, requireConnection, resolveProviderEnv } from './provide
 import { evaluateThresholds, matchedRateLimit, parseRateLimit, type AbortPolicy } from './abort'
 import { wrapForSandbox } from './sandbox'
 import { connectionToken } from './secrets'
+import { IS_WIN, homeDir } from './platform'
+
+// Mata a arvore de processos do run, por plataforma. Windows: taskkill /T. POSIX: mata o grupo (-pid).
+function killTree(pid: number): void {
+  if (IS_WIN) {
+    execFile('taskkill', ['/PID', String(pid), '/T', '/F'], () => {})
+  } else {
+    try {
+      process.kill(-pid, 'SIGKILL') // grupo inteiro (child foi spawnado detached)
+    } catch {
+      try {
+        process.kill(pid, 'SIGKILL')
+      } catch {
+        /* ja morreu */
+      }
+    }
+  }
+}
 
 export function buildArgs(req: RunRequest, model?: string): string[] {
   // stream-json na entrada: o processo aceita novas mensagens do usuario enquanto roda.
@@ -254,9 +272,10 @@ export function startRun(o: StartOptions): string {
   const sb = wrapForSandbox('claude', args, o.sandbox ?? 'none', { cwd: req.cwd, env: sbKeys })
   emit('start', `${sb.cmd} ${sb.args.join(' ')}  [profile ${req.profile}${o.routine ? `, routine ${o.routine}` : ''}]`)
   const child = spawn(sb.cmd, sb.args, {
-    cwd: req.cwd ?? process.env.USERPROFILE,
+    cwd: req.cwd ?? homeDir(),
     env: childEnv({ ...providerEnv, ...(sb.env ?? {}) }),
     windowsHide: true,
+    detached: !IS_WIN, // POSIX: child lidera um grupo de processos, p/ matar a arvore ao parar
   })
   const a: Active = { child, sent: 0, results: 0, emit: (k, t, ref) => emit(k, t, { ref }), permissions: new Map() }
   active.set(runId, a)
@@ -390,8 +409,8 @@ export function stopRun(runId: string, reason: RunStatus = 'stopped'): Promise<v
   a.child.stdin?.end()
   return new Promise((res) => {
     const kill = (): void => {
-      if (active.has(runId)) execFile('taskkill', ['/PID', String(a.child.pid), '/T', '/F'], () => res())
-      else res()
+      if (active.has(runId) && a.child.pid) killTree(a.child.pid)
+      res()
     }
     a.killTimer = setTimeout(kill, 8000)
     a.child.once('close', () => {
@@ -402,7 +421,7 @@ export function stopRun(runId: string, reason: RunStatus = 'stopped'): Promise<v
 }
 
 export function forceKillAll(): void {
-  for (const a of active.values()) if (a.child.pid) execFile('taskkill', ['/PID', String(a.child.pid), '/T', '/F'], () => {})
+  for (const a of active.values()) if (a.child.pid) killTree(a.child.pid)
 }
 
 export async function stopAllRuns(): Promise<void> {
