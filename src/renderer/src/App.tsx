@@ -355,9 +355,9 @@ function useSidebarLayout() {
 
 // Smoke: monta um layout de exemplo (splits + rotina + historico) e pede o screenshot.
 async function runSmoke(): Promise<void> {
-  openTerminal(undefined, { initialCommand: "Write-Host 'terminal 1' -ForegroundColor Yellow; $PSVersionTable.PSVersion.ToString()" })
-  openTerminal('right', { initialCommand: 'claude --version' })
-  openTerminal('below', { initialCommand: 'Get-Date' })
+  openTerminal(undefined)
+  openTerminal('right')
+  openTerminal('below')
   await initStore()
   await new Promise((r) => setTimeout(r, 800))
   const routines = await window.turno.routines.list()

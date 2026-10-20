@@ -1,5 +1,5 @@
-onlyBuiltDependencies:
-  - electron
-  - electron-winstaller
-  - esbuild
-  - node-pty
+allowBuilds:
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  node-pty: true
