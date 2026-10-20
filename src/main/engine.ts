@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { Cron } from 'croner'
 import { watch, type FSWatcher } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
-import { debounce } from './triggers'
+import { debounce, watchShouldSkip } from './triggers'
 import type { Connection, Routine, RunRecord, RunRequest, RunTrigger } from '../shared/types'
 import { cronExpressions, loadRoutines, runsBetween, watchRoutines } from './routines'
 import { duePausedRuns, getArmedAt, getRun, hasRunFor, insertRun, lastRuns, setArmed, threadOf, updateRun } from './db'
@@ -103,10 +103,9 @@ export function reload(): void {
         const rr = findRoutine(r.id)
         if (!rr || rr.error || !rr.config.enabled) return // rotina removida/com erro/desabilitada
         if (isRoutineRunning(r.id)) return // nao enfileira durante a run
-        // Cooldown pos-run: a propria run escreve no path observado; sem isso, a ultima escrita re-dispara
-        // em LOOP (gasto ilimitado). So re-arma depois de WATCH_COOLDOWN_MS do fim da ultima run.
-        const last = lastRuns().get(r.id)
-        if (last?.ended_at && Date.now() - Date.parse(last.ended_at) < WATCH_COOLDOWN_MS) return
+        // Pula se a ultima run esta nao-terminal (pausada por limite tem ended_at=null) ou terminou ha < cooldown
+        // (a propria run escreve no path observado -> sem isso, a ultima escrita re-dispara em LOOP / duplica no resume).
+        if (watchShouldSkip(lastRuns().get(r.id), Date.now(), WATCH_COOLDOWN_MS)) return
         void runRoutine(r.id, 'watch').catch(() => {})
       }, 1000)
       const mk = (recursive: boolean): void => {
