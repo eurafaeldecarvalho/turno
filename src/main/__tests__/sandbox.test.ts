@@ -16,10 +16,23 @@ describe('wrapForSandbox', () => {
     expect(w.args.slice(-2)).toEqual(['claude', '-p'])
   })
 
+  it("mode 'docker' encaminha as env vars do provedor com -e KEY (senao o claude roda sem provedor)", () => {
+    const w = wrapForSandbox('claude', ['-p'], 'docker', { image: 'img', env: ['ANTHROPIC_BASE_URL', 'ANTHROPIC_AUTH_TOKEN'] })
+    // passa-through do env do processo host para o container
+    expect(w.args).toContain('-e')
+    expect(w.args).toContain('ANTHROPIC_BASE_URL')
+    expect(w.args).toContain('ANTHROPIC_AUTH_TOKEN')
+  })
+
   it("mode 'wsl' envolve em wsl com o comando original", () => {
     const w = wrapForSandbox('claude', ['-p'], 'wsl')
     expect(w.cmd).toBe('wsl')
     expect(w.args.slice(-2)).toEqual(['claude', '-p'])
+  })
+
+  it("mode 'wsl' seta WSLENV para repassar as env vars ao Linux", () => {
+    const w = wrapForSandbox('claude', ['-p'], 'wsl', { env: ['ANTHROPIC_BASE_URL', 'TURNO_RUN_ID'] })
+    expect(w.env?.WSLENV).toBe('ANTHROPIC_BASE_URL:TURNO_RUN_ID')
   })
 })
 

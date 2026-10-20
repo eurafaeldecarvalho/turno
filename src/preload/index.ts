@@ -69,6 +69,9 @@ const api: TurnoApi = {
     deleteToken: (connId) => ipcRenderer.invoke('provider:deleteToken', connId),
     preflight: (connId) => ipcRenderer.invoke('provider:preflight', connId),
   },
+  ai: {
+    suggestCommand: (connId, ctx) => ipcRenderer.invoke('ai:suggestCommand', connId, ctx),
+  },
   smoke: {
     enabled: process.argv.includes('--turno-smoke'),
     waitSec: Number(process.argv.find((a) => a.startsWith('--smoke-wait='))?.slice(13) ?? 0),

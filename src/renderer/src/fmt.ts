@@ -63,4 +63,4 @@ export function duration(r: RunRecord): string {
   return m < 60 ? `${m}min ${s % 60}s` : `${Math.floor(m / 60)}h ${m % 60}min`
 }
 
-export const TRIGGER_LABEL: Record<string, string> = { manual: 'manual', cron: 'scheduled', catchup: 'catch-up', adhoc: 'ad hoc', followup: 'follow-up' }
+export const TRIGGER_LABEL: Record<string, string> = { manual: 'manual', cron: 'scheduled', catchup: 'catch-up', adhoc: 'ad hoc', followup: 'follow-up', watch: 'file change' }

@@ -18,6 +18,7 @@ import { claudeLogin, claudeLogout, claudeStatus } from './provider-auth'
 import { setSecret, deleteSecret } from './secrets'
 import { getConnection } from './providers'
 import { checkConnection } from './doctor'
+import { suggestCommand } from './ai'
 
 const smoke = process.argv.includes('--smoke')
 const startHidden = process.argv.includes('--hidden')
@@ -250,6 +251,7 @@ ipcMain.handle('provider:preflight', (_e, connId: string) => {
   const conn = getConnection(getSettings(), connId)
   return checkConnection(conn)
 })
+ipcMain.handle('ai:suggestCommand', (_e, connId: string, ctx: { ask: string; lastCommand?: string; output?: string }) => suggestCommand(connId, ctx))
 ipcMain.handle('ui:openExternal', (_e, url: string) => {
   // So abre esquemas conhecidos (http/https e protocolos de apps), nunca arquivo local.
   if (!/^(https?|claude|vscode|cursor|chatgpt|slack|notion|obsidian):/i.test(url)) throw new Error('unsupported link')

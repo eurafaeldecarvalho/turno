@@ -49,6 +49,7 @@ const schema = z.object({
     .optional(),
   sandbox: z.enum(['none', 'docker', 'wsl']).default('none'),
   isolation: z.enum(['none', 'worktree']).default('none'),
+  triggers: z.array(z.object({ kind: z.literal('watch'), path: z.string().min(1) })).optional(),
   catchup: z.boolean().default(true),
   catchup_window_h: z.number().positive().default(12),
   precheck: z.string().optional(),

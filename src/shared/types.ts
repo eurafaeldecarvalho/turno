@@ -50,6 +50,7 @@ export interface RoutineConfig {
   abort?: AbortPolicy[] // politicas de parada agnosticas (custo/passos/duracao/limite de sessao/semanal)
   sandbox: SandboxMode // 'none' por padrao (sem sandbox)
   isolation: 'none' | 'worktree' // 'worktree' roda a rotina num git worktree isolado
+  triggers?: RoutineTrigger[] // dispara a rotina por evento local (file-watch), alem do cron
   catchup: boolean
   catchup_window_h: number
   precheck?: string
@@ -97,7 +98,10 @@ export type AbortPolicy =
   | { kind: 'duration_min'; limit: number }
   | { kind: 'session_limit' } // limite de 5h → pausa e retoma no reset
   | { kind: 'weekly_limit' } // limite semanal → pausa e retoma no reset
-export type RunTrigger = 'manual' | 'cron' | 'catchup' | 'adhoc' | 'followup'
+export type RunTrigger = 'manual' | 'cron' | 'catchup' | 'adhoc' | 'followup' | 'watch'
+
+// Gatilhos de evento local (alem do cron). Hoje: mudanca de arquivo/pasta (file-watch, com debounce).
+export type RoutineTrigger = { kind: 'watch'; path: string }
 
 export interface RunRecord {
   id: string
@@ -299,6 +303,10 @@ export interface TurnoApi {
     setToken(connId: string, token: string): Promise<string> // guarda no cofre, devolve o tokenRef
     deleteToken(connId: string): Promise<void>
     preflight(connId: string): Promise<PreflightResult>
+  }
+  ai: {
+    // NL -> comando no terminal: devolve { command, explanation }. command=null => UI nao oferece Execute.
+    suggestCommand(connId: string, ctx: { ask: string; lastCommand?: string; output?: string }): Promise<{ command: string | null; explanation: string }>
   }
   smoke: {
     enabled: boolean

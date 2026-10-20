@@ -242,16 +242,18 @@ export function startRun(o: StartOptions): string {
   // Guardado para continuar a conversa depois (follow-up com --resume).
   writeFileSync(join(dir, 'request.json'), JSON.stringify({ ...req, prompt: undefined }, null, 2))
   const args = buildArgs(req, model)
-  const sb = wrapForSandbox('claude', args, o.sandbox ?? 'none', { cwd: req.cwd })
+  const providerEnv: Record<string, string> = {
+    ...resolveProviderEnv(conn, connectionToken(conn)),
+    TURNO_RUN_ID: runId,
+    TURNO_RUN_DIR: dir,
+    ...(o.scheduledAt ? { TURNO_SCHEDULED_AT: o.scheduledAt } : {}),
+  }
+  // Sandbox (opt-in): repassa as env do provedor pro container/WSL; 'none' (default) nao altera nada.
+  const sb = wrapForSandbox('claude', args, o.sandbox ?? 'none', { cwd: req.cwd, env: Object.keys(providerEnv) })
   emit('start', `${sb.cmd} ${sb.args.join(' ')}  [profile ${req.profile}${o.routine ? `, routine ${o.routine}` : ''}]`)
   const child = spawn(sb.cmd, sb.args, {
     cwd: req.cwd ?? process.env.USERPROFILE,
-    env: childEnv({
-      ...resolveProviderEnv(conn, connectionToken(conn)),
-      TURNO_RUN_ID: runId,
-      TURNO_RUN_DIR: dir,
-      ...(o.scheduledAt ? { TURNO_SCHEDULED_AT: o.scheduledAt } : {}),
-    }),
+    env: childEnv({ ...providerEnv, ...(sb.env ?? {}) }),
     windowsHide: true,
   })
   const a: Active = { child, sent: 0, results: 0, emit: (k, t, ref) => emit(k, t, { ref }), permissions: new Map() }

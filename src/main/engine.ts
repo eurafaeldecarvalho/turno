@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process'
 import { Cron } from 'croner'
-import type { FSWatcher } from 'node:fs'
+import { watch, type FSWatcher } from 'node:fs'
+import { isAbsolute, join } from 'node:path'
+import { debounce } from './triggers'
 import type { Connection, Routine, RunRecord, RunRequest, RunTrigger } from '../shared/types'
 import { cronExpressions, loadRoutines, runsBetween, watchRoutines } from './routines'
 import { duePausedRuns, getArmedAt, getRun, hasRunFor, insertRun, lastRuns, setArmed, threadOf, updateRun } from './db'
@@ -18,6 +20,7 @@ const connOf = (profile: string): Connection => getConnection(getSettings(), pro
 let routines: Routine[] = []
 let jobs: Cron[] = []
 let watcher: FSWatcher | undefined
+let fileWatchers: FSWatcher[] = [] // watchers dos gatilhos file-watch das rotinas
 let root = ''
 let onRoutinesChanged: (rs: Routine[]) => void = () => {}
 
@@ -72,6 +75,8 @@ export function reload(): void {
   routines = loadRoutines(root)
   jobs.forEach((j) => j.stop())
   jobs = []
+  fileWatchers.forEach((w) => w.close())
+  fileWatchers = []
   for (const r of routines) {
     if (r.error) continue
     if (!r.config.enabled) {
@@ -88,6 +93,21 @@ export function reload(): void {
           void runRoutine(r.id, 'cron', at.toISOString())
         }),
       )
+    }
+    // Gatilhos file-watch: dispara a rotina (debounced) quando o caminho muda. Caminho relativo = dentro da pasta da rotina.
+    for (const t of r.config.triggers ?? []) {
+      if (t.kind !== 'watch') continue
+      const target = isAbsolute(t.path) ? t.path : join(r.dir, t.path)
+      const fire = debounce(() => void runRoutine(r.id, 'watch'), 1000)
+      try {
+        fileWatchers.push(watch(target, { recursive: true }, () => fire()))
+      } catch {
+        try {
+          fileWatchers.push(watch(target, () => fire())) // fallback sem recursive
+        } catch {
+          /* caminho invalido/inexistente: ignora o trigger */
+        }
+      }
     }
   }
   onRoutinesChanged(getRoutines())
