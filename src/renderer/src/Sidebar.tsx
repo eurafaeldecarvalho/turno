@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as RMouseEvent, type ReactNode } from 'react'
 import { useStore, isActive } from './store'
 import { scheduleSummary, statusTone, when, STATUS_LABEL } from './fmt'
-import { openAdhoc, openFanout, openHistory, openRoutine, openSettings, openTerminal } from './layout'
+import { openAdhoc, openFanout, openHistory, openRoutine, openTerminal } from './layout'
+import { openSettingsModal } from './SettingsModal'
 import { IconChat, IconChevron, IconClose, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
 import { addFolder, addTerminalItem, agentOf, closeItemTerminal, deleteFolder, deleteItem, getDragging, getItem, moveFolder, openItem, patchItem, renameFolder, saveItem, setDragging, toggleSection, useSidebar } from './sidebarStore'
 import { dockApi, paramsOf } from './layout'
@@ -261,7 +262,7 @@ export function Sidebar() {
           {running.length > 0 && <span className="count run">{running.length}</span>}
           {problems.length > 0 && <span className="count err" title="failures in the last 24h">{problems.length}</span>}
         </button>
-        <button onClick={() => openSettings()}>
+        <button onClick={() => openSettingsModal()}>
           <IconSettings /> Settings
         </button>
       </nav>

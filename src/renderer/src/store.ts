@@ -1,5 +1,17 @@
 import { useSyncExternalStore } from 'react'
-import type { Routine, RunRecord } from '../../shared/types'
+import type { Routine, RunRecord, RunStatus } from '../../shared/types'
+import { toast, type ToastTone } from './Toast'
+import { STATUS_LABEL } from './fmt'
+
+const TOAST_TONE: Partial<Record<RunStatus, ToastTone>> = {
+  ok: 'ok',
+  paused: 'run',
+  failed: 'err',
+  aborted: 'warn',
+  timeout: 'warn',
+  idle_timeout: 'warn',
+  rate_limited: 'warn',
+}
 
 // Estado global minimo: rotinas e runs recentes, atualizados por eventos do processo main.
 interface State {
@@ -26,8 +38,12 @@ export async function initStore(): Promise<void> {
   set({ routines, runs })
   window.turno.routines.onChanged((rs) => set({ routines: rs }))
   window.turno.run.onChanged((run) => {
+    const prev = state.runs.find((r) => r.id === run.id)
     const rest = state.runs.filter((r) => r.id !== run.id)
     set({ runs: [run, ...rest].sort((a, b) => sortKey(b).localeCompare(sortKey(a))).slice(0, 300) })
+    // Toast in-app na transicao running/queued -> terminal (so numa mudanca ao vivo, nao no carregamento inicial).
+    const tone = TOAST_TONE[run.status]
+    if (prev && isActive(prev) && tone) toast(`${run.routine ?? 'Run'}: ${STATUS_LABEL[run.status]}`, tone)
     // ultima run tambem aparece na sidebar
     set({ routines: state.routines.map((r) => (r.id === run.routine ? { ...r, lastRun: run } : r)) })
   })

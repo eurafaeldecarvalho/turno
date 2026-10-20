@@ -17,7 +17,9 @@ import { SettingsPanel } from './panels/SettingsPanel'
 import { Sidebar } from './Sidebar'
 import { StatusBar } from './StatusBar'
 import { ConfirmHost } from './ConfirmDialog'
-import { dockApi, openAdhoc, openFanout, openHistory, openRoutine, openRun, openSettings, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi } from './layout'
+import { SettingsModalHost, openSettingsModal } from './SettingsModal'
+import { ToastHost } from './Toast'
+import { dockApi, openAdhoc, openFanout, openHistory, openRoutine, openRun, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi } from './layout'
 import { initStore, useStore } from './store'
 import { addTerminalItem, openItem, patchItem, setDragging } from './sidebarStore'
 import type { TerminalParams } from './layout'
@@ -242,7 +244,7 @@ export function App() {
       if (ev.altKey && ev.shiftKey && (k === '+' || k === '=')) hit(() => openTerminal('right'))
       else if (ev.altKey && ev.shiftKey && (k === '_' || k === '-')) hit(() => openTerminal('below'))
       else if (ev.ctrlKey && ev.shiftKey && k === 't') hit(() => openTerminal())
-      else if (ev.ctrlKey && !ev.shiftKey && k === ',') hit(() => openSettings())
+      else if (ev.ctrlKey && !ev.shiftKey && k === ',') hit(() => openSettingsModal())
       else if (ev.ctrlKey && ev.shiftKey && k === 'h') hit(() => openHistory())
       else if (ev.ctrlKey && ev.shiftKey && k === 'w') hit(() => api.activePanel?.api.close())
       else if (ev.ctrlKey && ev.shiftKey && k === 'm')
@@ -303,6 +305,8 @@ export function App() {
       </main>
       <StatusBar />
       <ConfirmHost />
+      <SettingsModalHost />
+      <ToastHost />
     </div>
   )
 }
@@ -366,7 +370,7 @@ async function runSmoke(): Promise<void> {
   openHistory()
   if (window.turno.smoke.theme) {
     await updateSettings({ theme: window.turno.smoke.theme })
-    openSettings()
+    openSettingsModal()
   }
   if (window.turno.smoke.view === 'fanout') openFanout()
   if (window.turno.smoke.drag) {
