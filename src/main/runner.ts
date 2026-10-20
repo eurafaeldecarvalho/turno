@@ -2,8 +2,8 @@ import { setWorkingCount } from './awake'
 import { spawn, ChildProcess, execFile } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { createInterface } from 'node:readline'
-import { mkdirSync, createWriteStream, existsSync, readFileSync, rmSync, writeFileSync, WriteStream } from 'node:fs'
-import { join } from 'node:path'
+import { mkdirSync, createWriteStream, existsSync, readFileSync, realpathSync, rmSync, writeFileSync, WriteStream } from 'node:fs'
+import { join, relative } from 'node:path'
 import type { RunEvent, RunEventKind, RunRecord, RunRequest, RunStatus, RunTrigger } from '../shared/types'
 import { childEnv } from './env'
 import { getRun, insertRun, pruneRuns, updateRun } from './db'
@@ -30,6 +30,17 @@ function killTree(pid: number): Promise<void> {
     }
   }
   return Promise.resolve()
+}
+
+// realpath do caminho (resolve symlinks) p/ o mapeamento worktree bater com o repoRoot (que o git ja devolve resolvido).
+// Caminho inexistente (ex. worktree ja removida) -> devolve ele mesmo (o chamador trata o existsSync depois).
+function canonical(p: string | undefined): string | undefined {
+  if (!p) return p
+  try {
+    return realpathSync(p)
+  } catch {
+    return p
+  }
 }
 
 export function buildArgs(req: RunRequest, model?: string): string[] {
@@ -230,19 +241,27 @@ export function startRun(o: StartOptions): string {
   const conn = requireConnection(getSettings(), req.profile)
   const model = effectiveModel(conn, req.model)
   const runId = o.runId ?? newRunId()
-  // Isolation por worktree (opt-in): cria um git worktree e roda a run LA, nunca no diretorio principal (sob o editor).
-  // worktreeDecision LANCA se isolation='worktree' sem repo git -> runRoutine libera o lock e pula a run.
-  // no resume NAO cria outra: followUp passa req.cwd = run.cwd (a worktree preservada), e o teardown abaixo a reconhece.
-  const repoRoot = (o.isolation ?? 'none') === 'worktree' && !req.resume ? resolveRepoRoot(req.cwd) : undefined
-  const wt = worktreeDecision({ isolation: o.isolation, resume: !!req.resume, repoRoot, routineId: o.routine ?? 'adhoc', runId })
+  // Isolation por worktree (opt-in): roda a run num git worktree isolado, NUNCA no diretorio principal (sob o editor).
+  // canonCwd = realpath do cwd (symlink no path do usuario quebraria o mapeamento relative-> worktree, achado do red-team).
+  const canonCwd = canonical(req.cwd)
+  const wantsWorktree = (o.isolation ?? 'none') === 'worktree'
+  // Ja rodando DENTRO de uma worktree gerenciada VIVA = resume na worktree preservada -> continua nela, nao cria outra.
+  // (So vale se o diretorio ainda existe: se a worktree foi removida, recria em vez de rodar num cwd inexistente.)
+  const alreadyInWorktree = isManagedWorktreePath(canonCwd) && !!canonCwd && existsSync(canonCwd)
+  // Cria quando quer isolamento e NAO esta numa worktree viva (fresh OU follow-up cuja worktree limpa foi removida):
+  // assim o follow-up/resume de rotina isolada NUNCA cai no diretorio principal. worktreeDecision LANCA se nao for repo git.
+  const repoRoot = wantsWorktree && !alreadyInWorktree ? resolveRepoRoot(canonCwd) : undefined
+  const wt = worktreeDecision({ isolation: o.isolation, alreadyInWorktree, repoRoot, routineId: o.routine ?? 'adhoc', runId })
   if (wt && repoRoot) createWorktree(repoRoot, wt.branch, wt.path)
   // cwd efetivo: dentro do worktree, na MESMA subpasta que a rotina ocupa no repo (nao a raiz). Senao, o cwd pedido.
-  const effectiveCwd = wt && repoRoot && req.cwd ? worktreeCwd(wt.path, repoRoot, req.cwd) : req.cwd
-  // O que limpar no fim: o worktree recem-criado OU, no resume, o worktree gerenciado onde a run ja esta rodando
-  // (followUp passa req.cwd = run.cwd, que aponta pra worktree preservada). Assim o segmento retomado nao vaza.
+  const effectiveCwd = wt && repoRoot && canonCwd ? worktreeCwd(wt.path, repoRoot, canonCwd) : (canonCwd ?? req.cwd)
+  // A subpasta da rotina pode nao existir no checkout novo (ROUTINE.md ainda nao commitado / pasta ignorada): cria-a,
+  // senao o spawn falha com ENOENT (achado do red-team/code-review). Worktree novo = checkout limpo, mkdir e seguro.
+  if (wt && effectiveCwd && !existsSync(effectiveCwd)) mkdirSync(effectiveCwd, { recursive: true })
+  // O que limpar no fim: o worktree recem-criado OU, no resume, o worktree gerenciado vivo onde a run ja esta rodando.
   let teardown: { path: string; repoRoot: string } | undefined
   if (wt && repoRoot) teardown = { path: wt.path, repoRoot }
-  else if (isManagedWorktreePath(effectiveCwd)) {
+  else if (alreadyInWorktree) {
     const wtRoot = resolveRepoRoot(effectiveCwd) // raiz do proprio worktree (mesmo vindo de uma subpasta dele)
     const mainRoot = worktreeMainRoot(effectiveCwd!) // raiz do repo principal, de onde se remove o worktree
     if (wtRoot && mainRoot && mainRoot !== wtRoot) teardown = { path: wtRoot, repoRoot: mainRoot }
@@ -401,7 +420,9 @@ export function startRun(o: StartOptions): string {
       try {
         if (canCleanup(worktreeStatus(teardown.path))) {
           removeWorktree(teardown.repoRoot, teardown.path)
-          cwdOverride = teardown.repoRoot // run.cwd deixa de apontar pra worktree removida (resume futuro cai no repo)
+          // run.cwd deixa de apontar pra worktree removida: mapeia de volta pra MESMA subpasta no repo principal
+          // (preserva o subdir da rotina; um follow-up com isolamento recria uma worktree a partir dai).
+          cwdOverride = effectiveCwd ? join(teardown.repoRoot, relative(teardown.path, effectiveCwd)) : teardown.repoRoot
           emit('text', `worktree limpo removido: ${teardown.path}`)
         } else {
           emit('text', `worktree preservado (tem mudancas nao commitadas/ignoradas): ${teardown.path}`)

@@ -18,17 +18,18 @@ export function planWorktree(repoRoot: string, routineId: string, runId: string)
 }
 
 // Decide se uma run deve rodar num git worktree isolado — e, se sim, qual branch/caminho.
-// Regras de seguranca: resume continua na worktree ja existente (nao cria outra); e isolation 'worktree'
-// SEM repositorio git LANCA, para a run ser pulada em vez de rodar no diretorio principal (sob o editor do usuario).
+// Regras de seguranca: se a run JA esta dentro de uma worktree gerenciada viva (resume na worktree
+// preservada), continua nela (nao cria outra); senao (fresh OU resume cuja worktree foi removida) cria.
+// isolation 'worktree' SEM repositorio git LANCA, p/ a run ser pulada em vez de rodar no diretorio principal.
 export function worktreeDecision(o: {
   isolation?: 'none' | 'worktree'
-  resume?: boolean
+  alreadyInWorktree?: boolean
   repoRoot?: string
   routineId: string
   runId: string
 }): { branch: string; path: string } | undefined {
   if ((o.isolation ?? 'none') !== 'worktree') return undefined
-  if (o.resume) return undefined
+  if (o.alreadyInWorktree) return undefined
   if (!o.repoRoot) throw new Error('isolation "worktree" requer um repositorio git (nenhum encontrado a partir do diretorio da run)')
   return planWorktree(o.repoRoot, o.routineId, o.runId)
 }
@@ -64,11 +65,13 @@ export function worktreeMainRoot(cwd: string): string | undefined {
   }
 }
 
-// Saida de `git status --porcelain --ignored` dentro do worktree (vazia = limpo). I/O isolado para o teardown.
-// --ignored inclui arquivos ignorados pelo .gitignore: saida de uma rotina (ex. relatorio, dist/) NAO e apagada
-// no cleanup "limpo" (um worktree novo nasce sem ignorados; se ha algum, foi a run que gerou -> preserva).
+// Saida de `git status --porcelain` dentro do worktree (vazia = limpo). I/O isolado para o teardown.
+// SEM --ignored de proposito: arquivos ignorados (node_modules, dist/, .cache) sao regeneraveis, entao NAO
+// bloqueiam a limpeza — senao uma rotina que builda vazaria GBs de worktree por run. Mudanca em arquivo
+// RASTREADO ou arquivo novo NAO-ignorado aparece (` M`/`??`) e PRESERVA a worktree (trabalho de verdade,
+// ou commite na branch turno/ que sobrevive a remocao). Saida que importa deve ir pra path rastreado/commit.
 export function worktreeStatus(path: string): string {
-  return execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: path, encoding: 'utf8', stdio: 'pipe' })
+  return execFileSync('git', ['status', '--porcelain'], { cwd: path, encoding: 'utf8', stdio: 'pipe' })
 }
 
 // Parseia `git worktree list --porcelain` em entradas.

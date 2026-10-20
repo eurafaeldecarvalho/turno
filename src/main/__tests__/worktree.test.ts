@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, rmSync, existsSync } from 'node:fs'
+import { mkdtempSync, rmSync, existsSync, mkdirSync, symlinkSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { writeFileSync } from 'node:fs'
@@ -39,14 +39,14 @@ describe('worktreeDecision (puro) — quando criar um worktree para a run', () =
     expect(worktreeDecision({ ...base, isolation: 'none', repoRoot: '/repo' })).toBeUndefined()
     expect(worktreeDecision({ ...base, repoRoot: '/repo' })).toBeUndefined()
   })
-  it('resume nao cria novo worktree (continua na worktree ja existente)', () => {
-    expect(worktreeDecision({ ...base, isolation: 'worktree', resume: true, repoRoot: '/repo' })).toBeUndefined()
+  it('ja DENTRO de uma worktree gerenciada (resume na worktree preservada) nao cria outra', () => {
+    expect(worktreeDecision({ ...base, isolation: 'worktree', alreadyInWorktree: true, repoRoot: '/repo' })).toBeUndefined()
   })
   it('isolation worktree SEM repo git lanca (nunca roda no diretorio principal)', () => {
     expect(() => worktreeDecision({ ...base, isolation: 'worktree', repoRoot: undefined })).toThrow(/repositorio git/i)
   })
-  it('isolation worktree com repo git devolve o plano (branch + path)', () => {
-    const plan = worktreeDecision({ ...base, isolation: 'worktree', repoRoot: '/repo' })
+  it('isolation worktree FORA de worktree gerenciada cria (fresh OU resume cuja worktree sumiu)', () => {
+    const plan = worktreeDecision({ ...base, isolation: 'worktree', alreadyInWorktree: false, repoRoot: '/repo' })
     expect(plan).toEqual(planWorktree('/repo', 'rota', 'run-1'))
   })
 })
@@ -99,6 +99,25 @@ describe('createWorktree/removeWorktree (integracao git)', () => {
     expect(resolveRepoRoot(tmpdir())).toBeUndefined() // tmpdir nao e repo git
   })
 
+  it('cwd canonicalizado (realpath) nao escapa do worktree quando o repo chega por symlink (fix BREAK B)', () => {
+    const base = mkdtempSync(join(tmpdir(), 'turno-sym-'))
+    const real = join(base, 'real')
+    mkdirSync(join(real, 'sub'), { recursive: true })
+    execFileSync('git', ['init', '-q'], { cwd: real })
+    execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '--allow-empty', '-q', '-m', 'init'], { cwd: real })
+    symlinkSync(real, join(base, 'link'))
+    try {
+      const repoRoot = resolveRepoRoot(join(base, 'link'))! // git rev-parse devolve o REALPATH
+      const canon = realpathSync(join(base, 'link', 'sub')) // canonicaliza o cwd que veio por symlink
+      const { path: wtPath } = planWorktree(repoRoot, 'r', 'run-sym')
+      const eff = worktreeCwd(wtPath, repoRoot, canon)
+      expect(eff.startsWith(wtPath)).toBe(true) // DENTRO do worktree (sem ../ escapando pro repo principal)
+      expect(eff).toBe(join(wtPath, 'sub'))
+    } finally {
+      rmSync(base, { recursive: true, force: true })
+    }
+  })
+
   it('worktreeMainRoot: de DENTRO do worktree, acha o repo principal (p/ teardown no resume)', () => {
     const { branch, path } = planWorktree(repo, 'rota', 'run-main')
     rmSync(path, { recursive: true, force: true })
@@ -113,14 +132,20 @@ describe('createWorktree/removeWorktree (integracao git)', () => {
     }
   })
 
-  it('teardown NAO apaga saida ignorada (.gitignore) do agente', () => {
+  it('teardown: untracked (nao-ignorado) PRESERVA; ignorado-only pode limpar (nao vaza build/node_modules)', () => {
     const { branch, path } = planWorktree(repo, 'rota', 'run-ign')
     rmSync(path, { recursive: true, force: true })
     createWorktree(repo, branch, path)
+    const gitq = (...a: string[]): void => void execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...a], { cwd: path, stdio: 'pipe' })
     try {
-      writeFileSync(join(path, '.gitignore'), 'saida.log\n')
-      writeFileSync(join(path, 'saida.log'), 'relatorio gerado pela rotina') // ignorado pelo git
-      expect(canCleanup(worktreeStatus(path))).toBe(false) // ignorado conta como "sujo" -> PRESERVA (nao perde a saida)
+      writeFileSync(join(path, '.gitignore'), 'build/\n')
+      gitq('add', '.gitignore')
+      gitq('commit', '-q', '-m', 'ignore build')
+      mkdirSync(join(path, 'build'))
+      writeFileSync(join(path, 'build', 'out.js'), 'artefato regeneravel') // IGNORADO
+      expect(canCleanup(worktreeStatus(path))).toBe(true) // so ignorado -> removivel (senao vazaria GB por run)
+      writeFileSync(join(path, 'report.txt'), 'trabalho de verdade') // untracked NAO-ignorado
+      expect(canCleanup(worktreeStatus(path))).toBe(false) // untracked real -> PRESERVA (nao perde trabalho)
     } finally {
       execFileSync('git', ['worktree', 'remove', '--force', path], { cwd: repo, stdio: 'pipe' })
     }

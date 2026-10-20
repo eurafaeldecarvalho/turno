@@ -301,7 +301,8 @@ export async function followUp(runId: string, text: string): Promise<{ runId: st
   const run = getRun(runId)
   if (!run) throw new Error('run not found')
   if (!run.session_id) throw new Error('this run has no session to continue (did it start?)')
-  // run.cwd e o cwd EFETIVO da run (worktree preservada no resume por limite; repo principal nos demais).
+  // run.cwd e o cwd EFETIVO da run: a worktree do Turno quando a run isolada foi preservada (resume por limite,
+  // ou terminou com mudancas), senao o repo principal (inclui worktree ja removida pelo teardown, mapeada de volta).
   // request.json guarda o cwd ORIGINAL (r.dir) -> usa-lo faria o resume rodar FORA da worktree, no dir principal.
   const saved = readRequest(runId)
   const base: RunRequest = saved
@@ -324,16 +325,26 @@ export async function followUp(runId: string, text: string): Promise<{ runId: st
     cwd: base.cwd ?? null,
     parent_id: run.id,
   })
-  startRun({
-    runId: newId,
-    routine: run.routine ?? undefined,
-    trigger: 'followup',
-    timeoutMin: r?.config.timeout_min ?? 60,
-    idleTimeoutMin: r?.config.idle_timeout_min ?? 15,
-    policies: r ? policiesFromConfig(r.config) : [],
-    priorCostUsd: priorCost(threadOf(run.id)), // teto de custo cumulativo pela conversa (anti-overspend no resume)
-    sandbox: r?.config.sandbox,
-    req: { ...base, prompt: text, resume: run.session_id },
-  })
+  // startRun pode lancar (ex. isolation=worktree cuja worktree sumiu e o cwd nao e mais repo git): libera o lock
+  // e marca a run como failed, em vez de vazar o lock e deixar a run presa em 'queued' (mesmo padrao do runRoutine).
+  try {
+    startRun({
+      runId: newId,
+      routine: run.routine ?? undefined,
+      trigger: 'followup',
+      timeoutMin: r?.config.timeout_min ?? 60,
+      idleTimeoutMin: r?.config.idle_timeout_min ?? 15,
+      policies: r ? policiesFromConfig(r.config) : [],
+      priorCostUsd: priorCost(threadOf(run.id)), // teto de custo cumulativo pela conversa (anti-overspend no resume)
+      sandbox: r?.config.sandbox,
+      isolation: r?.config.isolation, // follow-up de rotina isolada roda em worktree (continua na preservada ou recria)
+      req: { ...base, prompt: text, resume: run.session_id },
+    })
+  } catch (e) {
+    release(newId)
+    updateRun(newId, { status: 'failed', skip_reason: `nao iniciou: ${(e as Error).message}`, ended_at: new Date().toISOString() })
+    changed(newId)
+    throw e
+  }
   return { runId: newId, mode: 'followup' }
 }
