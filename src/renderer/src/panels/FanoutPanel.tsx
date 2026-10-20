@@ -21,15 +21,20 @@ export function FanoutPanel(_props: IDockviewPanelProps) {
 
   if (runs) {
     return (
-      <div className="fanout-compare" style={{ display: 'grid', gridTemplateColumns: `repeat(${runs.length}, minmax(0, 1fr))`, gap: 8, height: '100%', overflow: 'hidden' }}>
-        {runs.map((r) => (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="row" style={{ padding: '6px 10px', borderBottom: '1px solid var(--border)' }}>
+          <button className="btn ghost" onClick={() => setRuns(null)}>← New round</button>
+        </div>
+        <div className="fanout-compare" style={{ display: 'grid', gridTemplateColumns: `repeat(${runs.length}, minmax(0, 1fr))`, gap: 8, flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          {runs.map((r) => (
           <div key={r.connId} className="fanout-col" style={{ display: 'flex', flexDirection: 'column', minWidth: 0, borderRight: '1px solid var(--border)' }}>
             <div className="fanout-head" style={{ padding: '6px 10px', borderBottom: '1px solid var(--border)' }}>
               <strong>{conns.find((c) => c.id === r.connId)?.name ?? r.connId}</strong>
             </div>
             {r.runId ? <Conversation runId={r.runId} compact /> : <div className="banner banner-err">{r.error}</div>}
           </div>
-        ))}
+          ))}
+        </div>
       </div>
     )
   }

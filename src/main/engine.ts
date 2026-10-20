@@ -25,6 +25,7 @@ let root = ''
 let onRoutinesChanged: (rs: Routine[]) => void = () => {}
 
 const QUEUE_WAIT_MS = 45 * 60_000
+const WATCH_COOLDOWN_MS = 30_000 // janela apos uma run em que o file-watch ignora mudancas (anti-loop por self-write)
 
 export function getRoutines(): Routine[] {
   const last = lastRuns()
@@ -98,12 +99,26 @@ export function reload(): void {
     for (const t of r.config.triggers ?? []) {
       if (t.kind !== 'watch') continue
       const target = isAbsolute(t.path) ? t.path : join(r.dir, t.path)
-      const fire = debounce(() => void runRoutine(r.id, 'watch'), 1000)
+      const fire = debounce(() => {
+        const rr = findRoutine(r.id)
+        if (!rr || rr.error || !rr.config.enabled) return // rotina removida/com erro/desabilitada
+        if (isRoutineRunning(r.id)) return // nao enfileira durante a run
+        // Cooldown pos-run: a propria run escreve no path observado; sem isso, a ultima escrita re-dispara
+        // em LOOP (gasto ilimitado). So re-arma depois de WATCH_COOLDOWN_MS do fim da ultima run.
+        const last = lastRuns().get(r.id)
+        if (last?.ended_at && Date.now() - Date.parse(last.ended_at) < WATCH_COOLDOWN_MS) return
+        void runRoutine(r.id, 'watch').catch(() => {})
+      }, 1000)
+      const mk = (recursive: boolean): void => {
+        const w = watch(target, recursive ? { recursive: true } : undefined, () => fire())
+        w.on('error', () => {}) // sem listener, um erro do watcher (path removido) derruba o main
+        fileWatchers.push(w)
+      }
       try {
-        fileWatchers.push(watch(target, { recursive: true }, () => fire()))
+        mk(true)
       } catch {
         try {
-          fileWatchers.push(watch(target, () => fire())) // fallback sem recursive
+          mk(false) // fallback sem recursive
         } catch {
           /* caminho invalido/inexistente: ignora o trigger */
         }

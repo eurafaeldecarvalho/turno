@@ -8,7 +8,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { LigaturesAddon } from '@xterm/addon-ligatures'
 import { discarded, paramsOf, type TerminalParams } from '../layout'
-import { onSettings } from '../appearance'
+import { onSettings, useSettings } from '../appearance'
 import { terminalOptions } from '../terminalOptions'
 import { itemExists, patchItem } from '../sidebarStore'
 import { killParked, park, setLive, unpark } from '../liveTerms'
@@ -223,6 +223,9 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
   const handle = useRef<TermHandle | undefined>(undefined)
   const [find, setFind] = useState<string | null>(null)
   const [ai, setAi] = useState<{ ask: string; loading?: boolean; result?: { command: string | null; explanation: string } } | null>(null)
+  const conns = useSettings()?.connections ?? []
+  const aiConnId = handle.current?.profile ?? conns[0]?.id ?? ''
+  const aiConnName = conns.find((c) => c.id === aiConnId)?.name ?? aiConnId
 
   useEffect(() => {
     const el = host.current!
@@ -289,9 +292,9 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
   }
   const askAi = async (): Promise<void> => {
     const h = handle.current
-    if (!ai?.ask.trim() || !h) return
+    if (!ai?.ask.trim() || !h || !aiConnId) return
     setAi({ ...ai, loading: true })
-    const res = await window.turno.ai.suggestCommand(h.profile ?? 'claude-max', { ask: ai.ask, output: h.lastOutput() }).catch(() => ({ command: null, explanation: 'request failed' }))
+    const res = await window.turno.ai.suggestCommand(aiConnId, { ask: ai.ask, output: h.lastOutput() }).catch(() => ({ command: null, explanation: 'request failed' }))
     setAi((cur) => (cur ? { ...cur, loading: false, result: res } : null))
   }
   const execAi = (): void => {
@@ -304,6 +307,7 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
       <div ref={host} className="term-host" onMouseDown={() => api.setActive()} />
       {ai !== null && (
         <div className="term-find term-ai">
+          <span className="muted small" title="connection used for the suggestion">via {aiConnName || '—'}</span>
           <input
             autoFocus
             value={ai.ask}

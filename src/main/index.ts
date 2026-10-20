@@ -20,6 +20,9 @@ import { getConnection } from './providers'
 import { checkConnection } from './doctor'
 import { suggestCommand } from './ai'
 
+// Opacidade da janela: nunca abaixo de 0.3 (senao fica invisivel), nunca acima de 1.
+const clampOpacity = (v: number): number => Math.min(1, Math.max(0.3, Number.isFinite(v) ? v : 1))
+
 const smoke = process.argv.includes('--smoke')
 const startHidden = process.argv.includes('--hidden')
 let win: BrowserWindow | undefined
@@ -70,7 +73,7 @@ function createWindow(): void {
     },
   })
   win.once('ready-to-show', () => {
-    win?.setOpacity(getSettings().terminal.windowOpacity)
+    win?.setOpacity(clampOpacity(getSettings().terminal.windowOpacity))
     if (!startHidden || smoke) win?.show()
   })
   // Fechar a janela so esconde: as rotinas continuam rodando na bandeja.
@@ -280,7 +283,7 @@ ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
   if (patch.routinesDir && patch.routinesDir !== before.routinesDir) setRoot(s.routinesDir)
   if (patch.theme) applyTitleBar()
   if (patch.keepAwake) setAwakeMode(patch.keepAwake)
-  if (patch.terminal?.windowOpacity !== undefined) win?.setOpacity(patch.terminal.windowOpacity)
+  if (patch.terminal?.windowOpacity !== undefined) win?.setOpacity(clampOpacity(patch.terminal.windowOpacity))
   send('settings:changed', s)
   return s
 })

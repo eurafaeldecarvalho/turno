@@ -248,8 +248,10 @@ export function startRun(o: StartOptions): string {
     TURNO_RUN_DIR: dir,
     ...(o.scheduledAt ? { TURNO_SCHEDULED_AT: o.scheduledAt } : {}),
   }
-  // Sandbox (opt-in): repassa as env do provedor pro container/WSL; 'none' (default) nao altera nada.
-  const sb = wrapForSandbox('claude', args, o.sandbox ?? 'none', { cwd: req.cwd, env: Object.keys(providerEnv) })
+  // Sandbox (opt-in): repassa só ANTHROPIC_* + TURNO_RUN_ID (id, nao caminho) pro container/WSL.
+  // TURNO_RUN_DIR e caminho do HOST e nao existe dentro do sandbox -> nao repassa. 'none' (default) nao altera nada.
+  const sbKeys = Object.keys(providerEnv).filter((k) => k.startsWith('ANTHROPIC_') || k === 'TURNO_RUN_ID')
+  const sb = wrapForSandbox('claude', args, o.sandbox ?? 'none', { cwd: req.cwd, env: sbKeys })
   emit('start', `${sb.cmd} ${sb.args.join(' ')}  [profile ${req.profile}${o.routine ? `, routine ${o.routine}` : ''}]`)
   const child = spawn(sb.cmd, sb.args, {
     cwd: req.cwd ?? process.env.USERPROFILE,

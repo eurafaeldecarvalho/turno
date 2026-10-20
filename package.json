@@ -21,6 +21,7 @@
   "build": {
     "appId": "io.github.eurafaeldecarvalho.turno",
     "productName": "Turno",
+    "icon": "resources/icon.png",
     "win": {
       "target": [
         "nsis"
