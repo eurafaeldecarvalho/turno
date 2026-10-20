@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { AgentId, SidebarFolder, SidebarItem, SidebarState } from '../../shared/types'
-import { discarded, openTerminal, panelForItem, type TerminalParams } from './layout'
+import { discarded, openTerminal, panelForItem, paramsOf, type TerminalParams } from './layout'
 import { isParked, killParked, setLive } from './liveTerms'
 
 // ---- estado das pastas da barra lateral (persistido em %APPDATA%\turno\sidebar.json) ----
@@ -63,6 +63,13 @@ export const saveItem = (folderId: string, item: SidebarItem): void => {
   if (old >= 0) target.items.splice(old, 0, item)
   else target.items.push(item)
   commit({ ...state, folders, collapsed: { ...state.collapsed, [folderId]: false } })
+  syncTitle(item.id, item.name)
+}
+
+// Nome do item e titulo da aba andam juntos.
+function syncTitle(itemId: string, name: string): void {
+  const p = panelForItem(itemId)
+  if (p && p.title !== name) p.api.setTitle(name)
 }
 
 // Atualizacao vinda de um terminal aberto (pasta/sessao mudaram): salva sem mexer na ordem.
@@ -79,7 +86,7 @@ export function patchItem(itemId: string, patch: Partial<SidebarItem>): void {
     }),
   }))
   if (!changed) return
-  if (patch.name) panelForItem(itemId)?.api.setTitle(patch.name)
+  if (patch.name) syncTitle(itemId, patch.name)
   state = { ...state, folders }
   subs.forEach((f) => f())
   clearTimeout(saveTimer)
@@ -94,7 +101,7 @@ export function addTerminalItem(folderId: string, params: TerminalParams, title:
   const item: SidebarItem = {
     id: uid(),
     kind: 'terminal',
-    name: s?.name || (s ? `Claude · ${baseName(s.cwd)}` : '') || (params.lastCwd ? baseName(params.lastCwd) : title),
+    name: title.trim() || s?.name || (params.lastCwd ? baseName(params.lastCwd) : 'terminal'), // mesmo nome da aba
     cwd: s?.cwd ?? params.lastCwd ?? params.cwd,
     shell: params.shell,
     profile: params.profile,
@@ -113,7 +120,7 @@ function detach(itemId: string): void {
   killParked(itemId)
   setLive(itemId)
   const p = panelForItem(itemId)
-  if (p) p.api.updateParameters({ ...(p.params as TerminalParams), itemId: undefined })
+  if (p) p.api.updateParameters({ ...paramsOf(p), itemId: undefined })
 }
 
 export const deleteItem = (itemId: string): void => {
@@ -184,6 +191,7 @@ export async function openItem(item: SidebarItem): Promise<void> {
     // Reabre onde parou: retoma a ultima sessao do Claude, senao so o shell na ultima pasta.
     if (item.sessionId && (await window.turno.sidebar.claudeSessionExists(item.sessionId)))
       cmd = `claude --resume ${item.sessionId} --chrome${item.profile === 'qwen-local' ? ' --model qwen3.6:35b' : ''}`
+    else if (item.sessionId) patchItem(item.id, { agent: undefined, sessionId: undefined }) // sessao sumiu: vira terminal comum
   } else cmd = await resolveCommand(item)
   openTerminal(
     undefined,

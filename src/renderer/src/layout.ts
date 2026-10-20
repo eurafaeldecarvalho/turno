@@ -29,8 +29,14 @@ export interface TerminalParams {
 // Paineis fechados de vez (nao escondidos), mesmo sendo de um item de pasta.
 export const discarded = new Set<string>()
 
+// O dockview guarda os params em dois lugares que divergem (panel.params x api.getParameters()):
+// sempre ler a uniao, com as atualizacoes por cima.
+export function paramsOf(p: { params?: unknown; api: { getParameters?: () => unknown } }): TerminalParams & { kind?: string } {
+  return { ...((p.params as object) ?? {}), ...((p.api.getParameters?.() as object) ?? {}) }
+}
+
 export function panelForItem(itemId: string) {
-  return api?.panels.find((p) => (p.params as TerminalParams | undefined)?.itemId === itemId)
+  return api?.panels.find((p) => paramsOf(p).itemId === itemId)
 }
 
 export function openTerminal(dir?: Dir, params: TerminalParams = {}, title?: string, refId?: string, fixedId?: string): void {
@@ -83,6 +89,7 @@ export function saveLayout(): void {
     for (const p of Object.values(json.panels ?? {}) as any[]) {
       if (p.params?.initialCommand) delete p.params.initialCommand
       if (p.params?.autoStart) delete p.params.autoStart
+      if (p.params?.lastSession) delete p.params.lastSession // o Claude nao volta rodando com o layout
     }
     localStorage.setItem(KEY, JSON.stringify(json))
   } catch {

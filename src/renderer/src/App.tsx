@@ -16,9 +16,9 @@ import { SettingsPanel } from './panels/SettingsPanel'
 import { Sidebar } from './Sidebar'
 import { StatusBar } from './StatusBar'
 import { ConfirmHost } from './ConfirmDialog'
-import { dockApi, openAdhoc, openHistory, openRoutine, openRun, openSettings, openTerminal, restoreLayout, saveLayout, setDockApi } from './layout'
+import { dockApi, openAdhoc, openHistory, openRoutine, openRun, openSettings, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi } from './layout'
 import { initStore, useStore } from './store'
-import { addTerminalItem, openItem, setDragging } from './sidebarStore'
+import { addTerminalItem, openItem, patchItem, setDragging } from './sidebarStore'
 import type { TerminalParams } from './layout'
 import { updateSettings } from './appearance'
 import {
@@ -67,7 +67,12 @@ function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string; itemId?
 
   const commitRename = (d: string): void => {
     const v = d.trim()
-    if (v && v !== title) { api.setTitle(v); saveLayout() }
+    if (v && v !== title) {
+      api.setTitle(v)
+      saveLayout()
+      const itemId = (api.getParameters?.() as { itemId?: string } | undefined)?.itemId ?? params.itemId
+      if (itemId) patchItem(itemId, { name: v })
+    }
     setRenaming(false)
   }
 
@@ -204,7 +209,7 @@ export function App() {
     setDockApi(e.api)
     // Guarda qual aba esta sendo arrastada: a sidebar aceita terminais soltos numa pasta.
     e.api.onWillDragPanel((ev) => {
-      const params = (ev.panel.params ?? {}) as TerminalParams & { kind?: string }
+      const params = paramsOf(ev.panel)
       setDragging(params.kind === 'terminal' ? { id: ev.panel.id, params, title: ev.panel.title ?? 'terminal' } : undefined)
     })
     let t: ReturnType<typeof setTimeout> | undefined

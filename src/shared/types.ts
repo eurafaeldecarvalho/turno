@@ -199,7 +199,7 @@ export interface TurnoApi {
     kill(id: number): void
     onData(cb: (id: number, data: string) => void): () => void
     onExit(cb: (id: number, code: number) => void): () => void
-    onSession(cb: (id: number, s: TermSession) => void): () => void
+    onSession(cb: (id: number, s: TermSession | null) => void): () => void // null = o Claude saiu
   }
   run: {
     start(req: RunRequest): Promise<string>
@@ -220,6 +220,8 @@ export interface TurnoApi {
     setEnabled(id: string, enabled: boolean): Promise<void>
     openFolder(id?: string): Promise<void>
     delete(id: string): Promise<void>
+    // marca a pasta como confiavel (e o Chrome como ligado) antes de abrir o Claude num terminal
+    prepareClaude(cwd: string | undefined, chrome: boolean): Promise<void>
     template(): Promise<RoutineDraft>
     onChanged(cb: (rs: Routine[]) => void): () => void
   }

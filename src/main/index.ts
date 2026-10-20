@@ -13,6 +13,7 @@ import { notify } from './notify'
 import { awakeStatus, initAwake, setAwakeMode } from './awake'
 import { themeById } from '../shared/themes'
 import { detectShells, listFonts } from './shells'
+import { prepareClaude } from './claudeprep'
 
 const smoke = process.argv.includes('--smoke')
 const startHidden = process.argv.includes('--hidden')
@@ -207,6 +208,13 @@ ipcMain.handle('routines:save', (_e, d: RoutineDraft) => {
 ipcMain.handle('routines:setEnabled', (_e, id: string, enabled: boolean) => {
   setRoutineEnabled(getSettings().routinesDir, id, enabled)
   reload()
+})
+ipcMain.handle('claude:prepare', (_e, cwd: string | undefined, chrome: boolean) => {
+  try {
+    prepareClaude(cwd, chrome)
+  } catch (e) {
+    console.error('[claude:prepare]', e)
+  }
 })
 ipcMain.handle('routines:delete', async (_e, id: string) => {
   const r = findRoutine(id)

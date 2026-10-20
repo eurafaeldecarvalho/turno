@@ -15,7 +15,7 @@ const api: TurnoApi = {
     kill: (id) => ipcRenderer.send('pty:kill', id),
     onData: (cb) => listen<[number, string]>('pty:data', cb),
     onExit: (cb) => listen<[number, number]>('pty:exit', cb),
-    onSession: (cb) => listen<[number, TermSession]>('pty:session', cb),
+    onSession: (cb) => listen<[number, TermSession | null]>('pty:session', cb),
   },
   run: {
     start: (req) => ipcRenderer.invoke('run:start', req),
@@ -36,6 +36,7 @@ const api: TurnoApi = {
     setEnabled: (id, enabled) => ipcRenderer.invoke('routines:setEnabled', id, enabled),
     openFolder: (id) => ipcRenderer.invoke('routines:openFolder', id),
     delete: (id) => ipcRenderer.invoke('routines:delete', id),
+    prepareClaude: (cwd, chrome) => ipcRenderer.invoke('claude:prepare', cwd, chrome),
     template: () => ipcRenderer.invoke('routines:template'),
     onChanged: (cb) => listen<[Routine[]]>('routines:changed', cb),
   },

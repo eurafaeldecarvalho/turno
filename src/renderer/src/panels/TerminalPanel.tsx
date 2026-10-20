@@ -6,7 +6,7 @@ import { WebglAddon } from '@xterm/addon-webgl'
 import { SearchAddon } from '@xterm/addon-search'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
-import { discarded, type TerminalParams } from '../layout'
+import { discarded, paramsOf, type TerminalParams } from '../layout'
 import { onSettings } from '../appearance'
 import { itemExists, patchItem } from '../sidebarStore'
 import { killParked, park, setLive, unpark } from '../liveTerms'
@@ -81,13 +81,15 @@ function createTerm(params: TerminalParams): TermHandle {
   }
 
   // Pasta atual: o prompt emite OSC 9;9;"<pasta>" (integracao injetada no shell pelo main).
-  let cur: Cur = { lastCwd: params.lastCwd, lastSession: params.lastSession }
+  // Sessao so vale enquanto o Claude roda neste pty: um terminal novo comeca sem nenhuma.
+  let cur: Cur = { lastCwd: params.lastCwd }
   const remember = (patch: Cur): void => {
     cur = { ...cur, ...patch }
     binding?.onParams(cur)
     const itemId = binding?.itemId() ?? h.itemId
     if (!itemId) return
     if (patch.lastSession) patchItem(itemId, { agent: 'claude', sessionId: patch.lastSession.sessionId, cwd: patch.lastSession.cwd })
+    else if ('lastSession' in patch) patchItem(itemId, { agent: undefined, sessionId: undefined }) // saiu do Claude
     else if (patch.lastCwd) patchItem(itemId, { cwd: patch.lastCwd })
   }
   term.parser.registerOscHandler(9, (data) => {
@@ -144,11 +146,16 @@ function createTerm(params: TerminalParams): TermHandle {
     if (pending) {
       const cmd = pending
       pending = undefined
-      setTimeout(() => window.turno.pty.write(id, cmd + '\r'), 150)
+      setTimeout(async () => {
+        if (/^\s*claude\b/.test(cmd)) await window.turno.routines.prepareClaude(cur.lastCwd ?? params.cwd, /--chrome\b/.test(cmd)).catch(() => {})
+        window.turno.pty.write(id, cmd + '\r')
+      }, 150)
     }
   })
   const offSession = window.turno.pty.onSession((id, s) => {
-    if (id === ptyId && s.sessionId !== cur.lastSession?.sessionId) remember({ lastSession: s })
+    if (id !== ptyId) return
+    if (!s) cur.lastSession && remember({ lastSession: undefined })
+    else if (s.sessionId !== cur.lastSession?.sessionId) remember({ lastSession: s })
   })
   const offExit = window.turno.pty.onExit((id, code) => {
     if (id !== ptyId) return
@@ -201,12 +208,15 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
       h.dispose()
       h = undefined
     }
-    h ??= createTerm(params)
+    if (!h) {
+      h = createTerm(params)
+      if (params.lastSession) api.updateParameters({ ...params, lastSession: undefined })
+    }
     handle.current = h
     el.appendChild(h.el)
     h.bind({
       itemId: itemIdNow,
-      onParams: (cur) => api.updateParameters({ ...api.getParameters?.(), ...cur }),
+      onParams: (cur) => api.updateParameters({ ...paramsOf({ params, api }), lastCwd: cur.lastCwd, lastSession: cur.lastSession }),
       onFind: () => setFind((f) => f ?? ''),
     })
     if (params.itemId) setLive(params.itemId, 'open')

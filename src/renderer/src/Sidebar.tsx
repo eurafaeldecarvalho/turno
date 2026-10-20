@@ -4,7 +4,7 @@ import { scheduleSummary, statusTone, when, STATUS_LABEL } from './fmt'
 import { openAdhoc, openHistory, openRoutine, openSettings, openTerminal } from './layout'
 import { IconChat, IconChevron, IconClose, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
 import { addFolder, addTerminalItem, agentOf, closeItemTerminal, deleteFolder, deleteItem, getDragging, getItem, moveFolder, openItem, patchItem, renameFolder, saveItem, setDragging, toggleSection, useSidebar } from './sidebarStore'
-import { dockApi, type TerminalParams } from './layout'
+import { dockApi, paramsOf } from './layout'
 import { setLive, useLive } from './liveTerms'
 import { askConfirm } from './ConfirmDialog'
 import { FolderDialog, ItemDialog } from './ItemDialog'
@@ -193,7 +193,7 @@ function useTerminalDrop(): string | undefined {
         if (linked) return void (saveItem(f, linked), setDragging(undefined), setHover(undefined))
         const itemId = addTerminalItem(f, d.params, d.title)
         const panel = dockApi()?.getPanel(d.id)
-        panel?.api.updateParameters({ ...(panel.params as TerminalParams), itemId })
+        panel?.api.updateParameters({ ...paramsOf(panel), itemId })
         if (panel) setLive(itemId, 'open')
       }
       setDragging(undefined)

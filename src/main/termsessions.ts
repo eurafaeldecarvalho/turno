@@ -15,7 +15,7 @@ const lastByPty = new Map<number, string>()
 let watcher: FSWatcher | undefined
 let timer: ReturnType<typeof setTimeout> | undefined
 let interval: ReturnType<typeof setInterval> | undefined
-let emit: (ptyId: number, s: TermSession) => void = () => {}
+let emit: (ptyId: number, s: TermSession | null) => void = () => {}
 
 function processTable(): Promise<Map<number, number>> {
   return new Promise((resolve) => {
@@ -36,8 +36,8 @@ function processTable(): Promise<Map<number, number>> {
 }
 
 async function scan(): Promise<void> {
-  if (!ptyPids.size || !existsSync(dir())) return
-  const files = readdirSync(dir()).filter((f) => /^\d+\.json$/.test(f))
+  if (!ptyPids.size) return
+  const files = existsSync(dir()) ? readdirSync(dir()).filter((f) => /^\d+\.json$/.test(f)) : []
   const sessions: Array<{ pid: number; s: TermSession }> = []
   for (const f of files) {
     try {
@@ -65,13 +65,30 @@ async function scan(): Promise<void> {
       owner.set(pid, found)
     }
   }
+  const running = new Set<number>()
   for (const { pid, s } of sessions) {
     const ptyId = owner.get(pid)
-    if (ptyId == null || !s.sessionId) continue
+    if (ptyId == null || !s.sessionId || !alive(pid)) continue
+    running.add(ptyId)
     const key = `${s.sessionId}|${s.cwd}|${s.name ?? ''}`
     if (lastByPty.get(ptyId) === key) continue
     lastByPty.set(ptyId, key)
     emit(ptyId, s)
+  }
+  // O Claude saiu (apaga o proprio arquivo): o terminal volta a ser so um shell.
+  for (const ptyId of [...lastByPty.keys()]) {
+    if (running.has(ptyId)) continue
+    lastByPty.delete(ptyId)
+    emit(ptyId, null)
+  }
+}
+
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -80,7 +97,7 @@ function schedule(ms = 600): void {
   timer = setTimeout(() => void scan(), ms)
 }
 
-export function initTermSessions(onSession: (ptyId: number, s: TermSession) => void): void {
+export function initTermSessions(onSession: (ptyId: number, s: TermSession | null) => void): void {
   emit = onSession
 }
 
