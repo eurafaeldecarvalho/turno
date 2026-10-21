@@ -115,7 +115,7 @@ describe('createWorktree/removeWorktree (integracao git)', () => {
   })
 
   it('cwd canonicalizado (realpath) nao escapa do worktree quando o repo chega por symlink (fix BREAK B)', () => {
-    const base = mkdtempSync(join(tmpdir(), 'turno-sym-'))
+    const base = realpathSync.native(mkdtempSync(join(tmpdir(), 'turno-sym-'))) // temp do runner vem em nome curto (RUNNER~1)
     const real = join(base, 'real')
     mkdirSync(join(real, 'sub'), { recursive: true })
     execFileSync('git', ['init', '-q'], { cwd: real })
@@ -123,7 +123,7 @@ describe('createWorktree/removeWorktree (integracao git)', () => {
     symlinkSync(real, join(base, 'link'), 'junction') // junction: no Windows nao exige admin/Developer Mode (type ignorado fora do win32)
     try {
       const repoRoot = resolveRepoRoot(join(base, 'link'))! // git rev-parse devolve o REALPATH
-      const canon = realpathSync(join(base, 'link', 'sub')) // canonicaliza o cwd que veio por symlink
+      const canon = realpathSync.native(join(base, 'link', 'sub')) // canonicaliza o cwd que veio por symlink
       const { path: wtPath } = planWorktree(repoRoot, 'r', 'run-sym')
       const eff = worktreeCwd(wtPath, repoRoot, canon)
       expect(eff.startsWith(wtPath)).toBe(true) // DENTRO do worktree (sem ../ escapando pro repo principal)

@@ -37,7 +37,7 @@ function killTree(pid: number): Promise<void> {
 function canonical(p: string | undefined): string | undefined {
   if (!p) return p
   try {
-    return realpathSync(p)
+    return realpathSync.native(p) // native: nome longo no Windows (o git devolve o longo; RUNNER~1 nao bateria)
   } catch {
     return p
   }
