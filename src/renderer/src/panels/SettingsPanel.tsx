@@ -463,6 +463,7 @@ export function SettingsPanel() {
           <label className="field">
             <span>Window opacity: {Math.round(t.windowOpacity * 100)}%</span>
             <input type="range" min={0.3} max={1} step={0.05} value={t.windowOpacity} onChange={(e) => void term({ windowOpacity: Number(e.target.value) })} />
+            <small className="muted">Main window only; dialogs stay opaque. You'll see it after closing Settings.</small>
           </label>
           <small className="muted">Ctrl+Shift+C / Ctrl+Shift+V always copy and paste.</small>
         </section>

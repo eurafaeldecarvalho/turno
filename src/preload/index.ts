@@ -63,6 +63,7 @@ const api: TurnoApi = {
     pathExists: (p: string) => ipcRenderer.invoke('ui:pathExists', p),
     fileExists: (p: string): Promise<boolean> => ipcRenderer.invoke('ui:fileExists', p),
     notices: (): Promise<Array<{ file: string; message: string }>> => ipcRenderer.invoke('ui:notices'),
+    setModalOpen: (open: boolean): Promise<void> => ipcRenderer.invoke('ui:setModalOpen', open),
   },
   sidebar: {
     get: () => ipcRenderer.invoke('sidebar:get'),

@@ -98,6 +98,10 @@ export interface OpenTab {
   kind: string
   agent?: boolean // terminal rodando Claude (icone de chat, como o botao da nav)
   active?: boolean
+  routineId?: string // aba de rotina
+  runId?: string // aba de run
+  profile?: string // conexao do terminal (claude-max, qwen-local...)
+  command?: string // comando inicial (pode ter --model)
 }
 let _openTabs: OpenTab[] = []
 let _termTotal = 0
@@ -109,9 +113,9 @@ function syncOpenTabs(): void {
   _openTabs = api.panels
     .filter((p) => !(paramsOf(p) as TerminalParams & { kind?: string }).itemId)
     .map((p) => {
-      const pr = paramsOf(p) as TerminalParams & { kind?: string }
+      const pr = paramsOf(p) as TerminalParams & { kind?: string; routineId?: string; runId?: string }
       const agent = pr.profile === 'claude-max' || /^claude\b/.test(pr.initialCommand ?? '') || !!pr.lastSession
-      return { id: p.id, title: p.title ?? '', kind: pr.kind ?? 'terminal', agent, active: api!.activePanel?.id === p.id }
+      return { id: p.id, title: p.title ?? '', kind: pr.kind ?? 'terminal', agent, active: api!.activePanel?.id === p.id, routineId: pr.routineId, runId: pr.runId, profile: pr.profile, command: pr.initialCommand }
     })
   // Status bar: todos os terminais abertos, inclusive os que ja estao numa pasta da sidebar.
   _termTotal = api.panels.filter((p) => (paramsOf(p) as { kind?: string }).kind === 'terminal').length

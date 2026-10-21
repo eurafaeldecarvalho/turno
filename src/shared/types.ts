@@ -298,6 +298,7 @@ export interface TurnoApi {
     pathExists(p: string): Promise<boolean>
     fileExists(p: string): Promise<boolean>
     notices(): Promise<Array<{ file: string; message: string }>> // avisos do main (arquivo de dados ilegivel etc.)
+    setModalOpen(open: boolean): Promise<void> // modal aberto: janela opaca (window opacity so na tela principal)
   }
   sidebar: {
     get(): Promise<SidebarState>

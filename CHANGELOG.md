@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.1 (2026-10-21)
+
+- Modals can be dragged by their top strip. While a modal is open the title bar no longer drags the window, and a dragged modal is pulled back into view if the window shrinks.
+- Modals open below the title bar, so the system minimize/maximize/close buttons never sit on top of them.
+- Window opacity applies only to the main screen: the window turns fully opaque while a modal is open.
+- Sidebar: routines show only their schedule/state; Open tabs and folder items show agent · model · effort.
+
 ## 0.7.0 (2026-10-21)
 
 ### Interface

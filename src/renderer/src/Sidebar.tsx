@@ -8,7 +8,7 @@ import { openAdhoc, openFanout, openHistory, openRoutine, openRoutineEditorModal
 import { openSettingsModal } from './SettingsModal'
 import { IconChat, IconChevron, IconClock, IconClose, IconFanout, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconRoutine, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
 import { addFolder, addTerminalItem, agentOf, closeItemTerminal, deleteFolder, deleteItem, getDragging, getItem, moveFolder, openItem, patchItem, renameFolder, saveItem, setDragging, toggleSection, useSidebar } from './sidebarStore'
-import { dockApi, paramsOf } from './layout'
+import { dockApi, paramsOf, type OpenTab } from './layout'
 import { setLive, useLive } from './liveTerms'
 import { askConfirm } from './ConfirmDialog'
 import { FolderDialog, ItemDialog } from './ItemDialog'
@@ -37,6 +37,10 @@ function shortModel(model: string): string {
   if (match) return match[1]
   return m.split(/[-/:]/)[0]
 }
+
+// "Claude · sonnet · high": agente + modelo + esforco, so o que se souber.
+const agentLine = (agent: string, model?: string | null, effort?: string): string =>
+  [agent, model ? shortModel(model) || model : '', effort ?? ''].filter(Boolean).join(' · ')
 
 // Nome curto do agent preset para os itens de pasta.
 const AGENT_SHORT: Record<AgentId, string> = {
@@ -392,6 +396,28 @@ export function Sidebar() {
   const running = runs.filter(isActive)
   const problems = runs.filter((r) => Date.now() - Date.parse(r.ended_at ?? r.started_at ?? '0') < 86_400_000 && !['ok', 'running', 'queued', 'skipped'].includes(r.status))
   const openTabs = useOpenTabs()
+  // agente + modelo + esforco da aba (rotina, run, terminal com agente); terminal comum nao tem linha
+  const routineLine = (id: string | null | undefined): string | undefined => {
+    const r = id ? routines.find((x) => x.id === id) : undefined
+    if (!r) return undefined
+    const conn = connections.find((c) => c.id === r.config.profile)
+    const model = conn?.kind === 'endpoint' && conn.model ? conn.model : r.config.model
+    return agentLine(llmLabel(connections, r.config.profile, model), model, r.config.effort)
+  }
+  const tabLine = (tab: OpenTab): string | undefined => {
+    if (tab.kind === 'session') return routineLine(tab.routineId)
+    if (tab.kind === 'run') {
+      const run = runs.find((x) => x.id === tab.runId)
+      if (!run) return undefined
+      return routineLine(run.routine) ?? agentLine(llmLabel(connections, run.profile, run.model ?? ''), run.model)
+    }
+    if (tab.kind === 'terminal' && tab.profile) {
+      const conn = connections.find((c) => c.id === tab.profile)
+      const model = conn?.kind === 'endpoint' ? conn.model : /--model[ =](\S+)/.exec(tab.command ?? '')?.[1]
+      return agentLine(llmLabel(connections, tab.profile, model ?? ''), model)
+    }
+    return tab.kind === 'terminal' && tab.agent ? 'Claude' : undefined
+  }
   const activeTab = openTabs.find((t) => t.active)?.id
   useEffect(() => {
     if (activeTab) document.querySelector(`.sidebar [aria-current="page"]`)?.scrollIntoView({ block: 'nearest' })
@@ -467,7 +493,6 @@ export function Sidebar() {
           // endpoint (ex. Ollama) roda o modelo da conexao, nao o campo model da rotina
           const conn = connections.find((c) => c.id === r.config.profile)
           const effModel = conn?.kind === 'endpoint' && conn.model ? conn.model : r.config.model
-          const modelLabel = shortModel(effModel) || effModel
           const runNow = async (): Promise<void> => {
             const id = await window.turno.run.startRoutine(r.id).catch(() => '')
             if (id) openRoutine(r.id, r.config.name)
@@ -506,8 +531,7 @@ export function Sidebar() {
                     {...renameProps(`routine:${r.id}`)}
                   />
                   <span className="routine-sub">
-                    <span className="sb-dim">{llmLabel(connections, r.config.profile, effModel)}{modelLabel ? ` · ${modelLabel}` : ''} · {r.config.effort}</span>
-                    {sub && <span> · {sub}</span>}
+                    {sub && <span>{sub}</span>}
                     {last && !active && last.status !== 'ok' && <span className={`tone-${statusTone(last.status)}`}> · {STATUS_LABEL[last.status]}</span>}
                   </span>
                 </span>
@@ -563,6 +587,7 @@ Drag onto a folder to keep it` : tab.title}>
                     <span className="item-icon"><Icon size={14} /></span>
                     <span className="routine-text">
                       <InlineName className="routine-name" value={tab.title || tab.kind} onRename={(v) => renameTab(tab.id, v)} {...renameProps(`tab:${tab.id}`)} />
+                      {tabLine(tab) && <span className="routine-sub">{tabLine(tab)}</span>}
                     </span>
                   </button>
                   <span className="routine-actions">
@@ -655,9 +680,9 @@ Drag onto a folder to keep it` : tab.title}>
                     <span className="routine-sub">
                       {it.kind === 'link'
                         ? (it.url ?? '').replace(/^https?:[/][/]/, '').slice(0, 40)
-                        : it.kind === 'terminal'
-                          ? `${it.sessionId ? 'session' : 'terminal'}${it.cwd ? ` · ${lastPart(it.cwd)}` : ''}`
-                          : `${AGENT_SHORT[it.agent as AgentId] ?? agentOf(it.agent).name}${it.cwd ? ` · ${lastPart(it.cwd)}` : ''}`}
+                        : it.kind === 'terminal' && !it.sessionId
+                          ? `terminal${it.cwd ? ` · ${lastPart(it.cwd)}` : ''}`
+                          : agentLine(AGENT_SHORT[(it.agent ?? 'claude') as AgentId] ?? agentOf(it.agent).name, it.model)}
                     </span>
                   </span>
                 </ItemOpenButton>

@@ -54,6 +54,72 @@ document.addEventListener(
 // Registra o modal enquanto `open`; devolve o z-index do backdrop. `ref` aponta para a caixa do modal
 // (tabIndex={-1} para receber o foco inicial). `key` muda quando o modal troca de conteudo (ex. Runs -> run):
 // ele volta para o topo da pilha, por cima de quem tiver aberto no meio tempo.
+// Primeiro modal abriu / ultimo fechou: a barra de titulo para de arrastar a janela e a opacidade da janela
+// (Settings > Window opacity, so para a tela principal) fica em 100% enquanto houver modal.
+function modalsChanged(open: boolean): void {
+  document.body.classList.toggle('modal-open', open)
+  void window.turno.ui.setModalOpen?.(open)
+}
+
+// Arrastar o modal pela faixa de cima (titulo/cabecalho), sem pegar botoes e campos.
+const DRAG_ZONE = 48
+const INTERACTIVE = 'button, input, select, textarea, a, label, [role="combobox"], [role="button"], [contenteditable="true"], .inline-rename'
+function makeDraggable(box: HTMLElement): () => void {
+  let dx = 0
+  let dy = 0
+  const apply = (): void => void (box.style.translate = dx || dy ? `${dx}px ${dy}px` : '')
+  const inZone = (e: PointerEvent): boolean => {
+    const t = e.target as HTMLElement
+    if (t.closest(INTERACTIVE) || t.closest('.modal') !== box) return false
+    return e.clientY - box.getBoundingClientRect().top <= DRAG_ZONE
+  }
+  const onMove = (e: PointerEvent): void => void box.classList.toggle('modal-drag-zone', inZone(e))
+  const onDown = (e: PointerEvent): void => {
+    if (e.button !== 0 || !inZone(e)) return
+    e.preventDefault()
+    const bx = dx
+    const by = dy
+    const start = box.getBoundingClientRect()
+    const area = (box.parentElement ?? document.body).getBoundingClientRect()
+    box.classList.add('dragging')
+    const move = (m: PointerEvent): void => {
+      // o topo do modal (onde se segura) nunca sai da area: sempre da para trazer de volta
+      const l = Math.min(Math.max(start.left + m.clientX - e.clientX, area.left - start.width + 80), area.right - 80)
+      const t = Math.min(Math.max(start.top + m.clientY - e.clientY, area.top), area.bottom - DRAG_ZONE)
+      dx = bx + l - start.left
+      dy = by + t - start.top
+      apply()
+    }
+    const up = (): void => {
+      box.classList.remove('dragging')
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+  // janela diminuiu (resize, restaurar de maximizada): traz o modal arrastado de volta para a area alcancavel
+  const onResize = (): void => {
+    if (!dx && !dy) return
+    const r = box.getBoundingClientRect()
+    const area = (box.parentElement ?? document.body).getBoundingClientRect()
+    const l = Math.min(Math.max(r.left, area.left - r.width + 80), area.right - 80)
+    const t = Math.min(Math.max(r.top, area.top), area.bottom - DRAG_ZONE)
+    dx += l - r.left
+    dy += t - r.top
+    apply()
+  }
+  box.addEventListener('pointerdown', onDown)
+  box.addEventListener('pointermove', onMove)
+  window.addEventListener('resize', onResize)
+  return () => {
+    box.removeEventListener('pointerdown', onDown)
+    box.removeEventListener('pointermove', onMove)
+    window.removeEventListener('resize', onResize)
+    box.style.translate = ''
+  }
+}
+
 export function useModalLayer(open: boolean, close: () => void, ref?: RefObject<HTMLElement | null>, key?: string): number {
   const closeRef = useRef(close)
   closeRef.current = close
@@ -74,6 +140,7 @@ export function useModalLayer(open: boolean, close: () => void, ref?: RefObject<
     if (!open) return
     const layer: Layer = { close: () => closeRef.current(), el: () => ref?.current ?? null }
     stack.push(layer)
+    if (stack.length === 1) modalsChanged(true)
     window.getSelection()?.removeAllRanges() // selecao de outra tela nao aparece pintada dentro do modal novo
     setZ(BASE_Z + ++seq)
     // Foco no proprio modal (nao num campo: Enter num composer enviaria sem querer), salvo se algo dentro ja pegou.
@@ -85,8 +152,15 @@ export function useModalLayer(open: boolean, close: () => void, ref?: RefObject<
       cancelAnimationFrame(raf)
       const i = stack.indexOf(layer)
       if (i >= 0) stack.splice(i, 1)
+      if (!stack.length) modalsChanged(false)
     }
   }, [open, key])
+  // modal aberto pode ser arrastado pelo topo; ao reabrir volta ao centro
+  useEffect(() => {
+    const box = ref?.current
+    if (!open || !box) return
+    return makeDraggable(box)
+  }, [open])
   // Fechou de vez: devolve o foco a quem abriu.
   useEffect(() => {
     if (open) return

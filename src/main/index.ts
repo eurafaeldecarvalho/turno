@@ -278,6 +278,13 @@ ipcMain.handle('ui:openExternal', (_e, url: string) => {
   return shell.openExternal(url)
 })
 ipcMain.handle('ui:notices', () => takeNotices())
+// Window opacity vale so para a tela principal: com um modal aberto a janela fica opaca.
+let modalOpen = false
+const applyOpacity = (): void => win?.setOpacity(modalOpen ? 1 : clampOpacity(getSettings().terminal.windowOpacity))
+ipcMain.handle('ui:setModalOpen', (_e, open: boolean) => {
+  modalOpen = !!open
+  applyOpacity()
+})
 ipcMain.handle('ui:fileExists', (_e, p: string) => {
   try {
     return !!p && statSync(p).isFile()
@@ -311,7 +318,7 @@ ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
       if (now.routinesDir !== before.routinesDir) setRoot(now.routinesDir)
       if (now.theme !== before.theme) applyTitleBar()
       if (now.keepAwake !== before.keepAwake) setAwakeMode(now.keepAwake)
-      if (now.terminal.windowOpacity !== before.terminal.windowOpacity) win?.setOpacity(clampOpacity(now.terminal.windowOpacity))
+      if (now.terminal.windowOpacity !== before.terminal.windowOpacity) applyOpacity()
       send('settings:changed', now)
     }
     throw e
@@ -320,7 +327,7 @@ ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
   if (patch.routinesDir && patch.routinesDir !== before.routinesDir) setRoot(s.routinesDir)
   if (patch.theme) applyTitleBar()
   if (patch.keepAwake) setAwakeMode(patch.keepAwake)
-  if (patch.terminal?.windowOpacity !== undefined) win?.setOpacity(clampOpacity(patch.terminal.windowOpacity))
+  if (patch.terminal?.windowOpacity !== undefined) applyOpacity()
   send('settings:changed', s)
   return s
 })
