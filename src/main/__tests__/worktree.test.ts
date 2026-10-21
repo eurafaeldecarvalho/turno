@@ -53,7 +53,7 @@ describe('worktreeDecision (puro) — quando criar um worktree para a run', () =
 
 describe('worktreeCwd (puro) — mapeia o cwd da run pra dentro do worktree', () => {
   it('cwd na raiz do repo -> raiz do worktree', () => {
-    expect(worktreeCwd('/wt/r-1', '/repo', '/repo')).toBe('/wt/r-1')
+    expect(worktreeCwd('/wt/r-1', '/repo', '/repo')).toBe(join('/wt/r-1'))
   })
   it('cwd em subpasta -> MESMA subpasta dentro do worktree (nao a raiz)', () => {
     expect(worktreeCwd('/wt/r-1', '/repo', '/repo/routines/a')).toBe(join('/wt/r-1', 'routines/a'))
@@ -120,7 +120,7 @@ describe('createWorktree/removeWorktree (integracao git)', () => {
     mkdirSync(join(real, 'sub'), { recursive: true })
     execFileSync('git', ['init', '-q'], { cwd: real })
     execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '--allow-empty', '-q', '-m', 'init'], { cwd: real })
-    symlinkSync(real, join(base, 'link'))
+    symlinkSync(real, join(base, 'link'), 'junction') // junction: no Windows nao exige admin/Developer Mode (type ignorado fora do win32)
     try {
       const repoRoot = resolveRepoRoot(join(base, 'link'))! // git rev-parse devolve o REALPATH
       const canon = realpathSync(join(base, 'link', 'sub')) // canonicaliza o cwd que veio por symlink

@@ -29,6 +29,7 @@ linux:
   artifactName: Turno-${version}.${ext}
   icon: resources/icon.png
   category: Development
+  syncDesktopName: true # .desktop name = desktopName (package.json) = Electron app_id/WM_CLASS
   target:
     - AppImage
     - deb

@@ -3,6 +3,7 @@
   "version": "0.6.1",
   "private": true,
   "description": "Desktop app to schedule and run AI agent routines on your PC (Claude Code or local models via Ollama), with split terminals and a live chat with the running agent.",
+  "desktopName": "turno.desktop",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
