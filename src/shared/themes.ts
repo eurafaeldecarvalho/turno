@@ -9,6 +9,11 @@ export interface UiTokens {
   text: string
   muted: string
   faint: string
+  accentText?: string // accent com contraste de texto (derivado)
+  okText?: string
+  warnText?: string
+  errText?: string
+  runText?: string
   accent: string
   ok: string
   run: string
@@ -66,11 +71,29 @@ const mix = (a: string, b: string, t: number): string => {
   return toHex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t)
 }
 
+// Contraste WCAG entre duas cores (1..21).
+const luminance = (hex: string): number => {
+  const [r, g, b] = toRgb(hex).map((c) => {
+    const v = c / 255
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+const contrast = (a: string, b: string): number => {
+  const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m)
+  return (x + 0.05) / (y + 0.05)
+}
+
 // Deriva os tokens da UI a partir da paleta do terminal, mantendo o mesmo "peso" visual em todos os temas.
 // Evita escrever 14 cores de UI a mao por tema (DRY): a paleta ANSI autoritativa manda, a UI acompanha.
 // Se a cor "bright" coincidir com o texto (ex. Solarized, onde bright* sao tons de cinza = fg),
 // cai na cor base, que tem contraste. Evita accent/estado invisiveis.
-const distinct = (c: string, fg: string, base: string): string => (c.toLowerCase() === fg.toLowerCase() ? base : c)
+// Cor de status precisa ter cor: se a variante "bright" e igual ao texto ou um cinza (Solarized), usa a normal.
+const grey = (hex: string): boolean => {
+  const [r, g, b] = toRgb(hex)
+  return Math.max(r, g, b) - Math.min(r, g, b) < 40
+}
+const distinct = (c: string, fg: string, base: string): string => (c.toLowerCase() === fg.toLowerCase() || grey(c) ? base : c)
 
 const deriveUi = (p: TermPalette, dark: boolean): UiTokens => {
   const { background: bg, foreground: fg } = p
@@ -98,7 +121,7 @@ const mk = (id: string, name: string, dark: boolean, bg: string, fg: string, cur
   return { id, name, dark, term, ui: deriveUi(term, dark) }
 }
 
-export const THEMES: Theme[] = [
+const RAW_THEMES: Theme[] = [
   {
     id: 'orca-dark',
     name: 'Orca Dark',
@@ -263,5 +286,38 @@ export const THEMES: Theme[] = [
   mk('kanagawa-wave', 'Kanagawa Wave', true, '#1f1f28', '#dcd7ba', '#dcd7ba', '#2d4f67',
     ['#090618', '#c34043', '#76946a', '#c0a36e', '#7e9cd8', '#957fb8', '#6a9589', '#c8c093', '#727169', '#e82424', '#98bb6c', '#e6c384', '#7fb4ca', '#938aa9', '#7aa89f', '#dcd7ba']),
 ]
+
+// Texto secundario (muted/faint) aparece em 11-12px na sidebar e na status bar: puxa para a cor do texto
+// ate passar 4.6:1 sobre o fundo. Temas que ja passam nao mudam.
+// Contra o pior dos fundos onde o texto aparece (pagina, cards, campos).
+export const ensureContrast = (c: string, bgs: string[], text: string, min = 4.6): string => {
+  const worst = (v: string): number => Math.min(...bgs.map((b) => contrast(v, b)))
+  const target = Math.min(min, worst(text)) // tema cujo proprio texto nao chega la: empata com ele
+  for (let k = 0; k <= 1; k += 0.02) {
+    const v = mix(c, text, k)
+    if (worst(v) >= target) return v
+  }
+  return text
+}
+export const THEMES: Theme[] = RAW_THEMES.map((t) => {
+  const bgs = [t.ui.bg, t.ui.surface, t.ui.surface2, t.ui.surface3]
+  // cor como TEXTO (pilulas, chips, "On"): legivel sobre os fundos e sobre o proprio tom (pilula = cor ~15% sobre
+  // qualquer superficie). Vai para branco/preto, nao para o texto do tema: assim nao vira cinza (Solarized).
+  const extreme = t.dark ? '#ffffff' : '#000000'
+  const asText = (c: string): string => ensureContrast(c, [...bgs, ...bgs.map((b) => mix(b, c, 0.15))], extreme, 4.6)
+  return {
+    ...t,
+    ui: {
+      ...t.ui,
+      muted: ensureContrast(t.ui.muted, bgs, t.ui.text),
+      faint: ensureContrast(t.ui.faint, bgs, t.ui.text),
+      accentText: asText(t.ui.accent),
+      okText: asText(t.ui.ok),
+      warnText: asText(t.ui.warn),
+      errText: asText(t.ui.err),
+      runText: asText(t.ui.run),
+    },
+  }
+})
 
 export const themeById = (id: string): Theme => THEMES.find((t) => t.id === id) ?? THEMES[0]

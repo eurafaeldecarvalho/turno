@@ -1,12 +1,15 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, powerMonitor, shell, Tray } from 'electron'
+import { existsSync, statSync } from 'node:fs'
+import { LINK_RE } from '../shared/links'
 import { join } from 'node:path'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import type { RoutineDraft, RunRecord, RunRequest, Settings, SidebarState } from '../shared/types'
 import { claudeSessionExists, getSidebar, listClaudeSessions, saveSidebar } from './sidebar'
 import { registerPty, killAllPtys } from './pty'
 import { activeCount, answerPermission, initRunner, readRunEvents, startRun, stopAllRuns, stopRun, type PermissionDecision } from './runner'
-import { openDb, getRun, listRuns, threadOf } from './db'
+import { openDb, getRun, listRuns, threadOf, renameRoutineRuns } from './db'
 import { getSettings, setSettings } from './settings'
+import { takeNotices } from './jsonStore'
 import { saveRoutine, setRoutineEnabled, defaultConfig } from './routines'
 import { catchUp, findRoutine, followUp, getRoutines, reload, routineOf, runRoutine, setRoot, startEngine } from './engine'
 import { notify } from './notify'
@@ -220,6 +223,7 @@ ipcMain.handle('run:list', (_e, routine?: string, limit?: number) => listRuns(ro
 ipcMain.handle('routines:list', () => getRoutines())
 ipcMain.handle('routines:save', (_e, d: RoutineDraft) => {
   saveRoutine(getSettings().routinesDir, d)
+  if (d.originalId && d.originalId !== d.id) renameRoutineRuns(d.originalId, d.id)
   reload()
   return findRoutine(d.id)
 })
@@ -237,7 +241,11 @@ ipcMain.handle('claude:prepare', (_e, cwd: string | undefined, chrome: boolean) 
 ipcMain.handle('routines:delete', async (_e, id: string) => {
   const r = findRoutine(id)
   if (!r) return
-  await shell.trashItem(r.dir)
+  try {
+    await shell.trashItem(r.dir)
+  } catch {
+    throw new Error("Couldn't move the folder to the Recycle Bin: a file in it is open in another program, or access was denied")
+  }
   reload()
 })
 ipcMain.handle('routines:openFolder', (_e, id?: string) =>
@@ -266,9 +274,23 @@ ipcMain.handle('provider:preflight', (_e, connId: string) => {
 })
 ipcMain.handle('ai:suggestCommand', (_e, connId: string, ctx: { ask: string; lastCommand?: string; output?: string }) => suggestCommand(connId, ctx))
 ipcMain.handle('ui:openExternal', (_e, url: string) => {
-  // So abre esquemas conhecidos (http/https e protocolos de apps), nunca arquivo local.
-  if (!/^(https?|claude|vscode|cursor|chatgpt|slack|notion|obsidian):/i.test(url)) throw new Error('unsupported link')
+  if (!LINK_RE.test(url)) throw new Error('unsupported link')
   return shell.openExternal(url)
+})
+ipcMain.handle('ui:notices', () => takeNotices())
+ipcMain.handle('ui:fileExists', (_e, p: string) => {
+  try {
+    return !!p && statSync(p).isFile()
+  } catch {
+    return false
+  }
+})
+ipcMain.handle('ui:pathExists', (_e, p: string) => {
+  try {
+    return !!p && statSync(p).isDirectory() // so pastas: um arquivo no lugar da pasta tambem nao serve
+  } catch {
+    return false
+  }
 })
 ipcMain.handle('ui:pickFolder', async () => {
   const r = await dialog.showOpenDialog(win!, { properties: ['openDirectory'] })
@@ -278,7 +300,22 @@ ipcMain.handle('ui:pickFolder', async () => {
 ipcMain.handle('settings:get', () => getSettings())
 ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
   const before = getSettings()
-  const s = setSettings(patch)
+  let s: Settings
+  try {
+    s = setSettings(patch)
+  } catch (e) {
+    // settings.json lido de novo (estava travado na abertura): os efeitos dos valores reais valem agora
+    const now = getSettings()
+    if (now !== before) {
+      if (now.openAtLogin !== before.openAtLogin) applyOpenAtLogin(now.openAtLogin)
+      if (now.routinesDir !== before.routinesDir) setRoot(now.routinesDir)
+      if (now.theme !== before.theme) applyTitleBar()
+      if (now.keepAwake !== before.keepAwake) setAwakeMode(now.keepAwake)
+      if (now.terminal.windowOpacity !== before.terminal.windowOpacity) win?.setOpacity(clampOpacity(now.terminal.windowOpacity))
+      send('settings:changed', now)
+    }
+    throw e
+  }
   if (patch.openAtLogin !== undefined && patch.openAtLogin !== before.openAtLogin) applyOpenAtLogin(patch.openAtLogin)
   if (patch.routinesDir && patch.routinesDir !== before.routinesDir) setRoot(s.routinesDir)
   if (patch.theme) applyTitleBar()
@@ -331,8 +368,8 @@ app.whenReady().then(() => {
   startEngine(getSettings().routinesDir, (rs) => send('routines:changed', rs))
   createWindow()
   if (!smoke) buildTray()
-  catchUp()
-  powerMonitor.on('resume', () => setTimeout(catchUp, 15_000)) // espera a rede voltar
+  if (!smoke) catchUp() // smoke le a pasta real de rotinas: nunca dispara slot atrasado
+  if (!smoke) powerMonitor.on('resume', () => setTimeout(catchUp, 15_000)) // espera a rede voltar
   if (smoke) setTimeout(() => void finishSmoke(), 5 * 60_000)
 })
 

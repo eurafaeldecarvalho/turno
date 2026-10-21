@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.7.0 (2026-10-21)
+
+### Interface
+- Sidebar regrouped into Workspace and Automation, with Settings in the footer. Open tabs can be dragged into folders; hover actions no longer cover names; long names show a tooltip.
+- Settings: two-column layout, aligned Connections card, and a theme picker that previews each theme on hover. Interface size now scales every piece of text.
+- Readable status colors (≥ 4.5:1) in every theme; new contrast tests guard the theme list.
+- One modal system for all dialogs: Escape closes the top one, focus is trapped inside and returns to whoever opened it; shortcuts pause behind modals.
+- Terminal Find shows the match count and highlights the current match in a strong color; Find and the ask-AI bar fit narrow panes and keep their text.
+- Run viewer: reply box grows with the text, drafts are kept per run, scroll position survives resizes, tab switches and moves; skipped runs name the routine that held the lock.
+
+### Safety and data
+- Routine editor never overwrites an external edit (content compare-and-swap) and never rewrites a ROUTINE.md it couldn't read; renaming or toggling a broken routine from the sidebar is refused.
+- settings.json and sidebar.json are written atomically. A damaged, locked or wrongly shaped file is backed up once, reported, and never silently replaced with defaults.
+- Connection tokens only change after the connection list is saved.
+- Windows-reserved folder names (con, nul, com1…) are rejected; a terminal that can't start says why instead of showing a blank tab.
+
+### Release
+- GitHub Actions builds Windows (NSIS) and Linux (AppImage, deb, rpm) natively on each `v*` tag.
+
 ## 0.6.1 (2026-10-20)
 
 - Fix: the installed app opened to a blank window. The sidebar's connections selector returned a new empty array on every snapshot before settings loaded, which sent `useSyncExternalStore` into an update loop (React error #185) and unmounted the UI.

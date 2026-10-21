@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { toast } from '../Toast'
+import { Markdown } from '../markdown'
+import { onSettings } from '../appearance'
 import type { IDockviewPanelProps } from 'dockview-react'
 import type { RunEvent, RunRecord } from '../../../shared/types'
 import { useStore, isActive } from '../store'
-import { STATUS_LABEL, TRIGGER_LABEL, duration, statusTone, when } from '../fmt'
-import { openRoutine, openTerminal } from '../layout'
+import { STATUS_LABEL, TRIGGER_LABEL, duration, plural, statusTone, totalDuration, when } from '../fmt'
+import { openRoutine, openRun, openTerminal } from '../layout'
 import { IconStop, IconTerminal, IconRoutine, IconSend, IconChevron } from '../icons'
 
 // ---------- dados: conversa = cadeia de runs (original + follow-ups) ----------
@@ -140,7 +143,13 @@ function Collapsible({ head, children, open: initial = false, className = '' }: 
   )
 }
 
-function EventBlock({ ev, dur }: { ev: RunEvent; dur?: number }) {
+// texto do agente logo antes (o erro final costuma repetir a mesma frase)
+const prevTextOf = (blocks: Block[], j: number): string | undefined => {
+  const p = blocks[j - 1]
+  return p?.t === 'event' && p.ev.kind === 'text' ? p.ev.summary : undefined
+}
+
+function EventBlock({ ev, dur, prevText }: { ev: RunEvent; dur?: number; prevText?: string }) {
   switch (ev.kind) {
     case 'prompt':
       return (
@@ -155,20 +164,23 @@ function EventBlock({ ev, dur }: { ev: RunEvent; dur?: number }) {
         </div>
       )
     case 'text':
-      return <div className="msg-agent">{ev.summary}</div>
+      return <Markdown className="msg-agent" text={ev.summary} />
     case 'thinking': {
       const first = ev.summary.split('\n')[0].slice(0, 140)
+      const head = dur ? `Thought for ${fmtSecs(dur)}` : 'Thought'
+      // Pensamento curto cabe inteiro no resumo: sem expandir (antes repetia a mesma frase).
+      if (first === ev.summary.trim()) return <div className="msg-thinking coll-flat">{head} <span className="muted">— {first}</span></div>
       return (
-        <Collapsible className="msg-thinking" head={<span>{dur ? `Thought for ${fmtSecs(dur)}` : 'Thought'} <span className="muted">— {first}{ev.summary.length > first.length ? '…' : ''}</span></span>}>
-          <div className="thinking-text">{ev.summary}</div>
+        <Collapsible className="msg-thinking" head={<span>{head} <span className="muted think-preview">— {first}{ev.summary.length > first.length ? '…' : ''}</span></span>}>
+          <Markdown className="thinking-text" text={ev.summary} />
         </Collapsible>
       )
     }
     case 'final':
       return (
         <div className={`msg-final ${ev.detail ? 'err' : ''}`}>
-          <span>{ev.summary}</span>
-          {ev.detail && <pre className="pre">{ev.detail}</pre>}
+          <span>{ev.summary.replace(/ · 0s(?= ·|$)/, '')}</span>
+          {ev.detail && ev.detail.trim() !== prevText?.trim() && <pre className="pre">{ev.detail}</pre>}
         </div>
       )
     case 'retry':
@@ -293,6 +305,65 @@ function LiveLine({ since }: { since: string | null }) {
   )
 }
 
+// "held by <run id>": vira link para a run que segurava o lock.
+// Erro no ROUTINE.md acima da conversa. Some quando o arquivo e corrigido: o foco que estava nele nao cai no <body>.
+function FileErrorBanner({ id, name, error }: { id: string; name: string; error: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    return () => {
+      // cleanup de layout roda antes do no sair do DOM
+      if (!el || !el.contains(document.activeElement)) return
+      const dialog = el.closest<HTMLElement>('[role="dialog"]')
+      const conv = el.closest('.runview')?.querySelector<HTMLElement>('.conversation')
+      requestAnimationFrame(() => {
+        if (document.activeElement && document.activeElement !== document.body) return
+        if (conv?.isConnected) conv.focus({ preventScroll: true })
+        else if (dialog?.isConnected) dialog.focus({ preventScroll: true })
+        else window.dispatchEvent(new Event('turno:focus-active-panel'))
+      })
+    }
+  }, [])
+  return (
+    <div ref={ref} className="banner banner-err conv-file-err" role="status">
+      <div className="banner-pre">Error in ROUTINE.md: {error}</div>
+      <button className="link" onClick={() => openRoutine(id, name, true)}>Configure</button>
+    </div>
+  )
+}
+
+function SkipReason({ text }: { text: string }) {
+  const m = /^(.*?held by )(\d{4}-\d{2}-\d{2}T[\w-]+)(.*)$/.exec(text)
+  const holder = useStore((s) => (m ? s.runs.find((x) => x.id === m[2]) : undefined))
+  const name = useStore((s) => (holder?.routine ? s.routines.find((x) => x.id === holder.routine)?.config.name ?? holder.routine : undefined))
+  if (!m) return <>{text}</>
+  // mesmo texto do History: nome da rotina e hora da run que segurava o lock
+  const who = holder ? (holder.routine ? (name ?? holder.routine) : 'ad hoc') : undefined
+  const label = holder ? `${who} · ${when(holder.started_at ?? holder.ended_at)}` : 'that run'
+  return (
+    <>
+      {m[1]}
+      <button className="link" onClick={() => openRun(m[2], who ?? 'Run')}>{label}</button>
+      {m[3]}
+    </>
+  )
+}
+
+// Resposta ainda nao enviada, por conversa: fechar a run (Esc, ← Runs, clique fora) e voltar recupera o texto.
+// Store com assinatura: a aba do dock e o modal da mesma run mostram o mesmo rascunho, sempre o da run atual.
+const replyDrafts = new Map<string, string>()
+const draftSubs = new Set<() => void>()
+function setReplyDraft(id: string, v: string): void {
+  if (v) replyDrafts.set(id, v)
+  else replyDrafts.delete(id)
+  draftSubs.forEach((f) => f())
+}
+const useReplyDraft = (id: string): string =>
+  useSyncExternalStore(
+    (cb) => (draftSubs.add(cb), () => draftSubs.delete(cb)),
+    () => replyDrafts.get(id) ?? '',
+  )
+
 // ---------- conversa ----------
 
 export function Conversation({ runId, compact, onHeadChange }: { runId: string; compact?: boolean; onHeadChange?: (id: string) => void }) {
@@ -301,13 +372,47 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
   const { runs, events } = useThread(head)
   const routines = useStore((s) => s.routines)
   const [follow, setFollow] = useState(true)
-  const [draft, setDraft] = useState('')
+  // rascunho da conversa (chave = run raiz: o mesmo em qualquer follow-up aberto e em qualquer tela)
+  const draftKey = runId
+  const draft = useReplyDraft(draftKey)
+  const setDraft = (v: string): void => setReplyDraft(draftKey, v)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string>()
   const listRef = useRef<HTMLDivElement>(null)
+  // caixa de resposta cresce com o texto ate o teto do CSS (200px), depois rola
+  const composerRef = useRef<HTMLTextAreaElement>(null)
+  const fitComposer = (): void => {
+    const el = composerRef.current
+    // aba escondida (fora do DOM / largura 0): medir daria 0; mede quando aparecer
+    if (!el || !el.isConnected || !el.clientWidth) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight + 2, 200)}px`
+  }
+  useLayoutEffect(fitComposer, [draft, runs.length])
+  // largura ou fonte mudou (painel redimensionado, aba mostrada de novo, Interface size): mede de novo
+  useEffect(() => {
+    const el = composerRef.current
+    if (!el) return
+    let w = el.clientWidth
+    const ro = new ResizeObserver(() => {
+      if (el.clientWidth === w) return
+      w = el.clientWidth
+      fitComposer()
+    })
+    ro.observe(el)
+    const off = onSettings(() => requestAnimationFrame(fitComposer)) // Interface size / fonte
+    return () => (ro.disconnect(), off())
+  }, [runs.length > 0])
 
   const last = runs.at(-1)
   const first = runs[0]
+  // Abriu um follow-up antigo: existe um mais novo continuando desta run.
+  const newer = useStore((s) => {
+    // segue a cadeia de follow-ups ate o fim: "View latest" leva direto ao mais novo
+    let cur = last ? s.runs.find((r) => r.parent_id === last.id) : undefined
+    for (let next = cur; next; next = s.runs.find((r) => r.parent_id === next!.id)) cur = next
+    return cur
+  })
   const routine = routines.find((r) => r.id === (last?.routine ?? first?.routine))
   const total = runs.reduce((n, r) => n + (events[r.id]?.length ?? 0), 0)
   const blocksByRun = useMemo(() => runs.map((r) => ({ run: r, blocks: toBlocks(events[r.id] ?? []) })), [runs, events])
@@ -315,6 +420,46 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
   useEffect(() => {
     if (follow) listRef.current?.scrollTo({ top: listRef.current.scrollHeight })
   }, [total, follow])
+  // Ctrl+A em qualquer ponto da run (inclusive logo ao abrir, com o foco no dialogo) seleciona so a conversa
+  useEffect(() => {
+    const k = (e: KeyboardEvent): void => {
+      const list = listRef.current
+      const t = e.target as HTMLElement | null
+      if (!list || !(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'a' || t?.closest?.('input, textarea, .xterm')) return
+      const scope = list.closest('.modal') ?? list.closest('.runview')
+      if (!scope || !t || !(scope.contains(t) || t === document.body)) return
+      if (t === document.body && !list.closest('.modal')) return
+      e.preventDefault()
+      const range = document.createRange()
+      range.selectNodeContents(list.querySelector('.conv-inner') ?? list)
+      window.getSelection()?.removeAllRanges()
+      window.getSelection()?.addRange(range)
+    }
+    window.addEventListener('keydown', k, true)
+    return () => window.removeEventListener('keydown', k, true)
+  }, [])
+  // Aba aberta escondida: a altura era 0 no primeiro scroll. Quando o painel aparece, desce ate o fim.
+  const followRef = useRef(follow)
+  const savedTop = useRef(0)
+  followRef.current = follow
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+    let h = el.clientHeight
+    const ro = new ResizeObserver(() => {
+      if (el.clientHeight && followRef.current) el.scrollTo({ top: el.scrollHeight })
+      else if (!h && el.clientHeight) el.scrollTo({ top: savedTop.current }) // aba escondida e mostrada de novo
+      h = el.clientHeight
+    })
+    ro.observe(el)
+    // aba movida para outro grupo: volta ao fim (se acompanhava) ou a posicao em que estava
+    const onMoved = (): void => {
+      if (!el.isConnected || !el.clientHeight) return
+      el.scrollTo({ top: followRef.current ? el.scrollHeight : savedTop.current })
+    }
+    window.addEventListener('turno:panels-moved', onMoved)
+    return () => (ro.disconnect(), window.removeEventListener('turno:panels-moved', onMoved))
+  }, [!!last])
 
   if (!last) return <div className="panel-empty">Loading run…</div>
   const tone = statusTone(last.status)
@@ -359,18 +504,23 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
           </div>
           <div className="muted small">
             {TRIGGER_LABEL[first.trigger]} · {last.model ?? 'default'} · {when(first.started_at ?? first.ended_at)}
-            {first.started_at && ` · ${duration(last)}`}
-            {runs.length > 1 && ` · ${runs.length - 1} follow-up(s)`}
+            {first.started_at && (runs.length > 1 ? ` · ${totalDuration(runs)} total` : ` · ${duration(last)}`)}
+            {runs.length > 1 && ` · ${plural(runs.length - 1, 'follow-up')}`}
           </div>
         </div>
         <div className="run-actions">
           {routine && !live && ['failed', 'aborted', 'timeout', 'idle_timeout', 'rate_limited'].includes(last.status) && (
-            <button className="btn ghost" title="Run this routine again" onClick={() => void window.turno.run.startRoutine(routine.id)}>
+            <button
+              className="btn ghost"
+              disabled={!!routine.error}
+              title={routine.error ? `Fix the routine first: ${routine.error}` : 'Run this routine again'}
+              onClick={() => void window.turno.run.startRoutine(routine.id).catch((e) => toast(String((e as Error).message).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), 'err'))}
+            >
               ↻ Run again
             </button>
           )}
           {routine && !compact && (
-            <button className="btn ghost" onClick={() => openRoutine(routine.id, routine.config.name, true)}>
+            <button className="btn ghost" data-focus-key={`run-configure:${routine.config.name}`} onClick={() => openRoutine(routine.id, routine.config.name, true)}>
               <IconRoutine /> Configure
             </button>
           )}
@@ -387,11 +537,32 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
         </div>
       </header>
 
+      {routine?.error && !compact && (
+        <div className="conv-pinned">
+          <div className="conv-inner">
+            <FileErrorBanner id={routine.id} name={routine.config.name} error={routine.error} />
+          </div>
+        </div>
+      )}
+
       <div
         className="conversation"
+        tabIndex={-1}
+        onKeyDown={(e) => {
+          if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'a' || (e.target as HTMLElement).closest('textarea, input')) return
+          e.preventDefault()
+          const sel = window.getSelection()
+          const range = document.createRange()
+          range.selectNodeContents(e.currentTarget.querySelector('.conv-inner') ?? e.currentTarget)
+          sel?.removeAllRanges()
+          sel?.addRange(range)
+        }}
         ref={listRef}
         onScroll={(e) => {
           const el = e.currentTarget
+          // salto para 0 sem o usuario (DOM reinserido ao mover a aba) nao conta como rolagem dele
+          if (el.scrollTop === 0 && savedTop.current > 200 && !el.matches(':hover') && document.activeElement !== el) return
+          savedTop.current = el.scrollTop
           setFollow(el.scrollHeight - el.scrollTop - el.clientHeight < 60)
         }}
       >
@@ -399,14 +570,14 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
           {blocksByRun.map(({ run, blocks }, i) => (
             <div key={run.id} className="conv-run">
               {i > 0 && <div className="conv-sep"><span>follow-up · {when(run.started_at)}</span></div>}
-              {run.skip_reason && <div className="banner banner-warn">{run.status === 'skipped' ? 'Skipped: ' : ''}{run.skip_reason}</div>}
+              {run.skip_reason && <div className="banner banner-warn">{run.status === 'skipped' ? 'Skipped: ' : ''}<SkipReason text={run.skip_reason} /></div>}
               {blocks.map((b, j) =>
                 b.t === 'tools' ? (
                   <ToolRun key={j} items={b.items} />
                 ) : b.t === 'perm' ? (
                   <PermissionCard key={j} ev={b.ev} reply={b.reply} live={isActive(run)} />
                 ) : (
-                  <EventBlock key={j} ev={b.ev} dur={b.dur} />
+                  <EventBlock key={j} ev={b.ev} dur={b.dur} prevText={prevTextOf(blocks, j)} />
                 ),
               )}
             </div>
@@ -423,8 +594,15 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
 
       <div className="composer">
         {error && <div className="banner banner-err">{error}</div>}
+        {newer && (
+          <div className="banner banner-warn composer-newer">
+            This conversation continued in a newer follow-up.{' '}
+            <button className="link" onClick={() => (setHead(newer.id), onHeadChange?.(newer.id), listRef.current?.focus({ preventScroll: true }))}>View latest</button>
+          </div>
+        )}
         <div className="composer-box">
           <textarea
+            ref={composerRef}
             rows={2}
             value={draft}
             disabled={!canSend || sending}
@@ -447,9 +625,11 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
             <IconSend size={15} />
           </button>
         </div>
-        <div className="composer-hint muted small">
-          Enter sends · Shift+Enter new line · {live ? 'live in the current run' : 'creates a follow-up with --resume'}
-        </div>
+        {canSend && (
+          <div className="composer-hint muted small">
+            Enter sends · Shift+Enter new line · {live ? 'live in the current run' : 'creates a follow-up with --resume'}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -478,8 +658,9 @@ export function RoutineSession({ params }: IDockviewPanelProps<{ routineId: stri
       <div className="welcome">
         <h1>{routine.config.name}</h1>
         <p className="muted">Has not run yet. {routine.nextRuns[0] ? `Next run ${when(routine.nextRuns[0])}.` : ''}</p>
+        {routine.error && <div className="banner banner-err welcome-err"><div className="banner-pre">This routine has an error: {routine.error}</div></div>}
         <div className="welcome-actions">
-          <button className="btn primary" onClick={() => void window.turno.run.startRoutine(routine.id)}>Run now</button>
+          <button className="btn primary" disabled={!!routine.error} title={routine.error ? 'Fix the error in Configure first' : undefined} onClick={() => void window.turno.run.startRoutine(routine.id)}>Run now</button>
           <button className="btn" onClick={() => openRoutine(routine.id, routine.config.name, true)}>Configure</button>
         </div>
       </div>

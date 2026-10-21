@@ -14,17 +14,30 @@ function which(exe: string): string | undefined {
 
 let fontsCache: string[] | undefined
 
-// Fontes instaladas (mesmo metodo do Orca: InstalledFontCollection via PowerShell).
+// Fontes de icones/simbolos: nao servem como fonte de texto.
+const SYMBOL_FONTS = /^(Marlett|Webdings|Wingdings( \d)?|Symbol|MT Extra|Segoe (MDL2 Assets|Fluent Icons|UI Symbol|UI Emoji)|HoloLens MDL2 Assets)$/i
+
+// Fontes instaladas, via PowerShell (WPF + GDI).
 export function listFonts(): string[] {
   if (fontsCache) return fontsCache
   if (!IS_WIN) return (fontsCache = []) // fora do Windows: sem enumeracao (as fontes sugeridas ainda funcionam)
   try {
-    const out = execFileSync(
-      'powershell.exe',
-      ['-NoProfile', '-Command', '[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); Add-Type -AssemblyName System.Drawing; (New-Object System.Drawing.Text.InstalledFontCollection).Families | % Name'],
-      { encoding: 'utf8', windowsHide: true, timeout: 20000 },
-    )
-    fontsCache = [...new Set(out.split(/\r?\n/).map((s) => s.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+    // GDI (InstalledFontCollection) corta o nome em 31 caracteres ("Bahnschrift SemiBold SemiConden");
+    // WPF devolve as familias tipograficas com o nome inteiro. Usa as duas e descarta os nomes cortados do GDI.
+    const ps = [
+      '[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)',
+      'Add-Type -AssemblyName PresentationCore, System.Drawing',
+      "[System.Windows.Media.Fonts]::SystemFontFamilies | % { $_.FamilyNames['en-us'] } | ? { $_ } | % { 'W|' + $_ }",
+      "(New-Object System.Drawing.Text.InstalledFontCollection).Families | % { 'G|' + $_.Name }",
+    ].join('; ')
+    const out = execFileSync('powershell.exe', ['-NoProfile', '-Command', ps], { encoding: 'utf8', windowsHide: true, timeout: 20000 })
+    const names = out
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith('W|') || (l.startsWith('G|') && l.length - 2 < 31))
+      .map((l) => l.slice(2).trim())
+      .filter((n) => n && !SYMBOL_FONTS.test(n))
+    fontsCache = [...new Set(names)].sort((a, b) => a.localeCompare(b))
   } catch {
     fontsCache = []
   }

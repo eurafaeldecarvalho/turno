@@ -28,6 +28,8 @@ const set = (patch: Partial<State>): void => {
   subs.forEach((f) => f())
 }
 
+export const getStore = (): State => state
+
 export function useStore<T>(sel: (s: State) => T): T {
   return useSyncExternalStore(
     (cb) => (subs.add(cb), () => subs.delete(cb)),
@@ -57,6 +59,11 @@ export async function initStore(): Promise<void> {
 }
 
 const sortKey = (r: RunRecord): string => r.started_at ?? r.ended_at ?? ''
+
+// Recarrega a lista de runs (ex. depois de renomear a pasta de uma rotina, que muda o id delas).
+export async function reloadRuns(): Promise<void> {
+  set({ runs: await window.turno.run.list(undefined, 300) })
+}
 
 export function isActive(r: RunRecord | undefined): boolean {
   return !!r && (r.status === 'running' || r.status === 'queued')

@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { askConfirm } from './ConfirmDialog'
 import type { DockviewApi, Direction } from 'dockview-react'
 import type { ProfileId, TermSession } from '../../shared/types'
 
@@ -8,18 +9,23 @@ let _tabDisposables: Array<{ dispose(): void }> = []
 export const setDockApi = (a: DockviewApi): void => {
   _tabDisposables.forEach((d) => d.dispose())
   api = a
-  _tabDisposables = [a.onDidAddPanel(syncOpenTabs), a.onDidRemovePanel(syncOpenTabs)]
+  _tabDisposables = [a.onDidAddPanel(syncOpenTabs), a.onDidRemovePanel(syncOpenTabs), a.onDidActivePanelChange(syncOpenTabs)]
 }
 export const dockApi = (): DockviewApi | undefined => api
 
 const uid = (p: string): string => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
-let termCount = 0
+// Numeracao por tipo: o primeiro Claude e "claude 1", nao "claude 6".
+const termCounts: Record<string, number> = {}
+// nomes de itens das pastas (a sidebar registra; layout nao importa sidebarStore para evitar ciclo)
+let takenNames: () => string[] = () => []
+export const setTakenNames = (f: () => string[]): void => void (takenNames = f)
 
 type Dir = Exclude<Direction, 'within'> | undefined
 
 function place(dir: Dir, refId?: string) {
   const ref = refId ? api?.getPanel(refId) : api?.activePanel
-  return ref && dir ? { position: { referencePanel: ref.id, direction: dir } } : {}
+  if (!ref) return {}
+  return dir ? { position: { referencePanel: ref.id, direction: dir } } : refId ? { position: { referenceGroup: ref.group, direction: 'within' as const } } : {}
 }
 
 export interface TerminalParams {
@@ -41,12 +47,20 @@ const _routineEditSubs = new Set<() => void>()
 const _emitRoutineEdit = (): void => _routineEditSubs.forEach((f) => f())
 
 export function openRoutineEditorModal(id: string | null): void {
+  // editor dessa rotina ja aberto por baixo (Runs/run abertos a partir dele): fecha o que esta por cima
+  if (id && _routineEditState?.id === id && _panelModal) return closePanelModal()
   _routineEditState = { id }
   _emitRoutineEdit()
 }
+let _routineEditGuard: (() => boolean) | undefined
+export const setRoutineEditGuard = (g: (() => boolean) | undefined): void => void (_routineEditGuard = g)
 export function closeRoutineEditorModal(): void {
-  _routineEditState = null
-  _emitRoutineEdit()
+  const done = (): void => {
+    _routineEditState = null
+    _emitRoutineEdit()
+  }
+  if (!_routineEditGuard?.()) return done()
+  void askConfirm({ title: 'Discard changes?', message: 'This routine has changes that were not saved.', confirmLabel: 'Discard' }).then((ok) => ok && done())
 }
 export function useRoutineEditorModal(): { id: string | null } | null {
   return useSyncExternalStore(
@@ -57,8 +71,8 @@ export function useRoutineEditorModal(): { id: string | null } | null {
 
 // ---- modal de paineis (run, history, adhoc, fanout) ----
 export type PanelModalState =
-  | { kind: 'run'; runId: string; title: string }
-  | { kind: 'history'; routine?: string }
+  | { kind: 'run'; runId: string; title: string; back?: { routine?: string } }
+  | { kind: 'history'; routine?: string; keepFilter?: boolean }
   | { kind: 'adhoc' }
   | { kind: 'fanout' }
 
@@ -82,8 +96,11 @@ export interface OpenTab {
   id: string
   title: string
   kind: string
+  agent?: boolean // terminal rodando Claude (icone de chat, como o botao da nav)
+  active?: boolean
 }
 let _openTabs: OpenTab[] = []
+let _termTotal = 0
 const _tabSubs = new Set<() => void>()
 const _emitTabs = (): void => _tabSubs.forEach((f) => f())
 
@@ -93,8 +110,11 @@ function syncOpenTabs(): void {
     .filter((p) => !(paramsOf(p) as TerminalParams & { kind?: string }).itemId)
     .map((p) => {
       const pr = paramsOf(p) as TerminalParams & { kind?: string }
-      return { id: p.id, title: p.title ?? '', kind: pr.kind ?? 'terminal' }
+      const agent = pr.profile === 'claude-max' || /^claude\b/.test(pr.initialCommand ?? '') || !!pr.lastSession
+      return { id: p.id, title: p.title ?? '', kind: pr.kind ?? 'terminal', agent, active: api!.activePanel?.id === p.id }
     })
+  // Status bar: todos os terminais abertos, inclusive os que ja estao numa pasta da sidebar.
+  _termTotal = api.panels.filter((p) => (paramsOf(p) as { kind?: string }).kind === 'terminal').length
   _emitTabs()
 }
 
@@ -105,8 +125,45 @@ export function useOpenTabs(): OpenTab[] {
   )
 }
 
+export function useTerminalTotal(): number {
+  return useSyncExternalStore(
+    (cb) => (_tabSubs.add(cb), () => _tabSubs.delete(cb)),
+    () => _termTotal,
+  )
+}
+
+// Rotina renomeada: a aba da sessao (e a lista Open tabs) acompanham o nome novo.
+export function syncRoutineTitles(names: Map<string, string>): void {
+  if (!api) return
+  let changed = false
+  for (const p of api.panels) {
+    const pr = paramsOf(p) as { kind?: string; routineId?: string; customTitle?: boolean }
+    const name = pr.kind === 'session' && pr.routineId && !pr.customTitle ? names.get(pr.routineId) : undefined
+    if (name && p.title !== name) {
+      p.api.setTitle(name)
+      changed = true
+    }
+  }
+  if (changed) syncOpenTabs()
+}
+
+// Renomear uma aba pela lista Open tabs da sidebar.
+export function renameTab(id: string, title: string): void {
+  const p = api?.getPanel(id)
+  p?.api.setTitle(title)
+  if (p && (paramsOf(p) as { kind?: string }).kind === 'session') p.api.updateParameters({ ...paramsOf(p), customTitle: true }) // syncRoutineTitles respeita
+  syncOpenTabs()
+  saveLayout()
+}
+
 export function focusTab(id: string): void {
-  api?.getPanel(id)?.api.setActive()
+  const p = api?.getPanel(id)
+  if (!p) return
+  const wasMax = api!.hasMaximizedGroup()
+  if (wasMax && !p.api.isMaximized()) api!.exitMaximizedGroup()
+  p.api.setActive()
+  // com maximizado, o painel so aceita foco depois de reorganizar: entrega o teclado a ele
+  if (wasMax) setTimeout(() => window.dispatchEvent(new CustomEvent('turno:focus-panel', { detail: id })), 120)
 }
 
 export function closeTab(id: string): void {
@@ -127,12 +184,16 @@ export function openTerminal(dir?: Dir, params: TerminalParams = {}, title?: str
   if (!api) return
   const existing = fixedId ? api.getPanel(fixedId) : undefined
   if (existing) return existing.api.setActive()
-  termCount++
+  const label = params.profile === 'qwen-local' ? 'qwen' : params.profile === 'claude-max' ? 'claude' : 'terminal'
+  termCounts[label] = (termCounts[label] ?? 0) + 1
+  // pula nomes ja usados (aba aberta ou item salvo numa pasta): dois "terminal 4" diferentes confundiam
+  const taken = new Set([...api.panels.map((p) => p.title ?? ''), ...takenNames()].map((n) => n.toLowerCase()))
+  while (taken.has(`${label} ${termCounts[label]}`)) termCounts[label]++
   api.addPanel({
     id: fixedId ?? uid('term'),
     component: 'terminal',
     tabComponent: 'tab',
-    title: title ?? (params.profile === 'qwen-local' ? `qwen ${termCount}` : params.profile === 'claude-max' ? `claude ${termCount}` : `terminal ${termCount}`),
+    title: title ?? `${label} ${termCounts[label]}`,
     params: { ...params, kind: 'terminal' },
     renderer: 'always', // mantem o xterm vivo quando a aba fica escondida
     ...place(dir, refId),
@@ -157,11 +218,16 @@ export const openRoutine = (routineId: string | null, title: string, edit = fals
     ? openRoutineEditorModal(routineId)
     : openOnce(`session:${routineId}`, 'session', title, { routineId })
 export const openRun = (runId: string, title: string): void => {
-  _panelModal = { kind: 'run', runId, title }
+  const from = _panelModal?.kind === 'history' ? { routine: _panelModal.routine } : _panelModal?.kind === 'run' ? _panelModal.back : undefined
+  _panelModal = { kind: 'run', runId, title, back: from }
   _emitPanel()
 }
-export const openHistory = (routine?: string): void => {
-  _panelModal = { kind: 'history', routine }
+// Runs lembra a rotina escolhida no filtro: abrir uma run e voltar mantem a escolha.
+export function rememberHistoryRoutine(routine: string): void {
+  if (_panelModal?.kind === 'history') _panelModal = { ..._panelModal, routine: routine || undefined }
+}
+export const openHistory = (routine?: string, keepFilter = false): void => {
+  _panelModal = { kind: 'history', routine, keepFilter }
   _emitPanel()
 }
 export const openAdhoc = (): void => {

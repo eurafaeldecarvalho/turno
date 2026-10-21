@@ -22,6 +22,7 @@ export function validateConnectionForm(c: Partial<Connection>): string | null {
   if (!c.name?.trim()) return 'Give the connection a name'
   if (c.kind === 'endpoint') {
     if (!c.baseUrl?.trim()) return 'Endpoint needs a base URL'
+    if (!/^https?:\/\/[^\s/]+/i.test(c.baseUrl.trim())) return 'Base URL must start with http:// or https:// (e.g. http://localhost:11434)'
     if (!c.model?.trim()) return 'Endpoint needs a model'
   }
   return null

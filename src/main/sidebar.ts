@@ -1,22 +1,50 @@
 import { app } from 'electron'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
-import { closeSync, existsSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, openSync, readdirSync, readFileSync, readSync, statSync } from 'node:fs'
 import type { ClaudeSession, SidebarState } from '../shared/types'
+import { readJson, reportBadShape, writeJsonAtomic } from './jsonStore'
 
 const file = (): string => join(app.getPath('userData'), 'sidebar.json')
 
+// sidebar.json existia mas nao foi lido nesta sessao: o renderer esta com a lista vazia, gravar apagaria as pastas
+let blocked = false
+
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
+const KINDS = ['chat', 'link', 'terminal']
+const validItem = (i: unknown): boolean => isObj(i) && typeof i.id === 'string' && typeof i.name === 'string' && KINDS.includes(i.kind as string)
+
 export function getSidebar(): SidebarState {
-  try {
-    const s = JSON.parse(readFileSync(file(), 'utf8'))
-    return { collapsed: s.collapsed ?? {}, folders: s.folders ?? [] }
-  } catch {
+  const r = readJson<unknown>(file())
+  if (!r.ok) {
+    blocked = true
     return { collapsed: {}, folders: [] }
   }
+  if (r.data === undefined) return { collapsed: {}, folders: [] }
+  // JSON valido com forma errada: o que der para aproveitar fica; o resto e descartado (com copia do arquivo)
+  const d = isObj(r.data) ? r.data : {}
+  const bad: string[] = isObj(r.data) ? [] : ['the whole file']
+  const collapsed = isObj(d.collapsed) ? (d.collapsed as Record<string, boolean>) : (d.collapsed !== undefined && bad.push('collapsed'), {})
+  let folders: SidebarState['folders'] = []
+  if (Array.isArray(d.folders)) {
+    for (const f of d.folders) {
+      if (!isObj(f) || typeof f.id !== 'string' || typeof f.name !== 'string') {
+        bad.push('folders')
+        continue
+      }
+      const items = Array.isArray(f.items) ? f.items.filter(validItem) : []
+      if (!Array.isArray(f.items) || items.length !== f.items.length) bad.push(`items of "${f.name}"`)
+      folders.push({ ...(f as unknown as SidebarState['folders'][number]), items: items as SidebarState['folders'][number]['items'] })
+    }
+  } else if (d.folders !== undefined) bad.push('folders')
+  if (bad.length && !reportBadShape(file(), [...new Set(bad)])) blocked = true
+  if (bad.length && blocked) folders = []
+  return { collapsed, folders }
 }
 
 export function saveSidebar(s: SidebarState): SidebarState {
-  writeFileSync(file(), JSON.stringify(s, null, 2))
+  if (blocked) throw new Error("sidebar.json couldn't be read when Turno started, so sidebar changes aren't saved. Restart Turno once the file is available.")
+  writeJsonAtomic(file(), s)
   return s
 }
 

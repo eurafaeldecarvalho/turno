@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
+import { release } from 'node:os'
 import type { TurnoApi, RunEvent, RunRecord, Routine, Settings, AwakeStatus, TermSession } from '../shared/types'
 
 function listen<T extends unknown[]>(channel: string, cb: (...args: T) => void): () => void {
@@ -7,7 +8,11 @@ function listen<T extends unknown[]>(channel: string, cb: (...args: T) => void):
   return () => ipcRenderer.removeListener(channel, h)
 }
 
+// Build do Windows para o xterm ajustar o reflow ao ConPTY (windowsPty).
+const winBuild = process.platform === 'win32' ? Number(release().split('.')[2]) || undefined : undefined
+
 const api: TurnoApi = {
+  winBuild,
   pty: {
     create: (opts) => ipcRenderer.invoke('pty:create', opts),
     write: (id, data) => ipcRenderer.send('pty:write', id, data),
@@ -55,6 +60,9 @@ const api: TurnoApi = {
     onOpenRun: (cb) => listen<[string]>('ui:open-run', cb),
     openExternal: (url) => ipcRenderer.invoke('ui:openExternal', url),
     pickFolder: () => ipcRenderer.invoke('ui:pickFolder'),
+    pathExists: (p: string) => ipcRenderer.invoke('ui:pathExists', p),
+    fileExists: (p: string): Promise<boolean> => ipcRenderer.invoke('ui:fileExists', p),
+    notices: (): Promise<Array<{ file: string; message: string }>> => ipcRenderer.invoke('ui:notices'),
   },
   sidebar: {
     get: () => ipcRenderer.invoke('sidebar:get'),

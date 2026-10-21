@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // Aliases do `claude --model` (sempre a versao mais nova) e os ids completos atuais.
 export const CLAUDE_MODELS = [
@@ -15,14 +15,28 @@ export const CLAUDE_MODELS = [
 export function ModelSelect({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
   const known = value === '' || CLAUDE_MODELS.some((m) => m.v === value)
   const [custom, setCustom] = useState(!known)
+  const typed = useRef<string | undefined>(undefined) // ultimo valor digitado aqui (nao e mudanca de fora)
+  // valor trocado de fora (arquivo recarregado): volta para a lista se for um modelo conhecido
+  useEffect(() => {
+    if (value === typed.current) return
+    if (!known) setCustom(true)
+    else {
+      if (input.current && input.current === document.activeElement) requestAnimationFrame(() => select.current?.focus({ preventScroll: true }))
+      setCustom(false)
+    }
+  }, [value])
+  const input = useRef<HTMLInputElement>(null)
+  const select = useRef<HTMLSelectElement>(null)
   return (
-    <div className="row">
+    <div className="row model-select">
       <select
+        ref={select}
         aria-label="Model"
         disabled={disabled}
         value={custom ? '__custom' : value}
         onChange={(e) => {
           if (e.target.value === '__custom') return setCustom(true)
+          typed.current = undefined // escolha da lista: a proxima mudanca para um id livre vem de fora
           setCustom(false)
           onChange(e.target.value)
         }}
@@ -33,7 +47,7 @@ export function ModelSelect({ value, onChange, disabled }: { value: string; onCh
         ))}
         <option value="__custom">Other (type it)…</option>
       </select>
-      {custom && <input className="mono" value={value} placeholder="claude-…" onChange={(e) => onChange(e.target.value)} />}
+      {custom && <input ref={input} className="mono" aria-label="Model id" value={value} placeholder="claude-…" onChange={(e) => onChange((typed.current = e.target.value))} />}
     </div>
   )
 }

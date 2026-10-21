@@ -1,19 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { LINK_HINT, LINK_RE } from '../../shared/links'
+import { askConfirm } from './ConfirmDialog'
+import { createPortal } from 'react-dom'
 import type { AgentId, ClaudeSession, SidebarItem } from '../../shared/types'
 import { AGENTS, agentOf, saveItem, uid, useSidebar } from './sidebarStore'
 import { ModelSelect } from './ModelSelect'
 import { when } from './fmt'
 import { IconClose, IconFolder } from './icons'
+import { useModalLayer } from './modalStack'
 
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  useEffect(() => {
-    const k = (e: KeyboardEvent): void => void (e.key === 'Escape' && onClose())
-    window.addEventListener('keydown', k)
-    return () => window.removeEventListener('keydown', k)
-  }, [onClose])
-  return (
-    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-label={title}>
+  const box = useRef<HTMLDivElement>(null)
+  const z = useModalLayer(true, onClose, box)
+  return createPortal(
+    <div className="modal-backdrop modal-backdrop-top-anchored" style={{ zIndex: z }} onMouseDown={(e) => e.target === e.currentTarget && (e.preventDefault(), onClose())}>
+      <div ref={box} tabIndex={-1} className="modal" role="dialog" aria-modal="true" aria-label={title}>
         <header className="modal-head">
           <h2>{title}</h2>
           <button className="icon-btn" onClick={onClose} aria-label="Close">
@@ -22,19 +23,28 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
         </header>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
+}
+
+// Fechar sem salvar (Esc, clique fora, X): com algo digitado, pergunta antes. O Cancel descarta direto.
+function guardClose(dirty: boolean, onClose: () => void): () => void {
+  return () => (dirty ? void askConfirm({ title: 'Discard changes?', message: 'What you typed here will be lost.', confirmLabel: 'Discard' }).then((ok) => ok && onClose()) : onClose())
 }
 
 export function FolderDialog({ initial, onSave, onClose }: { initial?: string; onSave: (name: string) => void; onClose: () => void }) {
   const [name, setName] = useState(initial ?? '')
-  const ok = name.trim().length > 0
+  const { folders } = useSidebar()
+  const dup = folders.some((f) => f.name.trim().toLowerCase() === name.trim().toLowerCase() && f.name.trim().toLowerCase() !== (initial ?? '').trim().toLowerCase())
+  const ok = name.trim().length > 0 && !dup
   return (
-    <Modal title={initial ? 'Rename folder' : 'New folder'} onClose={onClose}>
+    <Modal title={initial ? 'Rename folder' : 'New folder'} onClose={guardClose(name.trim() !== (initial ?? '').trim(), onClose)}>
       <div className="modal-body">
         <label className="field">
           <span>Name</span>
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && ok && (onSave(name.trim()), onClose())} placeholder="e.g. Jobs, Study, Clients" />
+          <input autoFocus value={name} aria-invalid={dup || undefined} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), ok && (onSave(name.trim()), onClose()))} placeholder="e.g. Jobs, Study, Clients" />
+          {dup && <small className="tone-warn">A folder with this name already exists.</small>}
         </label>
       </div>
       <footer className="modal-foot">
@@ -57,6 +67,15 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
   const [command, setCommand] = useState(item?.command ?? '')
   const [url, setUrl] = useState(item?.url ?? '')
   const [sessions, setSessions] = useState<ClaudeSession[]>([])
+  // pasta que nao existe: o terminal abriria na pasta pessoal sem avisar
+  const [cwdMissing, setCwdMissing] = useState(false)
+  useEffect(() => {
+    const p = cwd.trim()
+    if (!p) return setCwdMissing(false)
+    const t = setTimeout(() => void window.turno.ui.pathExists(p).then((ok) => setCwdMissing(!ok)), 300)
+    return () => clearTimeout(t)
+  }, [cwd])
+  const initialSnap = useRef(JSON.stringify([folderId, item?.kind ?? 'chat', item?.name ?? '', item?.agent ?? 'claude', item?.sessionId ?? '', item?.cwd ?? '', item?.model ?? '', item?.command ?? '', item?.url ?? '']))
   const claude = agent === 'claude' || agent === 'claude-qwen'
   const preset = agentOf(agent)
 
@@ -73,14 +92,31 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
     }
   }
 
-  const valid = name.trim() && (kind === 'terminal' || kind === 'link' ? /^[a-z][\w+.-]*:/i.test(url.trim()) : agent !== 'custom' || command.trim())
+  const linkName = (): string => {
+    try {
+      return new URL(url.trim()).hostname || url.trim()
+    } catch {
+      return url.trim()
+    }
+  }
+  const valid = (name.trim() || (kind === 'link' && LINK_RE.test(url.trim()))) && (kind === 'terminal' ? true : kind === 'link' ? LINK_RE.test(url.trim()) : agent !== 'custom' || command.trim())
 
-  function save(): void {
+  const warnedCwd = useRef(item?.cwd ?? '') // pasta ja salva antes (aceita) nao avisa de novo
+  const [confirmCwd, setConfirmCwd] = useState(false)
+  async function save(): Promise<void> {
+    const c = cwd.trim()
+    if (c && kind !== 'link' && warnedCwd.current !== c && !(await window.turno.ui.pathExists(c))) {
+      warnedCwd.current = c // segundo Save grava mesmo assim
+      setCwdMissing(true)
+      return void setConfirmCwd(true)
+    }
     if (kind === 'terminal' && item) {
       saveItem(folder, { ...item, name: name.trim(), cwd: cwd.trim() || undefined })
       return onClose()
     }
-    const base: SidebarItem = { id: item?.id ?? uid(), kind, name: name.trim() }
+    const newId = item?.id ?? uid()
+    requestAnimationFrame(() => document.querySelector(`[data-item-id="${newId}"]`)?.scrollIntoView({ block: 'nearest' }))
+    const base: SidebarItem = { id: newId, kind, name: name.trim() || (kind === 'link' ? linkName() : '') } // link sem nome: usa o host
     const next: SidebarItem =
       kind === 'link'
         ? { ...base, url: url.trim() }
@@ -98,18 +134,25 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
   }
 
   return (
-    <Modal title={item ? 'Edit item' : 'New item'} onClose={onClose}>
-      <div className="modal-body">
+    <Modal title={item ? 'Edit item' : 'New item'} onClose={guardClose(JSON.stringify([folder, kind, name, agent, sessionId, cwd, model, command, url]) !== initialSnap.current, onClose)}>
+      <div
+        className="modal-body"
+        onKeyDown={(e) => {
+          // Enter num campo de uma linha salva (textarea e select seguem normais)
+          const t = e.target as HTMLElement
+          if (e.key === 'Enter' && !e.shiftKey && t.tagName === 'INPUT' && valid) (e.preventDefault(), save())
+        }}
+      >
         {kind !== 'terminal' && (
           <div className="seg">
-            <button className={kind === 'chat' ? 'on' : ''} onClick={() => setKind('chat')}>Agent chat</button>
-            <button className={kind === 'link' ? 'on' : ''} onClick={() => setKind('link')}>Link</button>
+            <button className={kind === 'chat' ? 'on' : ''} aria-pressed={kind === 'chat'} onClick={() => setKind('chat')}>Agent chat</button>
+            <button className={kind === 'link' ? 'on' : ''} aria-pressed={kind === 'link'} onClick={() => setKind('link')}>Link</button>
           </div>
         )}
         <div className="grid2">
           <label className="field">
             <span>Name</span>
-            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === 'chat' ? 'e.g. Study Kubernetes' : 'e.g. Chat on claude.ai'} />
+            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === 'chat' ? 'e.g. Study Kubernetes' : kind === 'terminal' ? 'e.g. API server' : 'e.g. Chat on claude.ai'} />
           </label>
           <label className="field">
             <span>Folder</span>
@@ -125,17 +168,24 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
           <>
             <label className="field">
               <span>Working folder</span>
-              <input className="mono" value={cwd} onChange={(e) => setCwd(e.target.value)} />
+              <div className="row">
+                <input className="mono grow" value={cwd} onChange={(e) => setCwd(e.target.value)} placeholder="C:\projects\my-app" />
+                <button className="btn" onClick={async () => { const d = await window.turno.ui.pickFolder(); if (d) setCwd(d) }} title="Choose folder" aria-label="Choose folder">
+                  <IconFolder />
+                </button>
+              </div>
+              {cwdMissing && <small className="tone-warn">This folder doesn't exist (or isn't a folder); the terminal will start in your home folder.{confirmCwd && cwd.trim() === warnedCwd.current ? ' Click Save anyway to keep it.' : ''}</small>}
             </label>
             <small className="muted">
-              {item?.sessionId ? `Reopens with claude --resume ${item.sessionId.slice(0, 8)}… in this folder.` : 'Reopens a terminal in this folder.'} The folder and session
-              update automatically while the terminal is open.
+              {item?.sessionId ? `Reopens with claude --resume ${item.sessionId.slice(0, 8)}… in this folder.` : 'Reopens a terminal in this folder.'} The folder{item?.sessionId ? ' and session' : ''} update{item?.sessionId ? '' : 's'}{' '}
+              automatically while the terminal is open.
             </small>
           </>
         ) : kind === 'link' ? (
           <label className="field">
             <span>URL</span>
-            <input className="mono" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://claude.ai/chat/…  ·  https://chatgpt.com/c/…" />
+            <input className="mono" aria-invalid={url.trim() && !LINK_RE.test(url.trim()) ? true : undefined} aria-describedby={url.trim() && !LINK_RE.test(url.trim()) ? 'link-hint' : undefined} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://claude.ai/chat/…  ·  https://chatgpt.com/c/…" />
+            {url.trim() && !LINK_RE.test(url.trim()) && <small id="link-hint" className="tone-err">{LINK_HINT}</small>}
             <small className="muted">Opens in the browser or the app registered for the link (claude.ai, ChatGPT, Notion…).</small>
           </label>
         ) : (
@@ -177,6 +227,7 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
                   <IconFolder />
                 </button>
               </div>
+              {cwdMissing && <small className="tone-warn">This folder doesn't exist (or isn't a folder); the terminal will start in your home folder.{confirmCwd && cwd.trim() === warnedCwd.current ? ' Click Save anyway to keep it.' : ''}</small>}
             </label>
             {agent === 'claude' && (
               <label className="field">
@@ -187,8 +238,16 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
             <details className="advanced" open={agent === 'custom'}>
               <summary>Command</summary>
               <label className="field">
-                <span>Command ({'{id}'} = session id). Empty = automatic.</span>
-                <input className="mono" value={command} onChange={(e) => setCommand(e.target.value)} placeholder={preset.resumeCmd || 'my-agent --resume {id}'} />
+                <span>Command ({'{id}'} = session id).{agent === 'custom' ? ' Required for a custom agent.' : ' Empty = automatic.'}</span>
+                <input
+                  className="mono"
+                  value={command}
+                  onChange={(e) => setCommand(e.target.value)}
+                  placeholder={preset.resumeCmd || 'my-agent --resume {id}'}
+                  aria-invalid={agent === 'custom' && !command.trim() && !!name.trim() ? true : undefined}
+                  aria-describedby={agent === 'custom' && !command.trim() && !!name.trim() ? 'cmd-required' : undefined}
+                />
+                {agent === 'custom' && !command.trim() && !!name.trim() && <small id="cmd-required" className="tone-err">Type the command that starts this agent.</small>}
               </label>
             </details>
           </>
@@ -196,7 +255,7 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
       </div>
       <footer className="modal-foot">
         <button className="btn ghost" onClick={onClose}>Cancel</button>
-        <button className="btn primary" disabled={!valid} onClick={save}>Save</button>
+        <button className="btn primary" disabled={!valid} onClick={save}>{confirmCwd && cwd.trim() === warnedCwd.current ? 'Save anyway' : 'Save'}</button>
       </footer>
     </Modal>
   )

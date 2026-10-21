@@ -17,9 +17,9 @@ export interface AbortMetrics {
 // Aborta se QUALQUER policy de threshold estourar. Retorna o motivo (texto curto) do primeiro que bateu.
 export function evaluateThresholds(m: AbortMetrics, policies: AbortPolicy[]): { abort: boolean; reason?: string } {
   for (const p of policies) {
-    if (p.kind === 'cost_usd' && m.costUsd > p.limit) return { abort: true, reason: `custo $${m.costUsd.toFixed(4)} passou do teto $${p.limit}` }
-    if (p.kind === 'steps' && m.steps > p.limit) return { abort: true, reason: `${m.steps} passos passaram do teto ${p.limit}` }
-    if (p.kind === 'duration_min' && m.durationMin > p.limit) return { abort: true, reason: `${m.durationMin.toFixed(1)}min passou do teto ${p.limit}min` }
+    if (p.kind === 'cost_usd' && m.costUsd > p.limit) return { abort: true, reason: `cost $${m.costUsd.toFixed(4)} went over the $${p.limit} limit` }
+    if (p.kind === 'steps' && m.steps > p.limit) return { abort: true, reason: `${m.steps} steps went over the ${p.limit} limit` }
+    if (p.kind === 'duration_min' && m.durationMin > p.limit) return { abort: true, reason: `${m.durationMin.toFixed(1)}min went over the ${p.limit}min limit` }
   }
   return { abort: false }
 }

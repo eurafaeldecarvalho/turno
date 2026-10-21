@@ -89,7 +89,7 @@ export function summarize(line: string): Summ[] {
     const ok = !e.is_error && e.subtype === 'success'
     return [{
       kind: 'final',
-      summary: `${ok ? 'turn completed' : `ended with an error (${e.subtype})`} · ${e.num_turns} steps · ${Math.round((e.duration_ms ?? 0) / 1000)}s${cost}`,
+      summary: `${ok ? 'turn completed' : e.subtype && e.subtype !== 'success' ? `ended with an error (${String(e.subtype).replace(/_/g, ' ')})` : 'ended with an error'} · ${e.num_turns} ${e.num_turns === 1 ? 'step' : 'steps'} · ${Math.round((e.duration_ms ?? 0) / 1000)}s${cost}`,
       detail: ok ? undefined : cap(String(e.result ?? ''), 4000),
     }]
   }
@@ -336,12 +336,14 @@ export function startRun(o: StartOptions): string {
   let maxSteps = 0
   const policies = o.policies ?? []
   const timers: Array<ReturnType<typeof setTimeout>> = []
-  if (o.timeoutMin) timers.push(setTimeout(() => void stopRun(runId, 'timeout'), o.timeoutMin * 60_000))
+  // setTimeout aceita no maximo 2^31-1 ms (~24,8 dias); acima disso o Node dispara em 1 ms
+  const ms = (min: number): number => Math.min(min * 60_000, 2 ** 31 - 1)
+  if (o.timeoutMin) timers.push(setTimeout(() => void stopRun(runId, 'timeout'), ms(o.timeoutMin)))
   let idle: ReturnType<typeof setTimeout> | undefined
   const bumpIdle = (): void => {
     if (!o.idleTimeoutMin) return
     clearTimeout(idle)
-    idle = setTimeout(() => void stopRun(runId, 'idle_timeout'), o.idleTimeoutMin * 60_000)
+    idle = setTimeout(() => void stopRun(runId, 'idle_timeout'), ms(o.idleTimeoutMin))
   }
   bumpIdle()
 
@@ -504,7 +506,16 @@ export function readRunEvents(runId: string): RunEvent[] {
     .filter(Boolean)
     .flatMap((l) => {
       try {
-        return [JSON.parse(l) as RunEvent]
+        const ev = JSON.parse(l) as RunEvent
+        if (ev.kind === 'final') ev.summary = ev.summary.replace('ended with an error (success)', 'ended with an error').replace(/ 1 steps /, ' 1 step ')
+        // runs gravadas antes do app ficar todo em ingles (so mensagens do sistema, nunca o texto do agente)
+        if (ev.kind === 'final' || ev.kind === 'exit' || ev.kind === 'init') ev.summary = ev.summary
+          .replace(/^turno concluído/, 'turn completed')
+          .replace(/^terminou com erro/, 'ended with an error')
+          .replace(/ (\d+) passos? /, (_m, n) => ` ${n} ${n === '1' ? 'step' : 'steps'} `)
+          .replace(/^processo terminou/, 'process exited')
+          .replace(/passou do teto|passaram do teto/g, 'went over the limit')
+        return [ev]
       } catch {
         return []
       }

@@ -71,6 +71,12 @@ export const IconSend = (p: P) => (
 export const IconChevron = (p: P) => (
   <svg {...base(p)}><path d="m9 6 6 6-6 6" /></svg>
 )
+export const IconFanout = (p: P) => (
+  <svg {...base(p)}><circle cx="5" cy="12" r="2" /><path d="M7 12h4m0 0 7-6m-7 6 7 6m-7-6h7" /></svg>
+)
+export const IconCheck = (p: P) => (
+  <svg {...base(p)}><path d="M20 6 9 17l-5-5" /></svg>
+)
 export const IconChat = (p: P) => (
   <svg {...base(p)}><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z" /></svg>
 )

@@ -162,3 +162,9 @@ export function pruneRuns(routine: string, keep = 200): string[] {
   for (const r of old) del.run(r.id)
   return old.map((r) => r.id)
 }
+
+// Pasta da rotina renomeada: runs e estado do agendador passam para o id novo (senao o historico vira "(removed)").
+export function renameRoutineRuns(from: string, to: string): void {
+  db.prepare('UPDATE runs SET routine = ? WHERE routine = ?').run(to, from)
+  db.prepare('UPDATE OR REPLACE routine_state SET routine = ? WHERE routine = ?').run(to, from)
+}

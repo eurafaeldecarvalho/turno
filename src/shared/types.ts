@@ -65,6 +65,7 @@ export interface Routine {
   error?: string
   nextRuns: string[] // ISO
   lastRun?: RunRecord
+  mtimeMs?: number // quando o ROUTINE.md foi gravado (o editor usa para nao sobrescrever edicao externa)
 }
 
 export interface RoutineDraft {
@@ -72,6 +73,7 @@ export interface RoutineDraft {
   originalId?: string
   config: RoutineConfig
   prompt: string
+  expectContent?: string // JSON [config, prompt] que o editor acha que esta no disco; diferente -> nao grava
 }
 
 export interface RunRequest {
@@ -293,6 +295,9 @@ export interface TurnoApi {
     onOpenRun(cb: (id: string) => void): () => void
     openExternal(url: string): Promise<void>
     pickFolder(): Promise<string | undefined>
+    pathExists(p: string): Promise<boolean>
+    fileExists(p: string): Promise<boolean>
+    notices(): Promise<Array<{ file: string; message: string }>> // avisos do main (arquivo de dados ilegivel etc.)
   }
   sidebar: {
     get(): Promise<SidebarState>
@@ -315,6 +320,7 @@ export interface TurnoApi {
   stats: {
     ptyMemory(): Promise<Array<{ ptyId: number; pid: number; memKb: number }>>
   }
+  winBuild?: number // build do Windows (ConPTY); undefined fora do Windows
   smoke: {
     enabled: boolean
     view?: string // abre um painel por nome (ex. 'fanout') p/ prova visual

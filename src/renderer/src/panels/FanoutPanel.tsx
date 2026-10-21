@@ -8,10 +8,19 @@ import { askConfirm } from '../ConfirmDialog'
 type FanoutRun = { connId: string; runId?: string; error?: string }
 
 // Fan-out: roda o MESMO prompt em varias connections e mostra os resultados lado a lado pra comparar.
+// Rascunho: fechar o modal nao perde o prompt nem as conexoes escolhidas.
+const draft: { prompt: string; picked: string[] } = { prompt: '', picked: [] }
+
 export function FanoutPanel(_props: IDockviewPanelProps) {
   const conns = useSettings()?.connections ?? []
-  const [prompt, setPrompt] = useState('')
-  const [picked, setPicked] = useState<string[]>([])
+  const [prompt, setPromptState] = useState(draft.prompt)
+  const [picked, setPickedState] = useState<string[]>(draft.picked)
+  const setPrompt = (v: string): void => {
+    draft.prompt = v
+    setPromptState(v)
+  }
+  const setPicked = (v: string[] | ((p: string[]) => string[])): void =>
+    setPickedState((p) => (draft.picked = typeof v === 'function' ? v(p) : v))
   const [runs, setRuns] = useState<FanoutRun[] | null>(null)
   const [starting, setStarting] = useState(false)
 
@@ -56,8 +65,8 @@ export function FanoutPanel(_props: IDockviewPanelProps) {
   return (
     <div className="adhoc">
       <div className="adhoc-form">
-        <div className="muted small">Run the same prompt across several connections and compare the results side by side.</div>
-        <div className="row">
+        <div className="row wrap" role="group" aria-label="Connections to compare">
+          <span className="muted small" title="Fan-out runs in Allowed only mode with no tools: each model answers with text only.">Compare on (text only, no tools)</span>
           {conns.map((c) => (
             <label key={c.id} className="row small muted">
               <input type="checkbox" checked={picked.includes(c.id)} onChange={() => toggle(c.id)} /> {c.name}
@@ -69,6 +78,7 @@ export function FanoutPanel(_props: IDockviewPanelProps) {
           rows={5}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
+          autoFocus
           placeholder="Prompt to run across the selected connections…"
         />
         <button className="btn primary" disabled={!prompt.trim() || !picked.length || starting} onClick={() => void start()}>

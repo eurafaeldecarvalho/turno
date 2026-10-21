@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react'
+import { toast } from './Toast'
+import { LINK_HINT } from '../../shared/links'
 import type { AgentId, SidebarFolder, SidebarItem, SidebarState } from '../../shared/types'
-import { discarded, openTerminal, panelForItem, paramsOf, type TerminalParams } from './layout'
+import { discarded, openTerminal, panelForItem, paramsOf, setTakenNames, type TerminalParams } from './layout'
 import { isParked, killParked, setLive } from './liveTerms'
 
 // ---- estado das pastas da barra lateral (persistido em %APPDATA%\turno\sidebar.json) ----
@@ -17,7 +19,18 @@ export function useSidebar(): SidebarState {
 function commit(next: SidebarState): void {
   state = next
   subs.forEach((f) => f())
-  void window.turno.sidebar.save(next)
+  saveNow(next)
+}
+let lastWarn = 0
+function saveNow(s: SidebarState): void {
+  void window.turno.sidebar.save(s).catch((e) => {
+    const msg = String((e as Error).message).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+    // arquivo ilegivel desde a abertura: o aviso fixo da abertura ja explica
+    if (/couldn't be read when Turno started/.test(msg)) return
+    if (Date.now() - lastWarn < 10_000) return // falhas seguidas (cada clique grava): um aviso so
+    lastWarn = Date.now()
+    toast(msg.replace('the change was not saved', 'Turno will save it with your next change'), 'warn')
+  })
 }
 
 export async function initSidebar(): Promise<void> {
@@ -41,7 +54,8 @@ export const renameFolder = (id: string, name: string): void =>
 
 export const deleteFolder = (id: string): void => {
   const gone = state.folders.find((f) => f.id === id)?.items ?? []
-  commit({ ...state, folders: state.folders.filter((f) => f.id !== id) })
+  const { [id]: _drop, ...collapsed } = state.collapsed // nao deixa o id da pasta sobrando em sidebar.json
+  commit({ ...state, collapsed, folders: state.folders.filter((f) => f.id !== id) })
   gone.forEach((x) => detach(x.id))
 }
 
@@ -90,7 +104,7 @@ export function patchItem(itemId: string, patch: Partial<SidebarItem>): void {
   state = { ...state, folders }
   subs.forEach((f) => f())
   clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => void window.turno.sidebar.save(state), 400)
+  saveTimer = setTimeout(() => saveNow(state), 400)
 }
 
 const baseName = (p?: string): string => (p ? (p.split(/[\\/]/).filter(Boolean).pop() ?? p) : '')
@@ -178,7 +192,8 @@ export async function resolveCommand(item: SidebarItem): Promise<string> {
 
 export async function openItem(item: SidebarItem): Promise<void> {
   if (item.kind === 'link') {
-    if (item.url) await window.turno.ui.openExternal(item.url).catch((e) => alert(String(e.message ?? e)))
+    // erro vira toast (o alert() nativo travava a janela inteira)
+    if (item.url) await window.turno.ui.openExternal(item.url).catch(() => toast(`Can't open this link. ${LINK_HINT}`, 'err'))
     return
   }
   // Ja aberto (inclusive a aba original que foi arrastada para a pasta): so foca.
@@ -212,3 +227,5 @@ export async function openItem(item: SidebarItem): Promise<void> {
 let dragging: { id: string; params: TerminalParams; title: string } | undefined
 export const setDragging = (d: typeof dragging): void => void (dragging = d)
 export const getDragging = (): typeof dragging => dragging
+
+setTakenNames(() => state.folders.flatMap((f) => f.items.map((i) => i.name)))

@@ -1,6 +1,6 @@
 import { ipcMain, WebContents } from 'electron'
 import * as pty from 'node-pty'
-import { existsSync } from 'node:fs'
+import { existsSync, statSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import type { PtyCreateOptions } from '../shared/types'
 import { childEnv } from './env'
@@ -9,6 +9,14 @@ import { getSettings } from './settings'
 import { connectionToken } from './secrets'
 import { defaultShell, homeDir } from './platform'
 import { initTermSessions, trackPty, untrackPty } from './termsessions'
+
+const isDir = (p: string): boolean => {
+  try {
+    return statSync(p).isDirectory()
+  } catch {
+    return false
+  }
+}
 
 const ptys = new Map<number, pty.IPty>()
 let nextId = 1
@@ -41,7 +49,7 @@ export function registerPty(getWc: () => WebContents | undefined): void {
     const id = nextId++
     const shell = opts.shell || getSettings().terminal.defaultShell || defaultShell()
     const { args, env } = shellArgs(shell)
-    const cwd = opts.cwd && existsSync(opts.cwd) ? opts.cwd : homeDir()
+    const cwd = opts.cwd && isDir(opts.cwd) ? opts.cwd : homeDir() // arquivo no lugar da pasta tambem cai na home
     const p = pty.spawn(shell, args, {
       name: 'xterm-256color',
       cols: opts.cols,

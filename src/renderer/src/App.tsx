@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState, type PointerEvent as RPointerEvent, type ReactElement } from 'react'
+import { useCallback, useEffect, useRef, useState, type PointerEvent as RPointerEvent, type ReactElement } from 'react'
+import { toast } from './Toast'
+import { isModalOpen, menuKeyNav } from './modalStack'
 import {
   DockviewReact,
   DockviewReadyEvent,
@@ -21,11 +23,12 @@ import { SettingsModalHost, openSettingsModal } from './SettingsModal'
 import { RoutineEditorModalHost } from './RoutineEditorModal'
 import { PanelModalHost } from './PanelModal'
 import { ToastHost } from './Toast'
-import { dockApi, openAdhoc, openFanout, openHistory, openRoutine, openRun, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi } from './layout'
-import { initStore, useStore } from './store'
+import { dockApi, syncRoutineTitles, openAdhoc, openFanout, openHistory, openRoutine, openRun, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi } from './layout'
+import { getStore, initStore, useStore } from './store'
+import { plural } from './fmt'
 import { addTerminalItem, openItem, patchItem, setDragging } from './sidebarStore'
 import type { TerminalParams } from './layout'
-import { updateSettings } from './appearance'
+import { updateSettings, setSettingsNotice } from './appearance'
 import {
   IconClock,
   IconChat,
@@ -65,30 +68,82 @@ const KIND_ICON: Record<string, (p: { size?: number }) => ReactElement> = {
   settings: IconSettings,
 }
 
-function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string; itemId?: string }>) {
+function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string; itemId?: string; profile?: string; initialCommand?: string; lastSession?: unknown }>) {
   const [title, setTitle] = useState(api.title ?? '')
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(api.title ?? '')
   useEffect(() => api.onDidTitleChange((e) => setTitle(e.title)).dispose, [api])
-  const Icon = KIND_ICON[params.kind ?? 'terminal'] ?? IconTerminal
+  const tabRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    // a aba focada e o .dv-tab do dockview (pai deste componente): F2 renomeia como na sidebar
+    const host = tabRef.current?.closest<HTMLElement>('.dv-tab')
+    const k = (e: KeyboardEvent): void => {
+      if (e.key !== 'F2') return
+      e.preventDefault()
+      setDraft(api.title ?? '')
+      setRenaming(true)
+    }
+    host?.addEventListener('keydown', k)
+    return () => host?.removeEventListener('keydown', k)
+  }, [api])
+  useEffect(() => {
+    // O botao de overflow do dockview aparece depois e encolhe o container: mede de novo quando ele muda.
+    const show = (): void => {
+      const el = tabRef.current
+      const box = el?.closest<HTMLElement>('.dv-tabs-container')
+      if (!el || !box || !api.isActive) return
+      const r = el.getBoundingClientRect()
+      const b = box.getBoundingClientRect()
+      if (r.right > b.right - 2) box.scrollLeft += r.right - b.right + 6
+      else if (r.left < b.left) box.scrollLeft -= b.left - r.left + 6
+    }
+    const box = tabRef.current?.closest<HTMLElement>('.dv-tabs-container')
+    const ro = new ResizeObserver(() => requestAnimationFrame(show))
+    if (box) ro.observe(box)
+    const t = setTimeout(show, 150)
+    const sub = api.onDidActiveChange((e) => e.isActive && (requestAnimationFrame(show), setTimeout(show, 150)))
+    return () => {
+      ro.disconnect()
+      clearTimeout(t)
+      sub.dispose()
+    }
+  }, [api])
+  const isAgent = params.kind === 'terminal' && (params.profile === 'claude-max' || /^claude\b/.test(params.initialCommand ?? '') || !!params.lastSession)
+  const Icon = isAgent ? IconChat : KIND_ICON[params.kind ?? 'terminal'] ?? IconTerminal
 
   const commitRename = (d: string): void => {
     const v = d.trim()
     if (v && v !== title) {
       api.setTitle(v)
+      api.updateParameters({ ...paramsOf({ params, api }), customTitle: true }) // nome dado a mao: syncRoutineTitles respeita
       saveLayout()
       const itemId = (api.getParameters?.() as { itemId?: string } | undefined)?.itemId ?? params.itemId
       if (itemId) patchItem(itemId, { name: v })
     }
     setRenaming(false)
+    refocusPanel()
+  }
+  // depois de renomear (Enter/Esc), o teclado volta para o painel da aba (o terminal)
+  const refocusPanel = (): void => {
+    // devolve o foco ao terminal so depois que a tecla (Enter/Esc) for solta: senao o caractere da propria
+    // tecla chega ao terminal e executa a linha que estava digitada nele
+    const go = (): void => {
+      window.dispatchEvent(new CustomEvent('turno:focus-panel', { detail: api.id }))
+      // so terminais ouvem o evento: nos outros paineis o foco volta para a propria aba
+      requestAnimationFrame(() => (document.activeElement === document.body || !document.activeElement) && tabRef.current?.closest<HTMLElement>('.dv-tab')?.focus())
+    }
+    const up = (): void => (window.removeEventListener('keyup', up, true), void setTimeout(go, 0))
+    window.addEventListener('keyup', up, true)
+    setTimeout(() => (window.removeEventListener('keyup', up, true), go()), 400) // garantia se o keyup nao vier
   }
 
   return (
-    <div className="tab" onAuxClick={(e) => e.button === 1 && api.close()} title={renaming ? undefined : title}>
+    <div ref={tabRef} className="tab" onAuxClick={(e) => e.button === 1 && api.close()} title={renaming ? undefined : title}>
       <Icon size={13} />
       {renaming ? (
         <input
           className="inline-rename tab-rename"
+          aria-label="Rename tab"
           autoFocus
           value={draft}
           onFocus={(e) => e.target.select()}
@@ -98,13 +153,13 @@ function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string; itemId?
           onKeyDown={(e) => {
             e.stopPropagation()
             if (e.key === 'Enter') commitRename(draft)
-            else if (e.key === 'Escape') setRenaming(false)
+            else if (e.key === 'Escape') (setRenaming(false), refocusPanel())
           }}
         />
       ) : (
         <span
           className="tab-title"
-          title="Double-click to rename"
+          title={`${title}\nDouble-click to rename`}
           onDoubleClick={(e) => { e.stopPropagation(); setDraft(title); setRenaming(true) }}
         >
           {title}
@@ -130,6 +185,7 @@ function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string; itemId?
 function GroupActions({ group, containerApi }: IDockviewHeaderActionsProps) {
   const [max, setMax] = useState(containerApi.hasMaximizedGroup())
   const [menu, setMenu] = useState(false)
+  const plusRef = useRef<HTMLButtonElement>(null)
   useEffect(() => containerApi.onDidMaximizedGroupChange(() => setMax(containerApi.hasMaximizedGroup())).dispose, [containerApi])
   const ref = group.activePanel?.id
 
@@ -141,20 +197,29 @@ function GroupActions({ group, containerApi }: IDockviewHeaderActionsProps) {
   return (
     <div className="group-actions">
       <div className="new-term-wrap">
-        <button title="New terminal" onClick={() => setMenu((v) => !v)}>
+        <button ref={plusRef} title="New terminal" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((v) => !v)}>
           <IconPlus size={14} />
         </button>
         {menu && (
           <>
             <div className="new-term-overlay" onClick={() => setMenu(false)} />
-            <div className="new-term-dropdown">
-              <button onClick={() => openNew({})}>
+            <div
+              className="new-term-dropdown"
+              role="menu"
+              ref={(el) => void (el && !el.contains(document.activeElement) && el.querySelector<HTMLButtonElement>('button')?.focus())}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') return void (e.stopPropagation(), setMenu(false), plusRef.current?.focus())
+                if (e.key === 'Tab') return void setMenu(false)
+                menuKeyNav(e, e.currentTarget)
+              }}
+            >
+              <button role="menuitem" onClick={() => openNew({})}>
                 <IconTerminal size={13} /> Terminal
               </button>
-              <button onClick={() => openNew({ profile: 'claude-max', initialCommand: 'claude --chrome' })}>
+              <button role="menuitem" onClick={() => openNew({ profile: 'claude-max', initialCommand: 'claude --chrome' })}>
                 <IconChat size={13} /> Claude
               </button>
-              <button onClick={() => openNew({ profile: 'qwen-local', initialCommand: 'claude --chrome' })}>
+              <button role="menuitem" onClick={() => openNew({ profile: 'qwen-local', initialCommand: 'claude --chrome' })}>
                 <IconChat size={13} /> Qwen
               </button>
             </div>
@@ -209,19 +274,68 @@ function Welcome(_: IWatermarkPanelProps) {
         <dt>Shift+Enter</dt><dd>new line in terminal claude</dd>
         <dt>drag tab</dt><dd>drop on another panel to split</dd>
       </dl>
-      {routines.length > 0 && <p className="muted small">{routines.length} routine(s) loaded in the sidebar.</p>}
+      {routines.length > 0 && <p className="muted small">{plural(routines.length, 'routine')} loaded in the sidebar.</p>}
     </div>
   )
 }
 
 export function App() {
+  // Pedido de foco no painel ativo (ex. o modal fechou e quem abriu nao existe mais)
+  useEffect(() => {
+    const f = (): void => {
+      const a = dockApi()?.activePanel
+      if (a) window.dispatchEvent(new CustomEvent('turno:focus-panel', { detail: a.id }))
+    }
+    window.addEventListener('turno:focus-active-panel', f)
+    return () => window.removeEventListener('turno:focus-active-panel', f)
+  }, [])
+  // A lista de abas escondidas do dockview so fecha com clique fora: o Esc faz o mesmo.
+  useEffect(() => {
+    const k = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape' || isModalOpen()) return
+      const list = document.querySelector('.dv-tabs-overflow-container')
+      if (!list || !(list as HTMLElement).offsetParent) return
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      for (const t of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) document.body.dispatchEvent(new MouseEvent(t, { bubbles: true }))
+    }
+    window.addEventListener('keydown', k, true)
+    return () => window.removeEventListener('keydown', k, true)
+  }, [])
+  // Rotina renomeada: a aba da sessao acompanha o nome novo.
+  const routineList = useStore((s) => s.routines)
+  useEffect(() => syncRoutineTitles(new Map(routineList.map((r) => [r.id, r.config.name]))), [routineList])
   const onReady = useCallback((e: DockviewReadyEvent) => {
     setDockApi(e.api)
     // Guarda qual aba esta sendo arrastada: a sidebar aceita terminais soltos numa pasta.
+    e.api.onDidRemovePanel(() => {
+      // o painel que fica ativo so aceita foco depois que o dockview termina de reorganizar: tenta algumas vezes
+      const tryFocus = (left: number): void => {
+        const a = e.api.activePanel
+        if (!a && !isModalOpen() && (!document.activeElement || document.activeElement === document.body))
+          return void document.querySelector<HTMLElement>('.welcome button')?.focus() // ultima aba fechada: tela de boas-vindas
+        if (!a || isModalOpen() || (document.activeElement && document.activeElement !== document.body)) return
+        window.dispatchEvent(new CustomEvent('turno:focus-panel', { detail: a.id }))
+        if (left > 0) setTimeout(() => tryFocus(left - 1), 80)
+        // so terminais ouvem o evento: nos outros paineis, a aba ativa recebe o foco
+        else document.querySelector<HTMLElement>('.dv-groupview.dv-active-group .dv-tab.dv-active-tab')?.focus()
+      }
+      setTimeout(() => tryFocus(4), 30)
+    })
     e.api.onWillDragPanel((ev) => {
       const params = paramsOf(ev.panel)
       setDragging(params.kind === 'terminal' ? { id: ev.panel.id, params, title: ev.panel.title ?? 'terminal' } : undefined)
     })
+    // arrastar um divisor (sash) tira o foco do terminal/campo: devolve ao soltar
+    let beforeSash: Element | null = null
+    document.addEventListener('pointerdown', (ev) => void ((ev.target as HTMLElement).closest?.('.dv-sash') && (beforeSash = document.activeElement)), true)
+    document.addEventListener('pointerup', () => {
+      const b = beforeSash as HTMLElement | null
+      beforeSash = null
+      if (b && b !== document.body && b.isConnected && (!document.activeElement || document.activeElement === document.body)) requestAnimationFrame(() => b.focus({ preventScroll: true }))
+    }, true)
+    // painel movido de grupo: o DOM e reinserido e o navegador zera a rolagem; as conversas restauram a sua
+    e.api.onDidMovePanel(() => requestAnimationFrame(() => window.dispatchEvent(new Event('turno:panels-moved'))))
     let t: ReturnType<typeof setTimeout> | undefined
     e.api.onDidLayoutChange(() => {
       clearTimeout(t)
@@ -236,7 +350,18 @@ export function App() {
 
   useEffect(() => {
     void initStore()
-    const off = window.turno.ui.onOpenRun((id) => openRun(id, 'Run'))
+    void window.turno.ui.notices().then((ms) =>
+      ms.forEach((n) => {
+        const id = toast(n.message, 'warn', { sticky: true })
+        if (n.file === 'settings.json') setSettingsNotice(id)
+      }),
+    )
+    const off = window.turno.ui.onOpenRun((id) => {
+      // mesmo titulo da lista de Runs: nome da rotina (ou ad hoc)
+      const { runs, routines } = getStore()
+      const r = runs.find((x) => x.id === id)
+      openRun(id, !r ? 'Run' : r.routine ? (routines.find((x) => x.id === r.routine)?.config.name ?? r.routine) : 'ad hoc')
+    })
     const onKey = (ev: KeyboardEvent): void => {
       const api = dockApi()
       if (!api) return
@@ -246,6 +371,7 @@ export function App() {
         ev.stopPropagation()
         fn()
       }
+      if (isModalOpen() && (!(ev.ctrlKey && !ev.shiftKey && k === ',') || document.querySelector('.confirm-modal'))) return // modal aberto: o workspace atras nao recebe atalhos
       if (ev.altKey && ev.shiftKey && (k === '+' || k === '=')) hit(() => openTerminal('right'))
       else if (ev.altKey && ev.shiftKey && (k === '_' || k === '-')) hit(() => openTerminal('below'))
       else if (ev.ctrlKey && ev.shiftKey && k === 't') hit(() => openTerminal())
@@ -268,23 +394,31 @@ export function App() {
   const side = useSidebarLayout()
   useEffect(() => {
     const onKey = (ev: KeyboardEvent): void => {
-      if (ev.ctrlKey && !ev.shiftKey && !ev.altKey && ev.key.toLowerCase() === 'b') {
+      // no terminal o Ctrl+B e do shell (readline/tmux) enquanto a sidebar esta visivel; escondida, ele a traz de volta
+      if (ev.ctrlKey && !ev.shiftKey && !ev.altKey && ev.key.toLowerCase() === 'b' && !isModalOpen() && (side.hidden || !(ev.target as HTMLElement | null)?.closest?.('.xterm'))) {
         ev.preventDefault()
         ev.stopPropagation()
         side.toggle()
+        // o botao que tinha o foco pode sumir com a sidebar: o teclado vai para o painel ativo
+        requestAnimationFrame(() => {
+          const a = dockApi()?.activePanel
+          if (a && (!document.activeElement || document.activeElement === document.body || !document.activeElement.isConnected))
+            window.dispatchEvent(new CustomEvent('turno:focus-panel', { detail: a.id }))
+        })
       }
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [side.toggle])
+  }, [side.toggle, side.hidden])
 
+  // Janela estreita: a sidebar cede espaco ao dock (clamp), sem passar da largura escolhida.
   return (
-    <div className="app" style={{ gridTemplateColumns: side.hidden ? '0 1fr' : `${side.width}px 1fr` }}>
+    <div className="app" style={{ gridTemplateColumns: side.hidden ? '0 1fr' : `clamp(200px, 26vw, ${side.width}px) 1fr` }}>
       {side.hidden ? <div /> : <Sidebar />}
       {!side.hidden && (
         <div
           className="sidebar-resizer"
-          style={{ left: side.width - 3 }}
+          style={{ left: `calc(clamp(200px, 26vw, ${side.width}px) - 3px)` }} // mesma largura efetiva da coluna (clamp)
           title="Drag to resize · double-click to reset"
           onPointerDown={side.startResize}
           onDoubleClick={side.reset}
@@ -305,7 +439,6 @@ export function App() {
           watermarkComponent={Welcome}
           onReady={onReady}
           theme={themeAbyss}
-          dndCompass
         />
       </main>
       <StatusBar />
@@ -372,14 +505,43 @@ async function runSmoke(): Promise<void> {
   const first = api.panels[0]
   first.api.setActive()
   if (routines[0]) openRoutine(routines[0].id, routines[0].config.name)
-  else openAdhoc()
+  else if (!window.turno.smoke.view) openAdhoc() // views especificas abrem so o proprio modal
   api.getPanel(first.id)?.api.setActive()
-  openHistory()
+  if (!window.turno.smoke.view) openHistory()
   if (window.turno.smoke.theme) {
     await updateSettings({ theme: window.turno.smoke.theme })
     openSettingsModal()
   }
   if (window.turno.smoke.view === 'fanout') openFanout()
+  if (window.turno.smoke.view === 'adhoc') openAdhoc()
+  if (window.turno.smoke.view === 'drag-tab') {
+    // Arrasta o 1o terminal de "Open tabs" para a 1a pasta (HTML5 drag sintetico).
+    await new Promise((r) => setTimeout(r, 800))
+    const li = document.querySelector<HTMLElement>('li[draggable="true"]')
+    const folder = document.querySelector<HTMLElement>('[data-folder-id]')
+    if (li && folder) {
+      const dt = new DataTransfer()
+      li.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }))
+      folder.scrollIntoView({ block: 'center' })
+      const r = folder.getBoundingClientRect()
+      const at = { bubbles: true, cancelable: true, dataTransfer: dt, clientX: r.left + 20, clientY: r.top + 10 }
+      folder.dispatchEvent(new DragEvent('dragover', at))
+      folder.dispatchEvent(new DragEvent('drop', at))
+      console.log('[smoke] dragged', li.textContent, '->', folder.dataset.folderId)
+    } else console.log('[smoke] drag-tab: nothing to drag', !!li, !!folder)
+  }
+  if (window.turno.smoke.view === 'run') {
+    const [last] = await window.turno.run.list(undefined, 1)
+    if (last) openRun(last.id, 'Run')
+  }
+  if (window.turno.smoke.view?.startsWith('settings')) openSettingsModal()
+  if (window.turno.smoke.view === 'settings-picker') {
+    // Abre o seletor de tema e passa o mouse no 4o tema: o app inteiro deve pre-visualizar.
+    await new Promise((r) => setTimeout(r, 600))
+    document.querySelector<HTMLButtonElement>('.theme-trigger')?.click()
+    await new Promise((r) => setTimeout(r, 300))
+    document.querySelectorAll('.theme-menu li')[3]?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+  }
   if (window.turno.smoke.drag) {
     // Mesmo caminho do arrasto: terminal com claude interativo -> solta na 1a pasta.
     openTerminal('right', { initialCommand: 'claude --model haiku' }, 'claude here', undefined, 'smoke-claude')

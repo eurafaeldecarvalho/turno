@@ -21,13 +21,14 @@ export async function notify(title: string, body: string, onClick?: () => void, 
   const { ntfyTopic, ntfyServer } = getSettings()
   if (!ntfyTopic) return
   try {
-    await fetch(`${ntfyServer.replace(/\/$/, '')}/${encodeURIComponent(ntfyTopic)}`, {
+    const res = await fetch(`${ntfyServer.replace(/\/$/, '')}/${encodeURIComponent(ntfyTopic)}`, {
       method: 'POST',
       // Cabecalhos HTTP so aceitam latin1: o titulo vai sem acentos problematicos.
       headers: { Title: title.normalize('NFD').replace(/[^\x20-\x7e]/g, ''), Tags: 'robot' },
       body: body.slice(0, 2000),
     })
-  } catch {
-    /* sem internet: o toast local ja foi mostrado */
+    if (!res.ok) console.warn(`[ntfy] ${res.status} ${res.statusText} from ${ntfyServer}`)
+  } catch (e) {
+    console.warn('[ntfy] send failed:', (e as Error).message) // sem internet ou servidor invalido; o toast local ja foi mostrado
   }
 }

@@ -11,14 +11,29 @@ export interface AdhocParams {
 }
 
 // Execucao avulsa: um prompt rapido sem criar rotina (tambem usado pelo modo smoke).
+// Rascunho: fechar o modal (Esc, clique fora) nao perde o que foi preenchido.
+const draft: { profile?: ProfileId; model?: string; effort?: Effort; perm?: PermissionMode; tools?: string; prompt: string } = { prompt: '' }
+// Tools uma por linha (como no editor de rotina): "Bash(git log:*)" tem espaco e nao pode ser quebrado.
+const parseTools = (t: string): string[] => t.split('\n').map((x) => x.trim()).filter(Boolean)
+
 export function AdhocPanel({ params }: IDockviewPanelProps<AdhocParams>) {
   const a = params.autoStart
-  const [profile, setProfile] = useState<ProfileId>(a?.profile ?? 'claude-max')
-  const [model, setModel] = useState(a?.model ?? 'sonnet')
-  const [effort, setEffort] = useState<Effort>(a?.effort ?? 'medium')
-  const [perm, setPerm] = useState<PermissionMode>(a?.permissionMode ?? 'dontAsk')
-  const [tools, setTools] = useState((a?.allowedTools ?? ['Read']).join(' '))
-  const [prompt, setPrompt] = useState(a?.prompt ?? '')
+  const keep = <T,>(set: (v: T) => void, key: keyof typeof draft) => (v: T): void => {
+    ;(draft as Record<string, unknown>)[key] = v
+    set(v)
+  }
+  const [profile, setProfileState] = useState<ProfileId>(a?.profile ?? draft.profile ?? 'claude-max')
+  const [model, setModelState] = useState(a?.model ?? draft.model ?? 'sonnet')
+  const [effort, setEffortState] = useState<Effort>(a?.effort ?? draft.effort ?? 'medium')
+  const [perm, setPermState] = useState<PermissionMode>(a?.permissionMode ?? draft.perm ?? 'dontAsk')
+  const [tools, setToolsState] = useState(a?.allowedTools ? a.allowedTools.join('\n') : (draft.tools ?? 'Read'))
+  const [prompt, setPromptState] = useState(a?.prompt ?? draft.prompt)
+  const setProfile = keep(setProfileState, 'profile')
+  const setModel = keep(setModelState, 'model')
+  const setEffort = keep(setEffortState, 'effort')
+  const setPerm = keep(setPermState, 'perm')
+  const setTools = keep(setToolsState, 'tools')
+  const setPrompt = keep(setPromptState, 'prompt')
   const [runId, setRunId] = useState<string>()
   const [started, setStarted] = useState(false)
   const [starting, setStarting] = useState(false)
@@ -32,7 +47,7 @@ export function AdhocPanel({ params }: IDockviewPanelProps<AdhocParams>) {
       model: isClaude ? model : undefined,
       effort,
       permissionMode: perm,
-      allowedTools: tools.split(/\s+/).filter(Boolean),
+      allowedTools: parseTools(tools),
       prompt,
     }
     setStarting(true)
@@ -50,26 +65,49 @@ export function AdhocPanel({ params }: IDockviewPanelProps<AdhocParams>) {
   return (
     <div className="adhoc">
       <div className="adhoc-form">
-        <select value={profile} onChange={(e) => setProfile(e.target.value as ProfileId)} aria-label="Profile">
-          {conns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        {isClaude ? <ModelSelect value={model} onChange={setModel} /> : <input value={conn?.model ?? ''} disabled aria-label="Model" />}
-        <select value={effort} onChange={(e) => setEffort(e.target.value as Effort)} aria-label="Effort">
-          {['low', 'medium', 'high', 'xhigh', 'max'].map((x) => <option key={x}>{x}</option>)}
-        </select>
-        <select value={perm} onChange={(e) => setPerm(e.target.value as PermissionMode)} aria-label="Permission">
-          <option value="manual">ask</option>
-          <option value="dontAsk">allowed only</option>
-          <option value="auto">auto</option>
-          <option value="acceptEdits">accept edits</option>
-          <option value="bypassPermissions">bypass all</option>
-        </select>
-        <input className="mono grow" value={tools} onChange={(e) => setTools(e.target.value)} placeholder="allowed tools" aria-label="Tools" />
+        <div className="adhoc-grid">
+          <label className="field">
+            <span>Connection</span>
+            <select value={profile} onChange={(e) => setProfile(e.target.value as ProfileId)}>
+              {conns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </label>
+          <label className="field">
+            <span>Model</span>
+            {isClaude ? <ModelSelect value={model} onChange={setModel} /> : <><input value={conn?.model ?? ''} disabled /><small className="muted">Set by the connection.</small></>}
+          </label>
+          <label className="field">
+            <span>Effort</span>
+            <select value={effort} onChange={(e) => setEffort(e.target.value as Effort)}>
+              {['low', 'medium', 'high', 'xhigh', 'max'].map((x) => <option key={x}>{x}</option>)}
+            </select>
+          </label>
+          <label className="field">
+            <span>Permissions</span>
+            <select value={perm} onChange={(e) => setPerm(e.target.value as PermissionMode)}>
+              <option value="manual">ask</option>
+              <option value="dontAsk">allowed only</option>
+              <option value="auto">auto</option>
+              <option value="acceptEdits">accept edits</option>
+              <option value="bypassPermissions">bypass all</option>
+            </select>
+          </label>
+          {perm === 'bypassPermissions' ? (
+            <small className="tone-err adhoc-tools">Bypass all: the agent runs anything without asking.</small>
+          ) : (
+            <label className="field adhoc-tools">
+              <span>Allowed tools (one per line)</span>
+              <textarea className="mono" rows={2} spellCheck={false} value={tools} onChange={(e) => setTools(e.target.value)} placeholder={'Read\nBash(git log:*)'} />
+              {perm === 'dontAsk' && !parseTools(tools).length && <small className="tone-warn">No tools allowed: the agent can only answer with text.</small>}
+            </label>
+          )}
+        </div>
         <textarea
           className="mono"
           rows={3}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
+          autoFocus
           placeholder="Prompt… (Ctrl+Enter runs)"
           onKeyDown={(e) => e.key === 'Enter' && e.ctrlKey && prompt.trim() && void start()}
         />

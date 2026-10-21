@@ -1,10 +1,14 @@
 import { useSyncExternalStore } from 'react'
 import type { Settings } from '../../shared/types'
+import { dismissToast, toast } from './Toast'
 import { themeById } from '../../shared/themes'
 
 // Configuracoes no renderer: carregadas uma vez e atualizadas ao vivo pelo main.
 let settings: Settings | undefined
 const subs = new Set<() => void>()
+// Tema em pre-visualizacao (hover no seletor): pinta o app e os terminais sem salvar nada.
+let preview: Settings['theme'] | undefined
+const effective = (): Settings | undefined => settings && (preview ? { ...settings, theme: preview } : settings)
 
 export function useSettings(): Settings | undefined {
   return useSyncExternalStore(
@@ -14,15 +18,28 @@ export function useSettings(): Settings | undefined {
 }
 
 export function onSettings(cb: (s: Settings) => void): () => void {
-  const f = (): void => settings && cb(settings)
+  const f = (): void => {
+    const e = effective()
+    if (e) cb(e)
+  }
   subs.add(f)
-  if (settings) cb(settings)
+  f()
   return () => subs.delete(f)
 }
 
 function set(s: Settings): void {
   settings = s
-  applyAppearance(s)
+  applyAppearance(effective()!)
+  subs.forEach((f) => f())
+}
+
+// undefined volta ao tema salvo. useSettings() continua devolvendo o valor salvo.
+export function previewTheme(id?: Settings['theme']): void {
+  if (preview === id) return
+  preview = id
+  const e = effective()
+  if (!e) return
+  applyAppearance(e)
   subs.forEach((f) => f())
 }
 
@@ -31,8 +48,22 @@ export async function initSettings(): Promise<void> {
   window.turno.settings.onChanged(set)
 }
 
-export async function updateSettings(patch: Partial<Settings>): Promise<void> {
-  set(await window.turno.settings.set(patch))
+// aviso (fixo) de settings.json ilegivel na abertura: some quando uma gravacao da certo
+let fileNotice: number | undefined
+export const setSettingsNotice = (id: number): void => void (fileNotice = id)
+
+// true = gravou. Falhou: avisa e volta a tela para o que o main tem (a mudanca nao vale).
+export async function updateSettings(patch: Partial<Settings>): Promise<boolean> {
+  try {
+    set(await window.turno.settings.set(patch))
+    if (fileNotice !== undefined) dismissToast(fileNotice)
+    fileNotice = undefined
+    return true
+  } catch (e) {
+    toast(String((e as Error).message).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), 'warn')
+    set(await window.turno.settings.get())
+    return false
+  }
 }
 
 const hexA = (hex: string, a: number): string => {
@@ -57,6 +88,11 @@ export function applyAppearance(s: Settings): void {
     '--muted': u.muted,
     '--faint': u.faint,
     '--accent': u.accent,
+    '--accent-text': u.accentText ?? u.accent,
+    '--ok-text': u.okText ?? u.ok,
+    '--warn-text': u.warnText ?? u.warn,
+    '--err-text': u.errText ?? u.err,
+    '--run-text': u.runText ?? u.run,
     '--accent-soft': hexA(u.accent, 0.14),
     '--accent-line': hexA(u.accent, 0.55),
     '--ok': u.ok,

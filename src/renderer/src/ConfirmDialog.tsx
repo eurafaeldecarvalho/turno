@@ -1,4 +1,5 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { useModalLayer } from './modalStack'
 
 // Popup de confirmacao do app (no lugar do confirm() nativo): askConfirm(...) resolve true/false.
 interface Ask {
@@ -10,10 +11,6 @@ interface Ask {
 let current: Ask | undefined
 const subs = new Set<() => void>()
 const emit = (): void => subs.forEach((f) => f())
-
-export function isConfirmOpen(): boolean {
-  return !!current
-}
 
 export function askConfirm(o: { title: string; message: string; confirmLabel?: string }): Promise<boolean> {
   current?.resolve(false)
@@ -39,19 +36,13 @@ export function ConfirmHost() {
   useEffect(() => {
     if (!ask) return
     btn.current?.focus()
-    const key = (e: KeyboardEvent): void => {
-      if (e.key !== 'Escape') return
-      e.preventDefault()
-      e.stopPropagation()
-      answer(false)
-    }
-    window.addEventListener('keydown', key, true)
-    return () => window.removeEventListener('keydown', key, true)
   }, [ask])
+  const box = useRef<HTMLDivElement>(null)
+  const z = useModalLayer(!!ask, () => answer(false), box)
   if (!ask) return null
   return (
-    <div className="modal-backdrop modal-backdrop-top" onMouseDown={(e) => e.target === e.currentTarget && answer(false)}>
-      <div className="modal confirm-modal" role="alertdialog" aria-label={ask.title}>
+    <div className="modal-backdrop" style={{ zIndex: z }} onMouseDown={(e) => e.target === e.currentTarget && (e.preventDefault(), answer(false))}>
+      <div ref={box} tabIndex={-1} className="modal confirm-modal" role="alertdialog" aria-modal="true" aria-label={ask.title}>
         <header className="modal-head">
           <h2>{ask.title}</h2>
         </header>
@@ -59,8 +50,8 @@ export function ConfirmHost() {
           <p className="confirm-text">{ask.message}</p>
         </div>
         <footer className="modal-foot">
-          <button className="btn ghost" onClick={() => answer(false)}>Cancel</button>
-          <button ref={btn} className="btn danger" onClick={() => answer(true)}>{ask.confirmLabel}</button>
+          <button ref={btn} className="btn ghost" onClick={() => answer(false)}>Cancel</button>
+          <button className="btn danger" onClick={() => answer(true)}>{ask.confirmLabel}</button>
         </footer>
       </div>
     </div>

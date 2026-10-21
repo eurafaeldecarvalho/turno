@@ -27,6 +27,7 @@ const DAY_LABEL: Record<string, string> = { sun: 'Sun', mon: 'Mon', tue: 'Tue', 
 export function scheduleSummary(c: RoutineConfig): string {
   if (c.schedule.cron) return `cron ${c.schedule.cron}`
   if (!c.schedule.times.length) return 'manual only'
+  if (!c.schedule.days.length) return 'no days selected'
   const d = [...c.schedule.days].sort((a, b) => WEEKDAYS.indexOf(a) - WEEKDAYS.indexOf(b))
   const key = d.join(',')
   const days =
@@ -44,7 +45,7 @@ export function when(iso: string | null | undefined): string {
   if (!iso) return '—'
   const d = new Date(iso)
   const now = new Date()
-  const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) // 24h, igual aos horarios das rotinas
   const sameDay = d.toDateString() === now.toDateString()
   const tomorrow = new Date(now.getTime() + 86_400_000).toDateString() === d.toDateString()
   const yesterday = new Date(now.getTime() - 86_400_000).toDateString() === d.toDateString()
@@ -54,13 +55,24 @@ export function when(iso: string | null | undefined): string {
   return `${d.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: '2-digit' })} ${time}`
 }
 
+const secsOf = (r: RunRecord): number =>
+  r.started_at ? Math.max(0, Math.round(((r.ended_at ? Date.parse(r.ended_at) : Date.now()) - Date.parse(r.started_at)) / 1000)) : 0
+
 export function duration(r: RunRecord): string {
   if (!r.started_at) return ''
-  const end = r.ended_at ? Date.parse(r.ended_at) : Date.now()
-  const s = Math.max(0, Math.round((end - Date.parse(r.started_at)) / 1000))
+  return fmtDuration(secsOf(r))
+}
+
+// Conversa com follow-ups: soma o tempo de todas as runs.
+export const totalDuration = (runs: RunRecord[]): string => fmtDuration(runs.reduce((t, r) => t + secsOf(r), 0))
+
+function fmtDuration(s: number): string {
   if (s < 60) return `${s}s`
   const m = Math.floor(s / 60)
   return m < 60 ? `${m}min ${s % 60}s` : `${Math.floor(m / 60)}h ${m % 60}min`
 }
 
 export const TRIGGER_LABEL: Record<string, string> = { manual: 'manual', cron: 'scheduled', catchup: 'catch-up', adhoc: 'ad hoc', followup: 'follow-up', watch: 'file change' }
+
+// "1 item" / "2 items" (no lugar de "item(s)").
+export const plural = (n: number, one: string, many = `${one}s`): string => `${n} ${n === 1 ? one : many}`

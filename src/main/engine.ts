@@ -12,6 +12,12 @@ import { changed, isRoutineRunning, newRunId, readRequest, sendToRun, startRun }
 import { childEnv } from './env'
 import { findConnection, getConnection, requireConnection } from './providers'
 import { getSettings } from './settings'
+
+// Rotina num endpoint (ex. Ollama) roda o modelo da conexao: e o que fica registrado na run.
+function effectiveModel(r: Routine): string {
+  const c = findConnection(getSettings(), r.config.profile)
+  return c?.kind === 'endpoint' && c.model ? c.model : r.config.model
+}
 import { claudeStatus } from './provider-auth'
 
 const connOf = (profile: string): Connection => getConnection(getSettings(), profile)
@@ -153,7 +159,7 @@ function skip(r: Routine, trigger: RunTrigger, scheduledAt: string | undefined, 
       status: 'skipped',
       scheduled_at: scheduledAt ?? null,
       profile: r.config.profile,
-      model: r.config.model,
+      model: effectiveModel(r),
       cwd: r.dir,
       skip_reason: reason,
     })
@@ -234,7 +240,7 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
     status: 'queued',
     scheduled_at: scheduledAt ?? null,
     profile: r.config.profile,
-    model: r.config.model,
+    model: effectiveModel(r),
     cwd: r.dir,
   })
   changed(runId)
@@ -276,7 +282,7 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
         profile: r.config.profile,
         prompt: buildPrompt(r, trigger, scheduledAt),
         cwd: r.dir,
-        model: r.config.model,
+        model: effectiveModel(r),
         effort: r.config.effort,
         permissionMode: r.config.permission_mode,
         allowedTools: r.config.allowed_tools,

@@ -1,6 +1,7 @@
-import { useEffect, useSyncExternalStore } from 'react'
+import { useRef, useSyncExternalStore } from 'react'
 import { SettingsPanel } from './panels/SettingsPanel'
-import { isConfirmOpen } from './ConfirmDialog'
+import { useModalLayer } from './modalStack'
+import { IconClose } from './icons'
 
 // Settings como MODAL (nao aba): single-instancia por natureza (sem acumular abas) e bloqueia o fundo.
 let open = false
@@ -21,23 +22,13 @@ export function SettingsModalHost() {
     (cb) => (subs.add(cb), () => subs.delete(cb)),
     () => open,
   )
-  useEffect(() => {
-    if (!isOpen) return
-    const key = (e: KeyboardEvent): void => {
-      if (e.key !== 'Escape') return
-      if (isConfirmOpen()) return // um confirm aberto por cima: o Esc e dele, nao fecha o Settings
-      e.preventDefault()
-      e.stopPropagation()
-      close()
-    }
-    window.addEventListener('keydown', key, true)
-    return () => window.removeEventListener('keydown', key, true)
-  }, [isOpen])
+  const box = useRef<HTMLDivElement>(null)
+  const z = useModalLayer(isOpen, close, box)
   if (!isOpen) return null
   return (
-    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && close()}>
-      <div className="modal modal-wide" role="dialog" aria-label="Settings" aria-modal="true">
-        <button className="modal-x" aria-label="Close" onClick={close}>✕</button>
+    <div className="modal-backdrop" style={{ zIndex: z }} onMouseDown={(e) => e.target === e.currentTarget && (e.preventDefault(), close())}>
+      <div ref={box} tabIndex={-1} className="modal modal-wide" role="dialog" aria-label="Settings" aria-modal="true">
+        <button className="modal-x" aria-label="Close" onClick={close}><IconClose size={14} /></button>
         <SettingsPanel />
       </div>
     </div>

@@ -7,6 +7,7 @@ interface Toast {
   id: number
   message: string
   tone: ToastTone
+  sticky?: boolean
 }
 
 let items: Toast[] = []
@@ -19,6 +20,9 @@ const DURATION = 4500
 function schedule(id: number): void {
   timers.set(id, setTimeout(() => dismiss(id), DURATION))
 }
+export function dismissToast(id: number): void {
+  dismiss(id)
+}
 function dismiss(id: number): void {
   const t = timers.get(id)
   if (t) clearTimeout(t)
@@ -27,11 +31,17 @@ function dismiss(id: number): void {
   emit()
 }
 
-export function toast(message: string, tone: ToastTone = 'info'): void {
+export function toast(message: string, tone: ToastTone = 'info', opts?: { sticky?: boolean }): number {
+  const same = items.find((x) => x.message === message && x.tone === tone)
+  if (same) {
+    if (!same.sticky) (clearTimeout(timers.get(same.id)), schedule(same.id))
+    return same.id
+  }
   const id = nextId++
-  items = [...items, { id, message, tone }].slice(-5) // no maximo 5 na pilha
+  items = [...items, { id, message, tone, sticky: opts?.sticky }].slice(-5) // no maximo 5 na pilha
   emit()
-  schedule(id)
+  if (!opts?.sticky) schedule(id) // aviso importante fica ate o usuario fechar
+  return id
 }
 
 export function ToastHost() {
@@ -54,7 +64,7 @@ export function ToastHost() {
             }
           }}
           onMouseLeave={() => {
-            if (!timers.has(t.id)) schedule(t.id)
+            if (!timers.has(t.id) && !t.sticky) schedule(t.id)
           }}
         >
           <span className="toast-dot" />
