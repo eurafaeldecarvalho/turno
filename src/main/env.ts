@@ -6,6 +6,6 @@ export function childEnv(extra: Record<string, string> = {}): Record<string, str
     if (k === 'CLAUDECODE' || k.startsWith('CLAUDE_CODE_') || k === 'ELECTRON_RUN_AS_NODE') continue
     env[k] = v
   }
-  env.SystemRoot ??= 'C:\Windows'
+  env.SystemRoot ??= 'C:\\Windows'
   return { ...env, ...extra }
 }

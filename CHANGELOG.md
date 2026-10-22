@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.7.3 (2026-10-21)
+
+- Setup tour on first launch, in 5 skippable steps:
+  - Agents: detects the agent CLIs on your PATH, shows the Claude sign-in and picks the local Ollama model from the installed ones.
+  - Look and terminal.
+  - Routines folder.
+  - Running in the background: start with Windows, keep awake.
+  - Notifications: Windows and ntfy, with a test.
+  Reopen it from Settings.
+- "What's new" after each update; also in Settings.
+- Fix: SystemRoot fallback path for child processes.
+
+## 0.7.2 (2026-10-21)
+
+- Fix: Qwen (local Ollama) terminals and "Claude Code with local Qwen" items no longer force a hardcoded model with `--model`. The model always comes from the connection's settings (passed to Claude Code through the connection's environment), so changing the model in Settings › Connections takes effect. New installs default to `qwen3:14b`.
+- Window opacity moves in 0.1% steps and has a number field for the exact percentage, decimals included.
+
 ## 0.7.1 (2026-10-21)
 
 - Modals can be dragged by their top strip. While a modal is open the title bar no longer drags the window, and a dragged modal is pulled back into view if the window shrinks.

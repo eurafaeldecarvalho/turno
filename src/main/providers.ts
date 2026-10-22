@@ -10,7 +10,7 @@ export const DEFAULT_CONNECTIONS: Connection[] = [
     kind: 'endpoint',
     baseUrl: 'http://localhost:11434',
     token: 'ollama',
-    model: 'qwen3.6:35b',
+    model: 'qwen3:14b', // so instalacoes novas; o settings.json existente continua valendo
     bootCommand: 'ollama serve',
     healthUrl: 'http://localhost:11434/api/version',
     extraEnv: { CLAUDE_CODE_MAX_CONTEXT_TOKENS: '131072' },

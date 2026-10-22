@@ -37,6 +37,8 @@ const defaults = (): Settings => ({
   theme: 'turno-dark',
   uiFontFamily: '"Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif',
   uiFontSize: 13,
+  onboardedAt: '',
+  seenVersion: '',
   terminal: TERMINAL_DEFAULTS,
   connections: DEFAULT_CONNECTIONS,
 })
@@ -110,6 +112,8 @@ function load(): void {
     else {
       const c = clean(r.data)
       saved = c.s
+      // quem ja usava o Turno (settings.json de antes da introducao) nao ve a introducao, so as novidades
+      if (!('onboardedAt' in r.data)) saved = { ...saved, onboardedAt: 'existing' }
       if (c.bad.length && !reportBadShape(file(), c.bad)) blocked = true
     }
   }

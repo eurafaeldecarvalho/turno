@@ -10,6 +10,7 @@ import { activeCount, answerPermission, initRunner, readRunEvents, startRun, sto
 import { openDb, getRun, listRuns, threadOf, renameRoutineRuns } from './db'
 import { getSettings, setSettings } from './settings'
 import { takeNotices } from './jsonStore'
+import { detectAgents, ollamaModels } from './onboarding'
 import { saveRoutine, setRoutineEnabled, defaultConfig } from './routines'
 import { catchUp, findRoutine, followUp, getRoutines, reload, routineOf, runRoutine, setRoot, startEngine } from './engine'
 import { notify } from './notify'
@@ -278,6 +279,9 @@ ipcMain.handle('ui:openExternal', (_e, url: string) => {
   return shell.openExternal(url)
 })
 ipcMain.handle('ui:notices', () => takeNotices())
+ipcMain.handle('ui:detectAgents', () => detectAgents())
+ipcMain.handle('ui:ollamaModels', (_e, baseUrl?: string) => ollamaModels(baseUrl))
+ipcMain.handle('ui:version', () => app.getVersion())
 // Window opacity vale so para a tela principal: com um modal aberto a janela fica opaca.
 let modalOpen = false
 const applyOpacity = (): void => win?.setOpacity(modalOpen ? 1 : clampOpacity(getSettings().terminal.windowOpacity))

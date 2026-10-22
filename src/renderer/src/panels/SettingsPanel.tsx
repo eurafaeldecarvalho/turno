@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { openOnboarding, openWhatsNew } from '../Onboarding'
 import { toast } from '../Toast'
 import { askConfirm } from '../ConfirmDialog'
 import { NumInput } from '../NumInput'
@@ -48,7 +49,7 @@ function ThemeSwatch({ t }: { t: Theme }) {
 
 // Dropdown proprio (o <select> nativo nao avisa hover nas opcoes): passar o mouse ou as setas
 // pre-visualizam o tema no app inteiro; sair da lista, Esc ou fechar volta ao tema salvo.
-function ThemePicker({ value, onPick, labelId }: { value: string; onPick: (id: string) => Promise<void>; labelId: string }) {
+export function ThemePicker({ value, onPick, labelId }: { value: string; onPick: (id: string) => Promise<void>; labelId: string }) {
   const [open, setOpen] = useState(false)
   const [hi, setHi] = useState(-1)
   const uid = useId()
@@ -310,6 +311,10 @@ export function SettingsPanel() {
 
         <section className="card">
           <h3>General</h3>
+          <div className="row">
+            <button className="btn" onClick={() => openOnboarding()}>Show the setup tour</button>
+            <button className="btn ghost" onClick={() => void openWhatsNew(true)}>What's new</button>
+          </div>
           <label className="field toggle-field">
             <span>Start with Windows (stays in the tray, no window)</span>
             <Switch checked={s.openAtLogin} onChange={(v) => void patch({ openAtLogin: v })} />
@@ -460,11 +465,18 @@ export function SettingsPanel() {
             <span>Font ligatures (=&gt;, !=) — applies to new terminals</span>
             <Switch checked={t.ligatures} onChange={(v) => void term({ ligatures: v })} />
           </label>
-          <label className="field">
-            <span>Window opacity: {Math.round(t.windowOpacity * 100)}%</span>
-            <input type="range" min={0.3} max={1} step={0.05} value={t.windowOpacity} onChange={(e) => void term({ windowOpacity: Number(e.target.value) })} />
+          <div className="field">
+            <span id="opacity-label">Window opacity</span>
+            {/* passo fino (0,1%): barra para ajustar no olho, campo para digitar o valor exato com casas decimais */}
+            <div className="opacity-row">
+              <input type="range" aria-labelledby="opacity-label" min={0.3} max={1} step={0.001} value={t.windowOpacity} onChange={(e) => void term({ windowOpacity: Number(e.target.value) })} />
+              <span className="opacity-num">
+                <NumInput aria-label="Window opacity (%)" min={30} max={100} step={0.1} value={Math.round(t.windowOpacity * 1000) / 10} onChange={(v) => void term({ windowOpacity: Math.round(v * 10) / 1000 })} />
+                <span className="muted">%</span>
+              </span>
+            </div>
             <small className="muted">Main window only; dialogs stay opaque. You'll see it after closing Settings.</small>
-          </label>
+          </div>
           <small className="muted">Ctrl+Shift+C / Ctrl+Shift+V always copy and paste.</small>
         </section>
 

@@ -64,6 +64,9 @@ const api: TurnoApi = {
     fileExists: (p: string): Promise<boolean> => ipcRenderer.invoke('ui:fileExists', p),
     notices: (): Promise<Array<{ file: string; message: string }>> => ipcRenderer.invoke('ui:notices'),
     setModalOpen: (open: boolean): Promise<void> => ipcRenderer.invoke('ui:setModalOpen', open),
+    detectAgents: () => ipcRenderer.invoke('ui:detectAgents'),
+    ollamaModels: (baseUrl?: string) => ipcRenderer.invoke('ui:ollamaModels', baseUrl),
+    version: () => ipcRenderer.invoke('ui:version'),
   },
   sidebar: {
     get: () => ipcRenderer.invoke('sidebar:get'),

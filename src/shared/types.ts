@@ -183,6 +183,13 @@ export interface AwakeStatus {
   working: number
 }
 
+export interface DetectedAgent {
+  id: string
+  name: string
+  url: string // onde instalar
+  path?: string // caminho no PATH; undefined = nao instalado
+}
+
 export interface Settings {
   keepAwake: AwakeMode
   routinesDir: string
@@ -192,6 +199,8 @@ export interface Settings {
   theme: string
   uiFontFamily: string
   uiFontSize: number
+  onboardedAt: string // '' = ainda nao viu a introducao (instalacao nova)
+  seenVersion: string // ultima versao cujas novidades o usuario ja viu
   terminal: TerminalSettings
   connections: Connection[]
 }
@@ -299,6 +308,9 @@ export interface TurnoApi {
     fileExists(p: string): Promise<boolean>
     notices(): Promise<Array<{ file: string; message: string }>> // avisos do main (arquivo de dados ilegivel etc.)
     setModalOpen(open: boolean): Promise<void> // modal aberto: janela opaca (window opacity so na tela principal)
+    detectAgents(): Promise<DetectedAgent[]> // CLIs de agentes encontrados no PATH (onboarding)
+    ollamaModels(baseUrl?: string): Promise<string[]> // modelos instalados no Ollama
+    version(): Promise<string>
   }
   sidebar: {
     get(): Promise<SidebarState>

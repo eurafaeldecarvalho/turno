@@ -191,7 +191,7 @@ export function ConnectionsSection() {
           {draft.kind === 'endpoint' && (
             <div className="grid2">
               <label className="field"><span>Base URL</span><input ref={urlRef} className="mono" aria-invalid={err && /url/i.test(err) ? true : undefined} aria-describedby={err && /url/i.test(err) ? 'conn-err' : undefined} value={draft.baseUrl ?? ''} placeholder="http://localhost:11434" onChange={(e) => setDraft({ ...draft, baseUrl: e.target.value })} /></label>
-              <label className="field"><span>Model</span><input ref={modelRef} className="mono" aria-invalid={err && /model/i.test(err) ? true : undefined} aria-describedby={err && /model/i.test(err) ? 'conn-err' : undefined} value={draft.model ?? ''} placeholder="qwen3.6:35b" onChange={(e) => setDraft({ ...draft, model: e.target.value })} /></label>
+              <label className="field"><span>Model</span><input ref={modelRef} className="mono" aria-invalid={err && /model/i.test(err) ? true : undefined} aria-describedby={err && /model/i.test(err) ? 'conn-err' : undefined} value={draft.model ?? ''} placeholder="qwen3:14b" onChange={(e) => setDraft({ ...draft, model: e.target.value })} /></label>
               <label className="field"><span>Token {draft.tokenRef ? '(leave blank to keep)' : '(optional)'}</span><input className="mono" type="password" value={token} onChange={(e) => setToken(e.target.value)} /></label>
             </div>
           )}

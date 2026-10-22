@@ -20,6 +20,7 @@ import { Sidebar } from './Sidebar'
 import { StatusBar } from './StatusBar'
 import { ConfirmHost } from './ConfirmDialog'
 import { SettingsModalHost, openSettingsModal } from './SettingsModal'
+import { OnboardingHost, maybeShowIntro, openOnboarding, openWhatsNew } from './Onboarding'
 import { RoutineEditorModalHost } from './RoutineEditorModal'
 import { PanelModalHost } from './PanelModal'
 import { ToastHost } from './Toast'
@@ -350,6 +351,8 @@ export function App() {
 
   useEffect(() => {
     void initStore()
+    // instalacao nova: introducao; atualizacao: novidades (smoke abre so pelas views proprias)
+    if (!window.turno.smoke.enabled) void window.turno.settings.get().then(maybeShowIntro)
     void window.turno.ui.notices().then((ms) =>
       ms.forEach((n) => {
         const id = toast(n.message, 'warn', { sticky: true })
@@ -444,6 +447,7 @@ export function App() {
       <StatusBar />
       <ConfirmHost />
       <SettingsModalHost />
+      <OnboardingHost />
       <RoutineEditorModalHost />
       <PanelModalHost />
       <ToastHost />
@@ -530,6 +534,8 @@ async function runSmoke(): Promise<void> {
       console.log('[smoke] dragged', li.textContent, '->', folder.dataset.folderId)
     } else console.log('[smoke] drag-tab: nothing to drag', !!li, !!folder)
   }
+  if (window.turno.smoke.view === 'onboarding') openOnboarding()
+  if (window.turno.smoke.view === 'whatsnew') void openWhatsNew(true)
   if (window.turno.smoke.view === 'run') {
     const [last] = await window.turno.run.list(undefined, 1)
     if (last) openRun(last.id, 'Run')

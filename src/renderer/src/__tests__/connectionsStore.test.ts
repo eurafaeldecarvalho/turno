@@ -3,7 +3,7 @@ import { connectionsReducer, validateConnectionForm, newConnectionId } from '../
 import type { Connection } from '../../../shared/types'
 
 const claude: Connection = { id: 'claude-max', name: 'Claude', kind: 'claude' }
-const ollama: Connection = { id: 'qwen-local', name: 'Ollama', kind: 'endpoint', baseUrl: 'http://localhost:11434', model: 'qwen3.6:35b' }
+const ollama: Connection = { id: 'qwen-local', name: 'Ollama', kind: 'endpoint', baseUrl: 'http://localhost:11434', model: 'qwen3:14b' }
 
 describe('connectionsReducer', () => {
   it('add anexa a connection', () => {

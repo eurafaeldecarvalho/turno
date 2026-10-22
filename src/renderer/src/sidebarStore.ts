@@ -164,7 +164,8 @@ export interface AgentPreset {
 
 export const AGENTS: AgentPreset[] = [
   { id: 'claude', name: 'Claude Code', newCmd: 'claude --session-id {id}', resumeCmd: 'claude --resume {id}', hasModel: true },
-  { id: 'claude-qwen', name: 'Claude Code with local Qwen', newCmd: 'claude --session-id {id} --model qwen3.6:35b', resumeCmd: 'claude --resume {id} --model qwen3.6:35b' },
+  // modelo vem da conexao qwen-local (env ANTHROPIC_MODEL do terminal); flag de modelo aqui passaria por cima da config
+  { id: 'claude-qwen', name: 'Claude Code with local Qwen', newCmd: 'claude --session-id {id}', resumeCmd: 'claude --resume {id}' },
   { id: 'codex', name: 'Codex CLI', newCmd: 'codex', resumeCmd: 'codex resume {id}' },
   { id: 'gemini', name: 'Gemini CLI', newCmd: 'gemini', resumeCmd: 'gemini --resume {id}', note: 'check the resume command for your version' },
   { id: 'qwen-code', name: 'Qwen Code', newCmd: 'qwen', resumeCmd: 'qwen --resume {id}', note: 'check the resume command for your version' },
@@ -205,7 +206,7 @@ export async function openItem(item: SidebarItem): Promise<void> {
   } else if (item.kind === 'terminal') {
     // Reabre onde parou: retoma a ultima sessao do Claude, senao so o shell na ultima pasta.
     if (item.sessionId && (await window.turno.sidebar.claudeSessionExists(item.sessionId)))
-      cmd = `claude --resume ${item.sessionId} --chrome${item.profile === 'qwen-local' ? ' --model qwen3.6:35b' : ''}`
+      cmd = `claude --resume ${item.sessionId} --chrome` // modelo: env da conexao do profile (nunca flag de modelo fixa)
     else if (item.sessionId) patchItem(item.id, { agent: undefined, sessionId: undefined }) // sessao sumiu: vira terminal comum
   } else cmd = await resolveCommand(item)
   openTerminal(
