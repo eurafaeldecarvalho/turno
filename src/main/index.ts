@@ -1,15 +1,21 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, powerMonitor, shell, Tray } from 'electron'
 import { existsSync, statSync } from 'node:fs'
+import { stat } from 'node:fs/promises'
 import { LINK_RE } from '../shared/links'
 import { join } from 'node:path'
 import { mkdirSync, writeFileSync } from 'node:fs'
-import type { RoutineDraft, RunRecord, RunRequest, Settings, SidebarState } from '../shared/types'
+import type { McpServerDef, Task, RoutineDraft, RunRecord, RunRequest, Settings, SidebarState } from '../shared/types'
 import { claudeSessionExists, getSidebar, listClaudeSessions, saveSidebar } from './sidebar'
 import { registerPty, killAllPtys } from './pty'
-import { activeCount, answerPermission, initRunner, readRunEvents, startRun, stopAllRuns, stopRun, type PermissionDecision } from './runner'
+import { activeCount, answerPermission, initRunner, readRunEvents, rotatedFrom, setRotateHandler, startRun, stopAllRuns, stopRun, type PermissionDecision } from './runner'
 import { openDb, getRun, listRuns, threadOf, renameRoutineRuns } from './db'
 import { getSettings, setSettings } from './settings'
 import { takeNotices } from './jsonStore'
+import { accountEnv, addAccount, agentsState, clearBlock, detectInstalled, getAccount, initAccounts, refreshLogin, removeAccount, reorderAccounts, setThresholds, updateAccount } from './accounts'
+import { closeSession, initBroker, listSessions, prepareLaunch, prepareRaw, swap, type PrepareOpts } from './agentBroker'
+import { listMcp, mcpStatus, removeMcp, saveMcp } from './mcphub'
+import { connectJira, disconnectJira, listTasks, startTask } from './tasks'
+import { agentDef } from '../shared/agents'
 import { detectAgents, ollamaModels } from './onboarding'
 import { saveRoutine, setRoutineEnabled, defaultConfig } from './routines'
 import { catchUp, findRoutine, followUp, getRoutines, reload, routineOf, runRoutine, setRoot, startEngine } from './engine'
@@ -166,7 +172,8 @@ function onRunFinished(run: RunRecord): void {
   const r = routineOf(run)
   const mode = r?.config.notify ?? 'failures'
   const failed = run.status !== 'ok'
-  if (mode === 'never' || (mode === 'failures' && !failed) || run.trigger === 'adhoc' || run.trigger === 'followup') return
+  const isFollowUp = run.trigger === 'followup' && !rotatedFrom(run.parent_id)
+  if (mode === 'never' || (mode === 'failures' && !failed) || run.trigger === 'adhoc' || isFollowUp) return
   const name = r?.config.name ?? run.routine ?? 'Run'
   const title = failed ? `⚠ ${name}: ${run.status}` : `✓ ${name} finished`
   const body = failed ? (run.skip_reason ?? run.result ?? 'see the log in Turno') : (run.result ?? '')
@@ -195,7 +202,58 @@ initRunner({
     })
   },
 })
+// run do ranking de contas que bateu o limite continua pela via do follow-up (cwd efetivo, locks, custo cumulativo)
+setRotateHandler(followUp)
 registerPty(liveWc)
+
+// ---- botao Agent: contas, broker de troca, hub de MCP ----
+initAccounts((s) => send('agents:state', s))
+const brokerReady = initBroker(send, () => showWindow())
+ipcMain.handle('agents:state', () => agentsState())
+ipcMain.handle('agents:detect', () => detectInstalled())
+ipcMain.handle('agents:sessions', () => listSessions())
+ipcMain.handle('agents:prepare', async (_e, o: PrepareOpts) => (await brokerReady, prepareLaunch(o)))
+ipcMain.handle('agents:add', (_e, agent: string, label?: string) => {
+  const { account, login, env } = addAccount(agent, label)
+  return { account, ...prepareRaw(env, login) }
+})
+ipcMain.handle('agents:login', (_e, id: string) => {
+  const a = getAccount(id)
+  if (!a) throw new Error('account not found')
+  const def = agentDef(a.agent)
+  return prepareRaw(accountEnv(a), def?.login ?? def?.launch ?? def?.cmd ?? '')
+})
+ipcMain.handle('agents:refreshLogin', (_e, id: string) => {
+  const ok = refreshLogin(id)
+  if (ok) clearBlock(id) // entrou de novo: volta para o ranking
+  return ok
+})
+ipcMain.handle('agents:update', (_e, id: string, patch: { label?: string; enabled?: boolean }) => updateAccount(id, patch))
+ipcMain.handle('agents:reorder', (_e, ids: string[]) => reorderAccounts(ids))
+ipcMain.handle('agents:remove', (_e, id: string) => removeAccount(id))
+ipcMain.handle('agents:thresholds', (_e, t: { fiveHour?: number; weekly?: number }) => setThresholds(t))
+ipcMain.handle('agents:swap', (_e, key: string, accountId?: string) => swap(key, 'manual', accountId))
+ipcMain.handle('agents:close', (_e, key: string) => closeSession(key))
+ipcMain.handle('tasks:list', () => listTasks())
+// tasks gravam integrations nos settings pelo main: avisa o renderer (pasta lembrada, Jira conectado)
+ipcMain.handle('tasks:connectJira', async (_e, o: { baseUrl: string; email: string; token?: string }) => {
+  const r = await connectJira(o)
+  send('settings:changed', getSettings())
+  return r
+})
+ipcMain.handle('tasks:disconnectJira', () => {
+  disconnectJira()
+  send('settings:changed', getSettings())
+})
+ipcMain.handle('tasks:start', async (_e, t: Task, folder: string, worktree: boolean) => {
+  const r = await startTask(t, folder, worktree)
+  send('settings:changed', getSettings())
+  return r
+})
+ipcMain.handle('mcp:list', () => listMcp())
+ipcMain.handle('mcp:save', (_e, def: McpServerDef, secrets: Record<string, string>) => saveMcp(def, secrets))
+ipcMain.handle('mcp:remove', (_e, id: string) => removeMcp(id))
+ipcMain.handle('mcp:status', (_e, cwd?: string) => mcpStatus(cwd))
 
 ipcMain.handle('run:start', (_e, req: RunRequest) => startRun({ req, trigger: 'adhoc' }))
 ipcMain.handle('run:fanout', (_e, prompt: string, connectionIds: string[], cwd?: string) =>
@@ -296,12 +354,24 @@ ipcMain.handle('ui:fileExists', (_e, p: string) => {
     return false
   }
 })
-ipcMain.handle('ui:pathExists', (_e, p: string) => {
-  try {
-    return !!p && statSync(p).isDirectory() // so pastas: um arquivo no lugar da pasta tambem nao serve
-  } catch {
-    return false
+// assincrono e com teto: pasta de rede inalcancavel (\\host\share) travava o main inteiro por segundos
+// Pasta local: stat direto (rapido). Pasta de rede: assincrono, com teto de 4 s e um stat pendente por servidor —
+// stats presos em servidor inalcancavel ocupavam o pool de threads e faziam pastas locais parecerem "inexistentes".
+const uncPending = new Set<string>()
+ipcMain.handle('ui:pathExists', async (_e, p: string) => {
+  if (!p) return false
+  const unc = /^[\\/]{2}([^\\/]+)/.exec(p)?.[1]?.toLowerCase()
+  if (!unc) {
+    try {
+      return statSync(p).isDirectory() // so pastas: um arquivo no lugar da pasta tambem nao serve
+    } catch {
+      return false
+    }
   }
+  if (uncPending.has(unc)) return false // servidor ainda sem resposta: nao empilha outro stat
+  uncPending.add(unc)
+  const check = stat(p).then((s) => s.isDirectory(), () => false).finally(() => uncPending.delete(unc))
+  return Promise.race([check, new Promise<boolean>((res) => setTimeout(() => res(false), 4000))])
 })
 ipcMain.handle('ui:pickFolder', async () => {
   const r = await dialog.showOpenDialog(win!, { properties: ['openDirectory'] })

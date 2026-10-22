@@ -9,6 +9,7 @@ import { getSettings } from './settings'
 import { connectionToken } from './secrets'
 import { defaultShell, homeDir } from './platform'
 import { initTermSessions, trackPty, untrackPty } from './termsessions'
+import { onPtyData, onPtyExit, takeLaunchEnv } from './agentBroker'
 
 const isDir = (p: string): boolean => {
   try {
@@ -55,15 +56,20 @@ export function registerPty(getWc: () => WebContents | undefined): void {
       cols: opts.cols,
       rows: opts.rows,
       cwd,
-      env: childEnv({ ...(opts.profile ? providerEnv(opts.profile) : {}), ...env }),
+      // terminal de agente: env da conta (pasta isolada, hooks do Turno) preparado por agents:prepare
+      env: childEnv({ ...(opts.profile ? providerEnv(opts.profile) : {}), ...env, ...takeLaunchEnv(opts.launchId, id) }),
       useConpty: true,
     })
     ptys.set(id, p)
     trackPty(id, p.pid)
-    p.onData((d) => getWc()?.send('pty:data', id, d))
+    p.onData((d) => {
+      getWc()?.send('pty:data', id, d)
+      onPtyData(id, d)
+    })
     p.onExit(({ exitCode }) => {
       ptys.delete(id)
       untrackPty(id)
+      onPtyExit(id)
       getWc()?.send('pty:exit', id, exitCode)
     })
     return id

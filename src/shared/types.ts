@@ -55,6 +55,10 @@ export interface RoutineConfig {
   catchup_window_h: number
   precheck?: string
   notify: 'failures' | 'always' | 'never'
+  mcp?: string[] // servidores do hub de MCP desta rotina
+  strict_mcp?: boolean // so os do hub: ignora os MCPs do usuario e o .mcp.json do repo
+  context_card?: string // cartao de contexto (5-15 linhas) para o agente
+  account_pool?: boolean // usa o ranking de contas Claude e continua noutra conta no limite
 }
 
 export interface Routine {
@@ -86,6 +90,11 @@ export interface RunRequest {
   allowedTools?: string[]
   chrome?: boolean
   resume?: string // session_id para continuar a conversa
+  accountId?: string // conta do botao Agent (pasta isolada do Claude)
+  pool?: boolean // usa o ranking de contas Claude e troca de conta no limite (chat do Agent, rotinas com account_pool)
+  mcp?: string[] // servidores do hub de MCP para esta run
+  strictMcp?: boolean // so os servidores do hub (ignora .mcp.json do repo e os do usuario)
+  contextCard?: string // cartao de contexto (system prompt extra)
 }
 
 export type RunStatus =
@@ -143,6 +152,7 @@ export interface PtyCreateOptions {
   shell?: string
   cwd?: string
   profile?: ProfileId
+  launchId?: string // terminal de agente: env da conta preparado pelo main (agents.prepare)
   cols: number
   rows: number
 }
@@ -199,6 +209,7 @@ export interface Settings {
   theme: string
   uiFontFamily: string
   uiFontSize: number
+  integrations?: Integrations // tarefas externas (Jira) e pasta de cada projeto
   onboardedAt: string // '' = ainda nao viu a introducao (instalacao nova)
   seenVersion: string // ultima versao cujas novidades o usuario ja viu
   terminal: TerminalSettings
@@ -240,6 +251,8 @@ export interface SidebarFolder {
   id: string
   name: string
   items: SidebarItem[]
+  mcp?: string[] // servidores do hub de MCP injetados nos agentes abertos desta pasta
+  context?: string // cartao de contexto (5-15 linhas) para os agentes desta pasta
 }
 
 export interface SidebarState {
@@ -252,6 +265,103 @@ export interface ClaudeSession {
   cwd: string
   title: string
   updatedAt: string
+}
+
+
+// ---- tarefas externas (GitHub Issues, Jira) ----
+export interface Integrations {
+  jira?: { baseUrl: string; email: string } // token no cofre
+  repoMap?: Record<string, string> // projeto (owner/repo ou chave Jira) -> pasta do repositorio
+}
+export interface Task {
+  provider: 'github' | 'jira'
+  key: string // owner/repo#123 ou PAY-42
+  title: string
+  url: string
+  project: string
+  status?: string
+  updatedAt?: string
+}
+export interface TaskStart {
+  cwd: string
+  prompt: string
+  branch?: string
+  file: string
+}
+
+// ---- hub de MCP ----
+export interface McpServerDef {
+  id: string
+  name: string
+  transport: 'stdio' | 'http'
+  command?: string
+  args?: string[]
+  url?: string
+  headers?: Record<string, string>
+  env?: Record<string, string>
+  secrets?: string[] // nomes de headers/env cujo valor fica no cofre do Turno
+  secretSet?: Record<string, boolean> // (leitura) quais segredos ja tem valor
+  everyTab?: boolean // injeta tambem em abas de agente abertas fora de uma pasta
+  note?: string
+  preset?: string
+}
+export interface McpStatusRow {
+  source: 'turno' | 'claude-user' | 'project' | 'codex'
+  id: string
+  name: string
+  transport: 'stdio' | 'http'
+  target: string
+}
+
+// ---- botao Agent: contas ranqueadas de agentes CLI ----
+export interface AgentAccount {
+  id: string
+  agent: string // id do catalogo (shared/agents.ts)
+  label: string
+  rank: number // 1 = primeira escolha
+  enabled: boolean
+  home: string | null // pasta de config isolada; null = login padrao do usuario
+  email?: string
+  createdAt: string
+}
+export interface UsageWindow {
+  pct: number // 0-100
+  resetsAt?: string // ISO
+}
+export interface AccountUsage {
+  fiveHour?: UsageWindow
+  weekly?: UsageWindow
+  state: 'ok' | 'warning' | 'exhausted' | 'unknown' | 'blocked'
+  reason?: string
+  until?: string // volta a ter cota (ISO)
+  observedAt?: string
+}
+export interface AgentsState {
+  accounts: AgentAccount[]
+  usage: Record<string, AccountUsage>
+  thresholds: { fiveHour: number; weekly: number }
+  installed: string[] // ids de agentes encontrados no PATH
+  signedOut: string[] // contas isoladas sem login encontrado (fora do ranking)
+}
+// Uma conversa de agente aberta num terminal (sobrevive a trocas de conta na mesma aba)
+export type AgentTabStatus = 'starting' | 'working' | 'needs-input' | 'needs-permission' | 'idle' | 'error' | 'swapping' | 'parked'
+export interface AgentSessionInfo {
+  key: string // id da conversa no Turno
+  agent: string
+  accountId: string
+  status: AgentTabStatus
+  message?: string
+  sessionId?: string // id nativo da sessao (Claude: session_id)
+  handoffs: number
+}
+export interface AgentLaunch {
+  launchId: string // o pty:create usa o env guardado por este id
+  key: string
+  agent: string
+  accountId: string
+  command: string
+  typeAfter?: string // texto digitado depois que o agente subir
+  banner?: string
 }
 
 export interface TurnoApi {
@@ -325,6 +435,37 @@ export interface TurnoApi {
     setToken(connId: string, token: string): Promise<string> // guarda no cofre, devolve o tokenRef
     deleteToken(connId: string): Promise<void>
     preflight(connId: string): Promise<PreflightResult>
+  }
+  agents: {
+    state(): Promise<AgentsState>
+    onState(cb: (s: AgentsState) => void): () => void
+    detect(): Promise<string[]>
+    sessions(): Promise<AgentSessionInfo[]>
+    onSessions(cb: (s: AgentSessionInfo[]) => void): () => void
+    prepare(o: { key?: string; agent?: string; accountId?: string; cwd?: string; resumeSessionId?: string; prompt?: string; chrome?: boolean; folderId?: string; model?: string; banner?: string }): Promise<AgentLaunch>
+    add(agent: string, label?: string): Promise<{ account: AgentAccount; launchId: string; command: string }>
+    login(id: string): Promise<{ launchId: string; command: string }>
+    refreshLogin(id: string): Promise<boolean>
+    update(id: string, patch: { label?: string; enabled?: boolean }): Promise<void>
+    reorder(ids: string[]): Promise<void>
+    remove(id: string): Promise<void>
+    setThresholds(t: { fiveHour?: number; weekly?: number }): Promise<void>
+    swap(key: string, accountId?: string): Promise<void>
+    close(key: string): Promise<void>
+    onSwap(cb: (l: AgentLaunch) => void): () => void
+    onType(cb: (key: string, text: string) => void): () => void
+  }
+  tasks: {
+    list(): Promise<{ tasks: Task[]; errors: Record<string, string>; jiraConnected: boolean }>
+    connectJira(o: { baseUrl: string; email: string; token?: string }): Promise<string>
+    disconnectJira(): Promise<void>
+    start(t: Task, folder: string, worktree: boolean): Promise<TaskStart>
+  }
+  mcp: {
+    list(): Promise<McpServerDef[]>
+    save(def: McpServerDef, secrets: Record<string, string>): Promise<McpServerDef>
+    remove(id: string): Promise<void>
+    status(cwd?: string): Promise<McpStatusRow[]>
   }
   ai: {
     // NL -> comando no terminal: devolve { command, explanation }. command=null => UI nao oferece Execute.

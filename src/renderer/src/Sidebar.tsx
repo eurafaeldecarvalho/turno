@@ -1,12 +1,15 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as RMouseEvent, type ReactNode } from 'react'
+import { FolderAgentDialog } from './FolderAgentDialog'
+import { needsYou, STATUS_TEXT, usageText, useAgents, useAgentSessions } from './agentStore'
+import { AgentButton } from './AgentButton'
 import { toast } from './Toast'
 import { createPortal } from 'react-dom'
 import { menuKeyNav } from './modalStack'
 import { useStore, isActive } from './store'
 import { plural, scheduleSummary, statusTone, when, STATUS_LABEL } from './fmt'
-import { openAdhoc, openFanout, openHistory, openRoutine, openRoutineEditorModal, openTerminal, useOpenTabs, focusTab, closeTab, renameTab } from './layout'
+import { openTasks, openAdhoc, openFanout, openHistory, openRoutine, openRoutineEditorModal, openTerminal, useOpenTabs, focusTab, closeTab, renameTab } from './layout'
 import { openSettingsModal } from './SettingsModal'
-import { IconChat, IconChevron, IconClock, IconClose, IconFanout, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconRoutine, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
+import { IconCheck, IconChat, IconChevron, IconClock, IconClose, IconFanout, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconRoutine, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
 import { addFolder, addTerminalItem, agentOf, closeItemTerminal, deleteFolder, deleteItem, getDragging, getItem, moveFolder, openItem, patchItem, renameFolder, saveItem, setDragging, toggleSection, useSidebar } from './sidebarStore'
 import { dockApi, paramsOf, type OpenTab } from './layout'
 import { setLive, useLive } from './liveTerms'
@@ -305,6 +308,7 @@ const lastPart = (p: string): string => p.split(/[\\/]/).filter(Boolean).pop() ?
 
 type Dialog =
   | { t: 'folder'; folder?: SidebarFolder }
+  | { t: 'agent-setup'; folder: SidebarFolder }
   | { t: 'item'; folderId: string; item?: SidebarItem }
 
 // Pasta sob o ponteiro durante um arrasto de aba (funciona com drag HTML5 ou por ponteiro).
@@ -404,7 +408,16 @@ export function Sidebar() {
     const model = conn?.kind === 'endpoint' && conn.model ? conn.model : r.config.model
     return agentLine(llmLabel(connections, r.config.profile, model), model, r.config.effort)
   }
+  const agentsSt = useAgents()
+  const agentSessions = useAgentSessions()
   const tabLine = (tab: OpenTab): string | undefined => {
+    if (tab.agentKey) {
+      // aba de agente: status + conta atual (+ uso, quando o agente informa)
+      const s = agentSessions.find((x) => x.key === tab.agentKey)
+      if (!s) return undefined
+      const acc = agentsSt.accounts.find((a) => a.id === s.accountId)
+      return [STATUS_TEXT[s.status], acc?.label, usageText(agentsSt.usage[s.accountId])].filter(Boolean).join(' · ')
+    }
     if (tab.kind === 'session') return routineLine(tab.routineId)
     if (tab.kind === 'run') {
       const run = runs.find((x) => x.id === tab.runId)
@@ -427,6 +440,7 @@ export function Sidebar() {
     terminal: IconTerminal as IconComp, routine: IconRoutine as IconComp, run: IconClock as IconComp,
     session: IconChat as IconComp, history: IconHistory as IconComp, adhoc: IconSpark as IconComp,
     fanout: IconFanout as IconComp, settings: IconSettings as IconComp,
+    chat: IconChat as IconComp, tasks: IconCheck as IconComp,
   }
 
   return (
@@ -441,8 +455,9 @@ export function Sidebar() {
         <button onClick={() => openTerminal()}>
           <IconTerminal /> New terminal
         </button>
-        <button onClick={() => openTerminal(undefined, { profile: 'claude-max', initialCommand: 'claude --chrome' })}>
-          <IconChat /> Claude
+        <AgentButton />
+        <button onClick={() => openTasks()}>
+          <IconCheck /> Tasks
         </button>
       </nav>
       <nav className="nav nav-automation" aria-label="Automation">
@@ -562,6 +577,7 @@ export function Sidebar() {
       </ul>
       </Section>
 
+      <NeedsYou />
       {openTabs.length > 0 && (
         <Section id="open-tabs" title="Open tabs" count={openTabs.length}>
           <ul className="routines">
@@ -584,7 +600,13 @@ export function Sidebar() {
                 >
                   <button className="routine-main" onClick={() => focusTab(tab.id)} onKeyDown={(e) => e.key === 'F2' && (e.preventDefault(), setRenaming(`tab:${tab.id}`))} title={tab.kind === 'terminal' ? `${tab.title}
 Drag onto a folder to keep it` : tab.title}>
-                    <span className="item-icon"><Icon size={14} /></span>
+                    <span className="item-icon">
+                      <Icon size={14} />
+                      {(() => {
+                        const s = tab.agentKey ? agentSessions.find((x) => x.key === tab.agentKey) : undefined
+                        return s && s.status !== 'starting' ? <span className={`tab-status st-${s.status}`} aria-hidden /> : null
+                      })()}
+                    </span>
                     <span className="routine-text">
                       <InlineName className="routine-name" value={tab.title || tab.kind} onRename={(v) => renameTab(tab.id, v)} {...renameProps(`tab:${tab.id}`)} />
                       {tabLine(tab) && <span className="routine-sub">{tabLine(tab)}</span>}
@@ -621,6 +643,7 @@ Drag onto a folder to keep it` : tab.title}>
         const folderMenu: MenuItem[] = [
           { label: 'New chat or link', onClick: () => setDialog({ t: 'item', folderId: f.id }) },
           { label: 'Rename', onClick: () => setRenaming(`folder:${f.id}`) },
+          { label: 'Agent setup (MCP, context)…', onClick: () => setDialog({ t: 'agent-setup', folder: f }) },
           ...(i > 0 ? [{ label: 'Move up', onClick: () => moveFolder(f.id, -1) }] : []),
           ...(i < folders.length - 1 ? [{ label: 'Move down', onClick: () => moveFolder(f.id, 1) }] : []),
           { label: 'Delete folder', danger: true, onClick: delFolder },
@@ -722,8 +745,37 @@ Drag onto a folder to keep it` : tab.title}>
           onSave={(name) => (dialog.folder ? renameFolder(dialog.folder.id, name) : addFolder(name))}
         />
       )}
+      {dialog?.t === 'agent-setup' && <FolderAgentDialog folder={dialog.folder} onClose={() => setDialog(undefined)} />}
       {dialog?.t === 'item' && <ItemDialog folderId={dialog.folderId} item={dialog.item} onClose={() => setDialog(undefined)} />}
 
     </aside>
+  )
+}
+
+// "Precisa de voce": agentes esperando resposta, permissao, com erro ou sem conta livre (inclui abas de pastas).
+function NeedsYou() {
+  const sessions = useAgentSessions().filter(needsYou)
+  useOpenTabs() // re-renderiza quando as abas mudam
+  const rows = sessions
+    .map((s) => ({ s, panel: dockApi()?.panels.find((p) => (paramsOf(p) as { agent?: { key: string } }).agent?.key === s.key) }))
+    .filter((r) => r.panel)
+  if (!rows.length) return null
+  return (
+    <section className="side-section needs-you" aria-label="Needs you">
+      <div className="section-head"><span className="section-title">Needs you</span><span className="section-count">{rows.length}</span></div>
+      <ul className="routines">
+        {rows.map(({ s, panel }) => (
+          <li key={s.key} className="routine">
+            <button className="routine-main" onClick={() => focusTab(panel!.id)} title={s.message ?? STATUS_TEXT[s.status]}>
+              <span className="item-icon"><span className={`tab-status st-${s.status}`} aria-hidden /></span>
+              <span className="routine-text">
+                <span className="routine-name">{panel!.title}</span>
+                <span className="routine-sub">{s.message ?? STATUS_TEXT[s.status]}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }

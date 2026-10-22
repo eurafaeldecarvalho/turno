@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as RPointerEvent, type ReactElement } from 'react'
+import { createPortal } from 'react-dom'
+import { TasksPanel } from './panels/TasksPanel'
+import { AgentChatPanel } from './panels/AgentChatPanel'
+import { useAgentSessions, STATUS_TEXT } from './agentStore'
 import { toast } from './Toast'
 import { isModalOpen, menuKeyNav } from './modalStack'
 import {
@@ -24,7 +28,7 @@ import { OnboardingHost, maybeShowIntro, openOnboarding, openWhatsNew } from './
 import { RoutineEditorModalHost } from './RoutineEditorModal'
 import { PanelModalHost } from './PanelModal'
 import { ToastHost } from './Toast'
-import { dockApi, syncRoutineTitles, openAdhoc, openFanout, openHistory, openRoutine, openRun, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi } from './layout'
+import { dockApi, syncRoutineTitles, openAdhoc, openFanout, openHistory, openRoutine, openRun, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi, openAgent } from './layout'
 import { getStore, initStore, useStore } from './store'
 import { plural } from './fmt'
 import { addTerminalItem, openItem, patchItem, setDragging } from './sidebarStore'
@@ -45,6 +49,7 @@ import {
   IconSplitDown,
   IconSplitRight,
   IconTerminal,
+  IconCheck,
 } from './icons'
 
 const components = {
@@ -55,6 +60,8 @@ const components = {
   history: HistoryPanel,
   adhoc: AdhocPanel,
   fanout: FanoutPanel,
+  chat: AgentChatPanel,
+  tasks: TasksPanel,
   settings: SettingsPanel, // Settings abre em modal; registrado so p/ restaurar layouts salvos antigos com aba 'settings'
 }
 
@@ -66,10 +73,14 @@ const KIND_ICON: Record<string, (p: { size?: number }) => ReactElement> = {
   history: IconHistory,
   adhoc: IconSpark,
   fanout: IconSpark,
+  chat: IconChat,
+  tasks: IconCheck,
   settings: IconSettings,
 }
 
-function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string; itemId?: string; profile?: string; initialCommand?: string; lastSession?: unknown }>) {
+function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string; itemId?: string; profile?: string; initialCommand?: string; lastSession?: unknown; agent?: { key: string } }>) {
+  const agentKey = (paramsOf({ params, api }) as { agent?: { key: string } }).agent?.key
+  const agentSess = useAgentSessions().find((s) => s.key === agentKey)
   const [title, setTitle] = useState(api.title ?? '')
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(api.title ?? '')
@@ -109,7 +120,7 @@ function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string; itemId?
       sub.dispose()
     }
   }, [api])
-  const isAgent = params.kind === 'terminal' && (params.profile === 'claude-max' || /^claude\b/.test(params.initialCommand ?? '') || !!params.lastSession)
+  const isAgent = params.kind === 'terminal' && (!!agentKey || params.profile === 'claude-max' || /^claude\b/.test(params.initialCommand ?? '') || !!params.lastSession)
   const Icon = isAgent ? IconChat : KIND_ICON[params.kind ?? 'terminal'] ?? IconTerminal
 
   const commitRename = (d: string): void => {
@@ -141,6 +152,7 @@ function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string; itemId?
   return (
     <div ref={tabRef} className="tab" onAuxClick={(e) => e.button === 1 && api.close()} title={renaming ? undefined : title}>
       <Icon size={13} />
+      {agentSess && agentSess.status !== 'starting' && <span className={`tab-status st-${agentSess.status}`} title={`${STATUS_TEXT[agentSess.status]}${agentSess.message ? `: ${agentSess.message}` : ''}`} aria-label={STATUS_TEXT[agentSess.status]} />}
       {renaming ? (
         <input
           className="inline-rename tab-rename"
@@ -195,18 +207,26 @@ function GroupActions({ group, containerApi }: IDockviewHeaderActionsProps) {
     openTerminal(undefined, params, undefined, ref)
   }
 
+  // menu no body (fora do painel, que corta o que passa da borda): alinhado a direita do "+", sem sair da janela
+  const dropPos = (): React.CSSProperties => {
+    const r = plusRef.current?.getBoundingClientRect()
+    if (!r) return {}
+    return r.right < 200 ? { position: 'fixed', top: r.bottom + 4, left: 8, right: 'auto' } : { position: 'fixed', top: r.bottom + 4, right: window.innerWidth - r.right, left: 'auto' }
+  }
   return (
     <div className="group-actions">
       <div className="new-term-wrap">
         <button ref={plusRef} title="New terminal" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((v) => !v)}>
           <IconPlus size={14} />
         </button>
-        {menu && (
+        {menu &&
+          createPortal(
           <>
             <div className="new-term-overlay" onClick={() => setMenu(false)} />
             <div
               className="new-term-dropdown"
               role="menu"
+              style={dropPos()}
               ref={(el) => void (el && !el.contains(document.activeElement) && el.querySelector<HTMLButtonElement>('button')?.focus())}
               onKeyDown={(e) => {
                 if (e.key === 'Escape') return void (e.stopPropagation(), setMenu(false), plusRef.current?.focus())
@@ -217,14 +237,15 @@ function GroupActions({ group, containerApi }: IDockviewHeaderActionsProps) {
               <button role="menuitem" onClick={() => openNew({})}>
                 <IconTerminal size={13} /> Terminal
               </button>
-              <button role="menuitem" onClick={() => openNew({ profile: 'claude-max', initialCommand: 'claude --chrome' })}>
-                <IconChat size={13} /> Claude
+              <button role="menuitem" onClick={() => (setMenu(false), openAgent({ dir: undefined }))}>
+                <IconChat size={13} /> Agent (best account)
               </button>
               <button role="menuitem" onClick={() => openNew({ profile: 'qwen-local', initialCommand: 'claude --chrome' })}>
                 <IconChat size={13} /> Qwen
               </button>
             </div>
-          </>
+          </>,
+          document.body,
         )}
       </div>
       <button title="Split right (Alt+Shift+=)" onClick={() => openTerminal('right', {}, undefined, ref)}>
@@ -257,8 +278,8 @@ function Welcome(_: IWatermarkPanelProps) {
         <button className="btn" onClick={() => openTerminal()}>
           <IconTerminal /> Terminal
         </button>
-        <button className="btn" onClick={() => openTerminal(undefined, { profile: 'claude-max', initialCommand: 'claude --chrome' })}>
-          <IconChat /> Claude
+        <button className="btn" onClick={() => openAgent()}>
+          <IconChat /> Agent
         </button>
         <button className="btn" onClick={() => openHistory()}>
           <IconHistory /> Runs

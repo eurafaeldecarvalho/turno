@@ -6,6 +6,8 @@ import { useStore, isActive } from './store'
 import { updateSettings } from './appearance'
 import { openHistory, useTerminalTotal } from './layout'
 import { IconCoffee } from './icons'
+import { useAgents, usageText, usageTone } from './agentStore'
+import { openSettingsModal } from './SettingsModal'
 
 function fmtMb(kb: number): string {
   const mb = kb / 1024
@@ -74,6 +76,24 @@ function ClaudeUsageSegment() {
       {fmtUsd(todayCost)} today
       <span className="sb-dim"> · {fmtUsd(weekCost)} this week</span>
     </span>
+  )
+}
+
+// Medidor de uso das contas de agentes (5h/7d, vindos do proprio Claude Code a cada resposta)
+function AccountUsageSegment() {
+  const st = useAgents()
+  // conta sem login fica de fora (o ranking tambem a ignora): o dado guardado dela nao diz nada sobre o que da para usar
+  const withData = st.accounts.filter((a) => a.enabled && !st.signedOut.includes(a.id) && st.usage[a.id] && st.usage[a.id].state !== 'unknown')
+  if (!withData.length) return null
+  const first = withData[0]
+  const u = st.usage[first.id]
+  const tip = withData.map((a) => `${a.label}: ${usageText(st.usage[a.id]) || 'no data'}`).join('\n')
+  return (
+    <button className="sb-item" title={`${tip}\nClick to manage accounts`} onClick={() => openSettingsModal('agents')}>
+      <span className={`dot dot-${usageTone(u)}`} />
+      {usageText(u)}
+      {withData.length > 1 && <span className="sb-dim"> · +{withData.length - 1}</span>}
+    </button>
   )
 }
 
@@ -167,6 +187,7 @@ export function StatusBar() {
       </span>
       <TerminalSegment />
       <ClaudeUsageSegment />
+      <AccountUsageSegment />
       <span className="sb-spacer" />
       <AwakeSegment />
     </footer>

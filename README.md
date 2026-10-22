@@ -45,6 +45,7 @@ Turno does not implement an agent. It schedules and supervises the CLIs you alre
 - [The live chat](#the-live-chat)
 - [Scheduling, locks and power](#scheduling-locks-and-power)
 - [Workspace: terminals, folders, themes](#workspace-terminals-folders-themes)
+- [Agents, accounts, tasks and MCP](#agents-accounts-tasks-and-mcp)
 - [Import from Claude Code Desktop](#import-from-claude-code-desktop)
 - [How it works](#how-it-works)
 - [Build from source](#build-from-source)
@@ -159,6 +160,16 @@ Prompt. Be explicit: nobody is watching to answer questions.
 | Ctrl+, | Settings |
 | Ctrl+Shift+H | Run history |
 | Ctrl+F | Search in terminal |
+
+## Agents, accounts, tasks and MCP
+
+- **Agent button:** opens the best-ranked account that still has quota. Turno knows 44 agent CLIs (catalog ported from [Orca](https://github.com/stablyai/orca), MIT) and adds a default account for each one it finds on your PATH.
+- **Several accounts per agent** (Claude Code, Codex, Gemini, Copilot, Kiro, OpenCode, Grok): each one keeps its sign-in in its own folder. Claude accounts share your history with `~/.claude`, so a conversation can resume on any of them. Accounts that are not signed in are skipped.
+- **Ranking and automatic switch** (Settings › Agents and accounts): above the thresholds (5-hour 90%, weekly 95%), the tab moves to the next account at the end of the turn. The same agent resumes the same conversation; another agent gets a handoff note. At the hard limit it switches immediately, and with no account left the tab waits for the reset. Usage comes from Claude Code's own status line; other agents are switched when their limit message appears.
+- **Chat tab:** a structured Claude chat that continues on the next account when one hits its limit.
+- **Tasks:** your GitHub issues (through `gh`) and Jira Cloud tasks (e-mail + API token) in one list. Start one in its own worktree branch with the agent you pick. Task text is treated as data, never typed into the shell.
+- **MCP servers** (Settings › MCP): set them up once (presets for Sentry, Atlassian, Bitbucket, GitHub read-only and Playwright, or custom) and pick them per folder (folder menu › Agent setup) and per routine. Secrets stay in the Windows encrypted store and reach the agent session only as environment variables. Turno never edits your own agent configs.
+- **Folder trust:** Turno never accepts Claude Code's "trust this folder" prompt for you. It only copies a trust you already gave to an extra account of the same folder.
 
 ## Import from Claude Code Desktop
 

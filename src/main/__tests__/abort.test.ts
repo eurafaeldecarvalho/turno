@@ -45,7 +45,7 @@ describe('parseRateLimit (so pausa quando REJECTED)', () => {
   const flat = '{"status":"rejected","resetsAt":1790012400,"rateLimitType":"seven_day"}'
 
   it('status rejected -> rejected:true + tipo + resetsAt', () => {
-    expect(parseRateLimit(rejected)).toEqual({ rateLimitType: 'five_hour', resetsAt: 1790012400, rejected: true })
+    expect(parseRateLimit(rejected)).toMatchObject({ rateLimitType: 'five_hour', resetsAt: 1790012400, rejected: true, status: 'rejected' })
   })
   it('status allowed -> rejected:false (NAO pausa)', () => {
     expect(parseRateLimit(allowed)?.rejected).toBe(false)

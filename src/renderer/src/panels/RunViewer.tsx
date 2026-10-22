@@ -413,6 +413,14 @@ export function Conversation({ runId, compact, onHeadChange }: { runId: string; 
     for (let next = cur; next; next = s.runs.find((r) => r.parent_id === next!.id)) cur = next
     return cur
   })
+  // Troca de conta (ranking): a run parou no limite e o main ja continuou a conversa numa filha. Segue sozinho para
+  // ela — senao as permissoes da continuacao ficam invisiveis e responder aqui abriria um 2o --resume da mesma sessao.
+  const rotatedTo = useStore((s) => (last?.status === 'rate_limited' ? s.runs.find((r) => r.parent_id === last.id) : undefined))
+  useEffect(() => {
+    if (!rotatedTo) return
+    setHead(rotatedTo.id)
+    onHeadChange?.(rotatedTo.id)
+  }, [rotatedTo?.id])
   const routine = routines.find((r) => r.id === (last?.routine ?? first?.routine))
   const total = runs.reduce((n, r) => n + (events[r.id]?.length ?? 0), 0)
   const blocksByRun = useMemo(() => runs.map((r) => ({ run: r, blocks: toBlocks(events[r.id] ?? []) })), [runs, events])

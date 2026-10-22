@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { agentDef } from '../../shared/agents'
 import { askConfirm } from './ConfirmDialog'
 import type { DockviewApi, Direction } from 'dockview-react'
 import type { ProfileId, TermSession } from '../../shared/types'
@@ -36,6 +37,19 @@ export interface TerminalParams {
   itemId?: string // item da sidebar que este terminal atualiza
   lastCwd?: string // pasta atual (OSC 9;9 do prompt)
   lastSession?: TermSession // sessao do Claude Code rodando aqui
+  launchId?: string // env preparado pelo main (ex.: login de uma conta numa pasta isolada); vale uma vez
+  agent?: AgentTermParams // aba de agente (botao Agent): conta escolhida pelo ranking, troca na mesma aba
+}
+
+export interface AgentTermParams {
+  key: string // conversa no Turno (sobrevive a trocas de conta)
+  agent?: string // agente pedido (sem = melhor conta de qualquer agente)
+  accountId?: string // conta atual/pedida
+  resumeSessionId?: string // sessao nativa para retomar ao reabrir
+  prompt?: string // primeiro prompt (so no 1o lancamento)
+  chrome?: boolean
+  folderId?: string // pasta da sidebar: MCPs e cartao de contexto da pasta
+  model?: string // modelo do item da pasta (Claude: --model)
 }
 
 // Paineis fechados de vez (nao escondidos), mesmo sendo de um item de pasta.
@@ -102,6 +116,7 @@ export interface OpenTab {
   runId?: string // aba de run
   profile?: string // conexao do terminal (claude-max, qwen-local...)
   command?: string // comando inicial (pode ter --model)
+  agentKey?: string // aba de agente: conversa no broker (status, conta)
 }
 let _openTabs: OpenTab[] = []
 let _termTotal = 0
@@ -114,8 +129,8 @@ function syncOpenTabs(): void {
     .filter((p) => !(paramsOf(p) as TerminalParams & { kind?: string }).itemId)
     .map((p) => {
       const pr = paramsOf(p) as TerminalParams & { kind?: string; routineId?: string; runId?: string }
-      const agent = pr.profile === 'claude-max' || /^claude\b/.test(pr.initialCommand ?? '') || !!pr.lastSession
-      return { id: p.id, title: p.title ?? '', kind: pr.kind ?? 'terminal', agent, active: api!.activePanel?.id === p.id, routineId: pr.routineId, runId: pr.runId, profile: pr.profile, command: pr.initialCommand }
+      const agent = !!pr.agent || pr.profile === 'claude-max' || /^claude\b/.test(pr.initialCommand ?? '') || !!pr.lastSession
+      return { id: p.id, title: p.title ?? '', kind: pr.kind ?? 'terminal', agent, active: api!.activePanel?.id === p.id, routineId: pr.routineId, runId: pr.runId, profile: pr.profile, command: pr.initialCommand, agentKey: pr.agent?.key }
     })
   // Status bar: todos os terminais abertos, inclusive os que ja estao numa pasta da sidebar.
   _termTotal = api.panels.filter((p) => (paramsOf(p) as { kind?: string }).kind === 'terminal').length
@@ -184,11 +199,38 @@ export function panelForItem(itemId: string) {
   return api?.panels.find((p) => paramsOf(p).itemId === itemId)
 }
 
+// Aba de agente (botao Agent): a conta sai do ranking; o main troca de conta na mesma aba quando a cota acaba.
+export function openAgent(o: { agent?: string; accountId?: string; model?: string; prompt?: string; cwd?: string; folderId?: string; itemId?: string; resumeSessionId?: string; chrome?: boolean; dir?: Dir; title?: string; fixedId?: string } = {}): void {
+  openTerminal(
+    o.dir,
+    {
+      cwd: o.cwd,
+      itemId: o.itemId,
+      agent: { key: uid('agent'), agent: o.agent, accountId: o.accountId, prompt: o.prompt, folderId: o.folderId, resumeSessionId: o.resumeSessionId, model: o.model, chrome: o.chrome ?? (!o.agent || o.agent === 'claude') },
+    },
+    o.title,
+    undefined,
+    o.fixedId,
+  )
+}
+
+export const openTasks = (): void => openOnce('tasks', 'tasks', 'Tasks', {})
+
+// Chat estruturado do botao Agent (Claude headless no ranking de contas). Cada chat e uma aba propria.
+export function openAgentChat(cwd?: string): void {
+  if (!api) return
+  // numeradas como os terminais: duas abas "chat" iguais confundiam
+  const taken = new Set(api.panels.map((p) => (p.title ?? '').toLowerCase()))
+  let n = 1
+  while (taken.has(`chat ${n}`)) n++
+  api.addPanel({ id: uid('chat'), component: 'chat', tabComponent: 'tab', title: `chat ${n}`, params: { kind: 'chat', cwd } })
+}
+
 export function openTerminal(dir?: Dir, params: TerminalParams = {}, title?: string, refId?: string, fixedId?: string): void {
   if (!api) return
   const existing = fixedId ? api.getPanel(fixedId) : undefined
   if (existing) return existing.api.setActive()
-  const label = params.profile === 'qwen-local' ? 'qwen' : params.profile === 'claude-max' ? 'claude' : 'terminal'
+  const label = params.agent ? (params.agent.agent ? (agentDef(params.agent.agent)?.name ?? params.agent.agent).toLowerCase() : 'agent') : params.profile === 'qwen-local' ? 'qwen' : params.profile === 'claude-max' ? 'claude' : 'terminal'
   termCounts[label] = (termCounts[label] ?? 0) + 1
   // pula nomes ja usados (aba aberta ou item salvo numa pasta): dois "terminal 4" diferentes confundiam
   const taken = new Set([...api.panels.map((p) => p.title ?? ''), ...takenNames()].map((n) => n.toLowerCase()))

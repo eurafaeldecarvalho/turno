@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { cleanPath, folderOk } from './paths'
 import { LINK_HINT, LINK_RE } from '../../shared/links'
 import { askConfirm } from './ConfirmDialog'
 import { createPortal } from 'react-dom'
@@ -29,7 +30,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
 }
 
 // Fechar sem salvar (Esc, clique fora, X): com algo digitado, pergunta antes. O Cancel descarta direto.
-function guardClose(dirty: boolean, onClose: () => void): () => void {
+export function guardClose(dirty: boolean, onClose: () => void): () => void {
   return () => (dirty ? void askConfirm({ title: 'Discard changes?', message: 'What you typed here will be lost.', confirmLabel: 'Discard' }).then((ok) => ok && onClose()) : onClose())
 }
 
@@ -70,10 +71,14 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
   // pasta que nao existe: o terminal abriria na pasta pessoal sem avisar
   const [cwdMissing, setCwdMissing] = useState(false)
   useEffect(() => {
-    const p = cwd.trim()
+    const p = cleanPath(cwd)
     if (!p) return setCwdMissing(false)
-    const t = setTimeout(() => void window.turno.ui.pathExists(p).then((ok) => setCwdMissing(!ok)), 300)
-    return () => clearTimeout(t)
+    let alive = true // resposta atrasada de um valor ja trocado e ignorada
+    const t = setTimeout(() => void folderOk(p).then((ok) => alive && setCwdMissing(!ok)), 300)
+    return () => {
+      alive = false
+      clearTimeout(t)
+    }
   }, [cwd])
   const initialSnap = useRef(JSON.stringify([folderId, item?.kind ?? 'chat', item?.name ?? '', item?.agent ?? 'claude', item?.sessionId ?? '', item?.cwd ?? '', item?.model ?? '', item?.command ?? '', item?.url ?? '']))
   const claude = agent === 'claude' || agent === 'claude-qwen'
@@ -103,15 +108,20 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
 
   const warnedCwd = useRef(item?.cwd ?? '') // pasta ja salva antes (aceita) nao avisa de novo
   const [confirmCwd, setConfirmCwd] = useState(false)
+  const [checking, setChecking] = useState(false)
   async function save(): Promise<void> {
-    const c = cwd.trim()
-    if (c && kind !== 'link' && warnedCwd.current !== c && !(await window.turno.ui.pathExists(c))) {
+    const c = cleanPath(cwd)
+    if (checking) return
+    setChecking(true) // pasta de rede pode levar segundos: o botao mostra que esta conferindo
+    const ok = !c || kind === 'link' || warnedCwd.current === c || (await folderOk(c))
+    setChecking(false)
+    if (!ok) {
       warnedCwd.current = c // segundo Save grava mesmo assim
       setCwdMissing(true)
       return void setConfirmCwd(true)
     }
     if (kind === 'terminal' && item) {
-      saveItem(folder, { ...item, name: name.trim(), cwd: cwd.trim() || undefined })
+      saveItem(folder, { ...item, name: name.trim(), cwd: cleanPath(cwd) || undefined })
       return onClose()
     }
     const newId = item?.id ?? uid()
@@ -125,7 +135,7 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
             agent,
             // Claude: o Turno cria o id da sessao na hora para poder retomar depois com --resume.
             sessionId: sessionId.trim() || (claude ? uid() : undefined),
-            cwd: cwd.trim() || undefined,
+            cwd: cleanPath(cwd) || undefined,
             model: claude && agent === 'claude' ? model || undefined : undefined,
             command: command.trim() || undefined,
           }
@@ -174,7 +184,7 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
                   <IconFolder />
                 </button>
               </div>
-              {cwdMissing && <small className="tone-warn">This folder doesn't exist (or isn't a folder); the terminal will start in your home folder.{confirmCwd && cwd.trim() === warnedCwd.current ? ' Click Save anyway to keep it.' : ''}</small>}
+              {cwdMissing && <small className="tone-warn">This folder doesn't exist (or isn't a full path like C:\code\repo); the terminal will start in your home folder.{confirmCwd && cleanPath(cwd) === warnedCwd.current ? ' Click Save anyway to keep it.' : ''}</small>}
             </label>
             <small className="muted">
               {item?.sessionId ? `Reopens with claude --resume ${item.sessionId.slice(0, 8)}… in this folder.` : 'Reopens a terminal in this folder.'} The folder{item?.sessionId ? ' and session' : ''} update{item?.sessionId ? '' : 's'}{' '}
@@ -227,7 +237,7 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
                   <IconFolder />
                 </button>
               </div>
-              {cwdMissing && <small className="tone-warn">This folder doesn't exist (or isn't a folder); the terminal will start in your home folder.{confirmCwd && cwd.trim() === warnedCwd.current ? ' Click Save anyway to keep it.' : ''}</small>}
+              {cwdMissing && <small className="tone-warn">This folder doesn't exist (or isn't a full path like C:\code\repo); the terminal will start in your home folder.{confirmCwd && cleanPath(cwd) === warnedCwd.current ? ' Click Save anyway to keep it.' : ''}</small>}
             </label>
             {agent === 'claude' && (
               <label className="field">
@@ -255,7 +265,7 @@ export function ItemDialog({ folderId, item, onClose }: { folderId: string; item
       </div>
       <footer className="modal-foot">
         <button className="btn ghost" onClick={onClose}>Cancel</button>
-        <button className="btn primary" disabled={!valid} onClick={save}>{confirmCwd && cwd.trim() === warnedCwd.current ? 'Save anyway' : 'Save'}</button>
+        <button className="btn primary" disabled={!valid} aria-busy={checking || undefined} onClick={save}>{checking ? 'Checking the folder…' : confirmCwd && cleanPath(cwd) === warnedCwd.current ? 'Save anyway' : 'Save'}</button>
       </footer>
     </Modal>
   )

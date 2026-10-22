@@ -15,6 +15,9 @@ import { wrapForSandbox } from './sandbox'
 import { canCleanup, createWorktree, deleteBranch, isManagedWorktreePath, removeWorktree, resolveRepoRoot, worktreeBase, worktreeBranch, worktreeCwd, worktreeDecision, worktreeHead, worktreeMainRoot, worktreeStatus, worktreeTeardown } from './worktree'
 import { connectionToken } from './secrets'
 import { IS_WIN, homeDir } from './platform'
+import { accountEnv, getAccount, markAccount, pickAccount, recordUsage } from './accounts'
+import { listMcp, routineMcpArgs } from './mcphub'
+import { prepareClaude } from './claudeprep'
 
 // Mata a arvore de processos do run, por plataforma. Windows: taskkill /T. POSIX: mata o grupo (-pid).
 // Devolve Promise p/ quem precisa esperar o kill concluir antes de prosseguir (ex. parar e reiniciar).
@@ -138,6 +141,7 @@ interface Active {
   emit: (kind: RunEventKind, text: string, ref?: string) => void
   permissions: Map<string, any>
   killTimer?: ReturnType<typeof setTimeout>
+  rotate?: boolean // bateu o limite numa run com ranking de contas: continua noutra conta
 }
 
 function writeLine(a: Active, obj: unknown): void {
@@ -234,6 +238,14 @@ function updateBlocker(): void {
   setWorkingCount(active.size)
 }
 
+let rotateHandler: ((runId: string, text: string) => Promise<unknown>) | undefined
+const rotatedRuns = new Set<string>()
+// run que e continuacao de uma troca de conta (ranking): avisa o resultado como a run original avisaria
+export const rotatedFrom = (parentId?: string | null): boolean => !!parentId && rotatedRuns.has(parentId)
+export const setRotateHandler = (f: (runId: string, text: string) => Promise<unknown>): void => {
+  rotateHandler = f
+}
+
 export function startRun(o: StartOptions): string {
   const { req } = o
   // Guard central: recusa profile de connection inexistente (nunca cai no provedor pago em silencio).
@@ -241,6 +253,18 @@ export function startRun(o: StartOptions): string {
   const conn = requireConnection(getSettings(), req.profile)
   const model = effectiveModel(conn, req.model)
   const runId = o.runId ?? newRunId()
+  // Ranking de contas (botao Agent): escolhe a melhor conta Claude com cota; a conversa e compartilhada entre contas.
+  // Sandbox (WSL/Docker) nao enxerga a pasta da conta nem o --mcp-config do host: recusa em vez de rodar na conta errada.
+  // (so servidores que ainda existem no hub contam: id removido ja e ignorado)
+  if ((o.sandbox ?? 'none') !== 'none' && (req.pool || req.accountId || listMcp().some((m) => req.mcp?.includes(m.id))))
+    throw new Error("account pool and MCP servers don't work with a sandbox; turn the sandbox off for this routine")
+  if (req.pool && conn.kind === 'claude') {
+    const cur = req.accountId ? getAccount(req.accountId) : undefined
+    const pick = cur && cur.enabled ? cur : pickAccount({ agent: 'claude', allowWarning: true })
+    if (!pick) throw new Error('no Claude account is available (every one is off, not signed in or at its usage limit)')
+    req.accountId = pick.id
+  }
+  const account = req.accountId && conn.kind === 'claude' ? getAccount(req.accountId) : undefined
   // Isolation por worktree (opt-in): roda a run num git worktree isolado, NUNCA no diretorio principal (sob o editor).
   // So canonicaliza/mexe no cwd quando a rotina pede isolamento — run normal fica com o cwd configurado, intacto.
   const wantsWorktree = (o.isolation ?? 'none') === 'worktree'
@@ -301,8 +325,20 @@ export function startRun(o: StartOptions): string {
   // Guardado para continuar a conversa depois (follow-up com --resume).
   writeFileSync(join(dir, 'request.json'), JSON.stringify({ ...req, prompt: undefined }, null, 2))
   const args = buildArgs(req, model)
+  // Hub de MCP + cartao de contexto (so os servidores escolhidos; valores dos segredos vao pelo env)
+  const mcp = routineMcpArgs(runId, req.mcp ?? [], !!req.strictMcp, req.contextCard)
+  args.push(...mcp.args)
+  if (account?.home) {
+    try {
+      prepareClaude(effectiveCwd, !!req.chrome, account.home) // pasta confiavel na conta isolada
+    } catch {
+      /* .claude.json ocupado: segue */
+    }
+  }
   const providerEnv: Record<string, string> = {
     ...resolveProviderEnv(conn, connectionToken(conn)),
+    ...(account ? accountEnv(account) : {}),
+    ...mcp.env,
     TURNO_RUN_ID: runId,
     TURNO_RUN_DIR: dir,
     ...(o.scheduledAt ? { TURNO_SCHEDULED_AT: o.scheduledAt } : {}),
@@ -311,7 +347,7 @@ export function startRun(o: StartOptions): string {
   // TURNO_RUN_DIR e caminho do HOST e nao existe dentro do sandbox -> nao repassa. 'none' (default) nao altera nada.
   const sbKeys = Object.keys(providerEnv).filter((k) => k.startsWith('ANTHROPIC_') || k === 'TURNO_RUN_ID')
   const sb = wrapForSandbox('claude', args, o.sandbox ?? 'none', { cwd: effectiveCwd, env: sbKeys })
-  emit('start', `${sb.cmd} ${sb.args.join(' ')}  [profile ${req.profile}${o.routine ? `, routine ${o.routine}` : ''}${wt ? `, worktree ${wt.branch}` : ''}]`)
+  emit('start', `${sb.cmd} ${sb.args.join(' ')}  [profile ${req.profile}${account ? `, account ${account.label}` : ''}${o.routine ? `, routine ${o.routine}` : ''}${wt ? `, worktree ${wt.branch}` : ''}]`)
   // A subpasta da rotina nao estava no checkout (nao commitada/ignorada): a run roda numa pasta vazia, avisa.
   if (createdMissingSubdir) emit('stderr', `aviso: ${effectiveCwd} nao existe no checkout da worktree (pasta nao commitada?); criada vazia`)
   const child = spawn(sb.cmd, sb.args, {
@@ -387,7 +423,22 @@ export function startRun(o: StartOptions): string {
     if (line.includes('"api_retry"') && /rate.?limit|429|overloaded/i.test(line)) rateLimited = true
     // Bateu o limite da assinatura (5h / semanal) DE VERDADE (status rejected): se a rotina pede pausar,
     // marca pra retomar no reset. Eventos 'allowed'/'allowed_warning' NAO param a run.
-    if (!a.pauseUntil) {
+    const rlInfo = account ? parseRateLimit(line) : undefined
+    if (rlInfo && account) {
+      // uso da conta (aviso de perto do limite) alimenta o ranking; rejected = esgotou ate o reset
+      const w = rlInfo.utilization !== undefined ? { pct: Math.round(rlInfo.utilization), resetsAt: rlInfo.resetsAt ? new Date(rlInfo.resetsAt * 1000).toISOString() : undefined } : undefined
+      if (w && /five|5h|session/i.test(rlInfo.rateLimitType)) recordUsage(account.id, { fiveHour: w })
+      else if (w && /seven|week/i.test(rlInfo.rateLimitType)) recordUsage(account.id, { weekly: w })
+      if (rlInfo.rejected) {
+        markAccount(account.id, 'exhausted', 'usage limit reached', rlInfo.resetsAt ? new Date(rlInfo.resetsAt * 1000).toISOString() : undefined)
+        if (req.pool && !a.rotate && pickAccount({ agent: 'claude', exclude: [account.id], allowWarning: true })) {
+          a.rotate = true
+          a.stopDetail = 'usage limit reached on this account; Turno continues the conversation on the next account'
+          void stopRun(runId, 'rate_limited')
+        }
+      }
+    }
+    if (!a.pauseUntil && !a.rotate) {
       const rl = parseRateLimit(line)
       const kind = rl?.rejected ? matchedRateLimit(rl.rateLimitType, policies) : undefined
       if (kind) {
@@ -459,7 +510,17 @@ export function startRun(o: StartOptions): string {
     })
     const rec = getRun(runId)!
     emitChanged(rec)
-    onFinished(rec)
+    // Ranking de contas: continua a MESMA conversa na proxima conta pelo follow-up do engine (mesmo cwd efetivo/worktree,
+    // locks da rotina e teto de custo cumulativo); a conta esgotada ja foi marcada, entao o follow-up escolhe a proxima.
+    // A run trocada nao avisa "falhou": quem avisa o resultado e a continuacao (ver rotatedFrom).
+    if (a.rotate && rec.session_id && rotateHandler) {
+      rotatedRuns.add(runId)
+      rotateHandler(runId, 'Continue exactly where you left off. The previous account hit its usage limit and Turno moved this conversation to another account.').catch((e) => {
+        console.warn('[runner] rotate failed', (e as Error).message)
+        rotatedRuns.delete(runId)
+        onFinished(rec)
+      })
+    } else onFinished(rec)
     // Nao poda run pausada (ainda vai ser retomada). Poda so apos realmente terminar.
     if (rec.routine && !a.pauseUntil)
       for (const id of pruneRuns(rec.routine)) rmSync(join(runsDir, id), { recursive: true, force: true })

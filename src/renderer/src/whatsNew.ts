@@ -7,6 +7,15 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.8.0',
+    items: [
+      { title: 'Agent button with ranked accounts', text: 'Works with 40+ agent CLIs, and you can add several accounts of Claude Code, Codex, Gemini, Copilot, Kiro, OpenCode and Grok. Rank them, and the Agent button opens the best one with quota left. Near the limit, the tab moves to the next account without losing the conversation.' },
+      { title: 'Chat tab', text: 'A structured Claude chat that continues on the next account when one hits its limit.' },
+      { title: 'Tasks', text: 'Your GitHub issues and Jira Cloud tasks in one list. Start one in its own worktree with an agent.' },
+      { title: 'MCP servers', text: 'Set up MCP servers once and pick them per folder and per routine, with secrets kept in the Windows encrypted store.' },
+    ],
+  },
+  {
     version: '0.7.3',
     items: [
       { title: 'A quick tour', text: 'New installs get a short setup: agents, look and terminal, routines, running in the background and notifications. Reopen it any time from Settings.' },

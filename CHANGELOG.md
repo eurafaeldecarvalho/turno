@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.8.0 (2026-10-22)
+
+### Agents and accounts
+- The sidebar "Claude" button is now "Agent": opens the best-ranked account that still has quota. Catalog of 44 agent CLIs (ported from Orca, MIT).
+- Several accounts per agent (Claude Code, Codex, Gemini, Copilot, Kiro, OpenCode, Grok), each in its own config folder; Claude accounts share history with ~/.claude.
+- Ranking and thresholds (5-hour 90%, weekly 95%) in Settings › Agents and accounts. Usage shows in the status bar.
+- Automatic switch: near the limit the tab moves to the next account at the end of the turn (same agent resumes the same conversation; another agent gets a handoff note). At the hard limit it switches immediately. With no account left, the session waits for the reset.
+- Tab status dots and a "Needs you" list in the sidebar (permission requests, finished turns).
+- Chat tab: structured Claude chat that continues on the next account at the limit.
+
+### Tasks
+- GitHub issues (via `gh`) and Jira Cloud (e-mail + API token) in one list. Start a task in a new worktree branch with the agent of your choice.
+
+### MCP
+- MCP hub in Settings: presets for Sentry, Atlassian, Bitbucket, GitHub (read-only), Playwright, or custom. Secrets stay in the Windows encrypted store and reach the agent only through the environment.
+- Per folder (folder menu › Agent setup) and per routine: MCP servers and a short context card. Routines can use the account pool and strict MCP.
+
+### Changed
+- Turno no longer accepts Claude Code's "trust this folder" prompt for you. It only copies a trust you already gave to an extra account, so a cloned repo's hooks can't run without Claude asking first.
+- Prompts that Turno types on a command line drop the characters `$`, backtick, `%` and `!` (the shell could run them). Task titles and issue text never go on the command line; they stay in the task file.
+- Folder fields in the Chat tab and in folder items accept pasted "Copy as path" values and need a full path. Checking a network folder no longer freezes the app.
+- Accounts, MCP servers and the context card only apply to Claude connections; routines using a sandbox skip with a clear reason when they also use them.
+
 ## 0.7.3 (2026-10-21)
 
 - Setup tour on first launch, in 5 skippable steps:

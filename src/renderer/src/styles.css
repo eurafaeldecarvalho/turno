@@ -596,7 +596,8 @@ select:disabled { cursor: default; opacity: .6; }
 
 /* Grupos estreitos do dock: abas legiveis e botoes do grupo recolhidos */
 .dockview-theme-abyss .dv-groupview { container-type: inline-size; }
-@container (max-width: 380px) { .group-actions button:not(:last-child) { display: none; } }
+/* so os botoes de dividir (filhos diretos); o "+" e o menu dele ficam (antes o seletor sumia com os itens do menu) */
+@container (max-width: 380px) { .group-actions > button:not(:last-child) { display: none; } }
 
 .coll.open .think-preview { display: none; }
 
@@ -703,7 +704,7 @@ body.modal-open .drag { -webkit-app-region: no-drag; }
 .opacity-num input { width: 78px; }
 
 /* ---------- introducao (onboarding) e novidades ---------- */
-.modal.onb { width: min(720px, 100%); height: min(600px, calc(100vh - var(--titlebar-h, 36px) - 48px)); overflow: hidden; }
+.modal.onb { position: relative; width: min(720px, 100%); height: min(600px, calc(100vh - var(--titlebar-h, 36px) - 48px)); overflow: hidden; }
 .modal.onb.news { width: min(560px, 100%); height: auto; }
 .onb-head { display: flex; gap: 14px; align-items: flex-start; padding: 22px 56px 10px 22px; }
 .onb-head img { flex: none; border-radius: 9px; }
@@ -742,3 +743,95 @@ body.modal-open .drag { -webkit-app-region: no-drag; }
 .news-list li { display: flex; gap: 10px; }
 .news-dot { flex: none; width: 7px; height: 7px; margin-top: 7px; border-radius: 50%; background: var(--accent); }
 .news-list p { margin: 2px 0 0; line-height: 1.5; }
+
+/* ---------- botao Agent (sidebar) ---------- */
+.agent-nav { display: flex; align-items: stretch; gap: 2px; }
+.agent-nav .agent-main { flex: 1; min-width: 0; }
+.agent-sub { margin-left: auto; font-size: calc(var(--ui-size, 13px) * 11 / 13); color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav .agent-more { flex: none; width: 26px; justify-content: center; padding: 6px 0; }
+.nav .agent-more svg { transform: rotate(-90deg); }
+.agent-menu { position: fixed; min-width: 240px; max-width: 320px; max-height: 420px; overflow-y: auto; }
+.agent-menu button { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+.agent-menu button small { font-size: calc(var(--ui-size, 13px) * 11 / 13); }
+.agent-menu .row { display: inline-flex; gap: 6px; align-items: center; }
+.agent-menu-group { display: flex; flex-direction: column; padding-top: 4px; }
+.agent-menu-label { padding: 4px 10px 2px; font-size: calc(var(--ui-size, 13px) * 10.5 / 13); text-transform: uppercase; letter-spacing: .6px; color: var(--faint); font-weight: 600; }
+.agent-acc { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-menu-empty { padding: 6px 10px; }
+
+/* status da conversa de agente (aba do dock, Open tabs, Needs you) */
+.tab-status { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--faint); }
+.item-icon .tab-status { position: absolute; right: -4px; bottom: -3px; box-shadow: 0 0 0 2px var(--surface); }
+.tab-status.st-working, .tab-status.st-swapping { background: var(--run); animation: pulse 1.4s ease-in-out infinite; }
+.tab-status.st-needs-input { background: var(--accent); }
+.tab-status.st-needs-permission, .tab-status.st-parked { background: var(--warn); }
+.tab-status.st-error { background: var(--err); }
+.tab-status.st-idle { background: var(--ok); }
+@keyframes pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .tab-status.st-working, .tab-status.st-swapping { animation: none; } }
+.tab .tab-status { margin-left: -2px; }
+.needs-you { border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.needs-you .section-head { color: var(--warn-text, var(--warn)); }
+
+/* ---------- Settings: contas e MCP ---------- */
+.acct-list { container-type: inline-size; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.acct { display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; }
+.acct + .acct { border-top: 1px solid var(--border); }
+.acct.off .acct-main { opacity: .55; }
+.acct-rank { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-3); color: var(--muted); font-size: calc(var(--ui-size, 13px) * 11 / 13); font-variant-numeric: tabular-nums; margin-top: 3px; }
+.acct-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.acct-label { border: 1px solid transparent; background: none; padding: 2px 4px; margin-left: -5px; font-weight: 600; color: var(--text); border-radius: 5px; width: 100%; }
+.acct-label:hover, .acct-label:focus { border-color: var(--border-strong); background: var(--bg); }
+.acct-actions { flex: none; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; max-width: 52%; }
+/* janela estreita: as acoes descem para baixo do nome em vez de espremer o nome */
+@container (max-width: 560px) {
+  .acct { flex-wrap: wrap; }
+  .acct-main { flex-basis: calc(100% - 30px); }
+  .acct-actions { max-width: none; width: 100%; justify-content: flex-start; padding-left: 30px; }
+}
+.acct-bars { display: flex; gap: 12px; flex-wrap: wrap; }
+.usage-bar { display: inline-flex; align-items: center; gap: 6px; font-size: calc(var(--ui-size, 13px) * 11 / 13); color: var(--muted); }
+.usage-bar-track { width: 90px; height: 5px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.usage-bar-fill { display: block; height: 100%; border-radius: 3px; }
+.usage-bar-pct { font-variant-numeric: tabular-nums; min-width: 3ch; }
+.tone-bg-ok { background: var(--ok); }
+.tone-bg-warn { background: var(--warn); }
+.tone-bg-err { background: var(--err); }
+.mcp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.mcp-list li { display: flex; align-items: center; gap: 6px; }
+.mcp-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mcp-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mcp-editor { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--bg); }
+.mcp-outside ul { margin: 6px 0 0; padding-left: 16px; }
+.check-row { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 2px 0; min-width: 0; }
+.check-row input[type='checkbox'] { width: auto; flex: none; margin: 0; }
+.check-row > span { flex: none; }
+.check-row small { min-width: 0; flex: 1; }
+.check-row small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+fieldset.field { border: 0; margin: 0; padding: 0; }
+fieldset.field > legend { font-size: calc(var(--ui-size, 13px) * 12 / 13); color: var(--muted); padding: 0; margin-bottom: 4px; }
+
+/* ---------- chat do Agent ---------- */
+.agent-chat { height: 100%; overflow: auto; display: flex; justify-content: center; }
+.agent-chat-form { width: min(760px, 100%); padding: 28px 22px; display: flex; flex-direction: column; gap: 12px; }
+.agent-chat-form h2 { margin: 0; font-size: calc(var(--ui-size, 13px) * 18 / 13); font-weight: 600; }
+.agent-chat-form p { margin: 0; line-height: 1.5; }
+.agent-chat-form textarea { resize: vertical; min-height: 110px; }
+.agent-chat-form .adhoc-grid { flex: none; } /* no form em coluna, flex-basis 100% esticava a grade ate a altura toda */
+
+/* ---------- Tasks ---------- */
+.tasks { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+.tasks-head { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.tasks-head .grow { flex: 1; min-width: 160px; }
+.tasks > .banner { margin: 8px 16px 0; }
+.jira-form { margin: 10px 16px 0; }
+.task-list { list-style: none; margin: 0; padding: 6px 8px 16px; overflow-y: auto; flex: 1; }
+.task-list > li { border-radius: 8px; }
+.task-list > li + li { border-top: 1px solid var(--border); }
+.task-list > li.open { background: var(--surface-2); }
+.task-row { display: flex; align-items: center; gap: 10px; padding: 8px; }
+.task-src { flex: none; font-size: calc(var(--ui-size, 13px) * 10 / 13); font-weight: 700; letter-spacing: .4px; padding: 2px 6px; border-radius: 5px; background: var(--surface-3); color: var(--muted); }
+.task-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.task-title { text-align: left; color: var(--text) !important; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.task-start { display: flex; flex-direction: column; gap: 8px; padding: 4px 8px 12px 50px; }
+.task-start .row { flex-wrap: wrap; gap: 10px; }

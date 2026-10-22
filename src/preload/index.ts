@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import { release } from 'node:os'
-import type { TurnoApi, RunEvent, RunRecord, Routine, Settings, AwakeStatus, TermSession } from '../shared/types'
+import type { TurnoApi, RunEvent, RunRecord, Routine, Settings, AwakeStatus, TermSession, AgentsState, AgentSessionInfo, AgentLaunch } from '../shared/types'
 
 function listen<T extends unknown[]>(channel: string, cb: (...args: T) => void): () => void {
   const h = (_e: IpcRendererEvent, ...args: unknown[]): void => cb(...(args as T))
@@ -81,6 +81,37 @@ const api: TurnoApi = {
     setToken: (connId, token) => ipcRenderer.invoke('provider:setToken', connId, token),
     deleteToken: (connId) => ipcRenderer.invoke('provider:deleteToken', connId),
     preflight: (connId) => ipcRenderer.invoke('provider:preflight', connId),
+  },
+  agents: {
+    state: () => ipcRenderer.invoke('agents:state'),
+    onState: (cb) => listen<[AgentsState]>('agents:state', cb),
+    detect: () => ipcRenderer.invoke('agents:detect'),
+    sessions: () => ipcRenderer.invoke('agents:sessions'),
+    onSessions: (cb) => listen<[AgentSessionInfo[]]>('agents:sessions', cb),
+    prepare: (o) => ipcRenderer.invoke('agents:prepare', o),
+    add: (agent, label) => ipcRenderer.invoke('agents:add', agent, label),
+    login: (id) => ipcRenderer.invoke('agents:login', id),
+    refreshLogin: (id) => ipcRenderer.invoke('agents:refreshLogin', id),
+    update: (id, patch) => ipcRenderer.invoke('agents:update', id, patch),
+    reorder: (ids) => ipcRenderer.invoke('agents:reorder', ids),
+    remove: (id) => ipcRenderer.invoke('agents:remove', id),
+    setThresholds: (t) => ipcRenderer.invoke('agents:thresholds', t),
+    swap: (key, accountId) => ipcRenderer.invoke('agents:swap', key, accountId),
+    close: (key) => ipcRenderer.invoke('agents:close', key),
+    onSwap: (cb) => listen<[AgentLaunch]>('agents:swap', cb),
+    onType: (cb) => listen<[string, string]>('agents:type', cb),
+  },
+  tasks: {
+    list: () => ipcRenderer.invoke('tasks:list'),
+    connectJira: (o) => ipcRenderer.invoke('tasks:connectJira', o),
+    disconnectJira: () => ipcRenderer.invoke('tasks:disconnectJira'),
+    start: (t, folder, worktree) => ipcRenderer.invoke('tasks:start', t, folder, worktree),
+  },
+  mcp: {
+    list: () => ipcRenderer.invoke('mcp:list'),
+    save: (def, secrets) => ipcRenderer.invoke('mcp:save', def, secrets),
+    remove: (id) => ipcRenderer.invoke('mcp:remove', id),
+    status: (cwd) => ipcRenderer.invoke('mcp:status', cwd),
   },
   ai: {
     suggestCommand: (connId, ctx) => ipcRenderer.invoke('ai:suggestCommand', connId, ctx),

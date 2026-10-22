@@ -36,6 +36,8 @@ export interface RateLimitInfo {
   rateLimitType: string
   resetsAt?: number // unix segundos
   rejected: boolean // status === 'rejected' (bateu de verdade); allowed/allowed_warning NAO pausam
+  status?: string // allowed | allowed_warning | rejected
+  utilization?: number // 0-100 quando o CLI informa (aviso de "perto do limite")
 }
 
 // Acha recursivamente o objeto de rate-limit (tem a chave rateLimitType) no evento do stream.
@@ -66,6 +68,9 @@ export function parseRateLimit(line: string): RateLimitInfo | undefined {
     rateLimitType: rl.rateLimitType as string,
     resetsAt: typeof rl.resetsAt === 'number' ? rl.resetsAt : undefined,
     rejected: rl.status === 'rejected',
+    status: typeof rl.status === 'string' ? rl.status : undefined,
+    // utilization vem 0-1 (fracao) ou 0-100 conforme a versao: normaliza para porcentagem
+    utilization: typeof rl.utilization === 'number' ? (rl.utilization <= 1 ? rl.utilization * 100 : rl.utilization) : undefined,
   }
 }
 

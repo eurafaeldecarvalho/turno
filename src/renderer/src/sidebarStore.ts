@@ -2,8 +2,8 @@ import { useSyncExternalStore } from 'react'
 import { toast } from './Toast'
 import { LINK_HINT } from '../../shared/links'
 import type { AgentId, SidebarFolder, SidebarItem, SidebarState } from '../../shared/types'
-import { discarded, openTerminal, panelForItem, paramsOf, setTakenNames, type TerminalParams } from './layout'
-import { isParked, killParked, setLive } from './liveTerms'
+import { discarded, openAgent, openTerminal, panelForItem, paramsOf, setTakenNames, type TerminalParams } from './layout'
+import { isParked, killParked, parkedAgent, setLive } from './liveTerms'
 
 // ---- estado das pastas da barra lateral (persistido em %APPDATA%\turno\sidebar.json) ----
 let state: SidebarState = { collapsed: {}, folders: [] }
@@ -51,6 +51,10 @@ export const addFolder = (name: string): string => {
 
 export const renameFolder = (id: string, name: string): void =>
   commit({ ...state, folders: state.folders.map((f) => (f.id === id ? { ...f, name } : f)) })
+
+// MCPs do hub e cartao de contexto dos agentes abertos a partir desta pasta
+export const patchFolder = (id: string, patch: { mcp?: string[]; context?: string }): void =>
+  commit({ ...state, folders: state.folders.map((f) => (f.id === id ? { ...f, ...patch } : f)) })
 
 export const deleteFolder = (id: string): void => {
   const gone = state.folders.find((f) => f.id === id)?.items ?? []
@@ -200,12 +204,33 @@ export async function openItem(item: SidebarItem): Promise<void> {
   // Ja aberto (inclusive a aba original que foi arrastada para a pasta): so foca.
   const open = panelForItem(item.id)
   if (open) return open.api.setActive()
+  // Claude (sem comando proprio): abre pelo broker de contas — melhor conta do ranking, troca no limite,
+  // MCPs e cartao de contexto da pasta. O historico e compartilhado entre contas, entao o resume funciona em qualquer uma.
+  const folder = state.folders.find((f) => f.items.some((i) => i.id === item.id))
+  // terminal com perfil (ex.: Qwen local) ou shell proprio segue pelo caminho antigo: nunca vai para uma conta paga
+  const claudeItem = (item.kind === 'chat' && item.agent === 'claude' && !item.command?.trim()) || (item.kind === 'terminal' && !!item.sessionId && !item.profile && !item.shell)
+  if (!isParked(item.id) && claudeItem) {
+    const exists = item.sessionId ? await window.turno.sidebar.claudeSessionExists(item.sessionId) : false
+    if (item.kind === 'terminal' && !exists) patchItem(item.id, { agent: undefined, sessionId: undefined })
+    else
+      return openAgent({
+        agent: 'claude',
+        model: item.model,
+        resumeSessionId: exists ? item.sessionId : undefined,
+        cwd: item.cwd || undefined,
+        folderId: folder?.id,
+        itemId: item.id,
+        title: item.name,
+        fixedId: `chat:${item.id}`,
+        chrome: true,
+      })
+  }
   let cmd = ''
   if (isParked(item.id)) {
     // Aba escondida: o terminal continua vivo, so volta para a tela.
   } else if (item.kind === 'terminal') {
     // Reabre onde parou: retoma a ultima sessao do Claude, senao so o shell na ultima pasta.
-    if (item.sessionId && (await window.turno.sidebar.claudeSessionExists(item.sessionId)))
+    if (item.sessionId && /^[A-Za-z0-9_-]{1,128}$/.test(item.sessionId) && (await window.turno.sidebar.claudeSessionExists(item.sessionId)))
       cmd = `claude --resume ${item.sessionId} --chrome` // modelo: env da conexao do profile (nunca flag de modelo fixa)
     else if (item.sessionId) patchItem(item.id, { agent: undefined, sessionId: undefined }) // sessao sumiu: vira terminal comum
   } else cmd = await resolveCommand(item)
@@ -217,6 +242,7 @@ export async function openItem(item: SidebarItem): Promise<void> {
       profile: item.profile ?? (item.agent === 'claude-qwen' ? 'qwen-local' : undefined),
       initialCommand: cmd || undefined,
       itemId: item.id,
+      agent: isParked(item.id) ? (parkedAgent(item.id) as TerminalParams['agent']) : undefined,
     },
     item.name,
     undefined,

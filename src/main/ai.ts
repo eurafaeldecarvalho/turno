@@ -17,12 +17,17 @@ export function suggestCommand(connId: string, ctx: NlContext): Promise<Suggesti
     return Promise.resolve({ command: null, explanation: String((e as Error).message) })
   }
   const model = effectiveModel(conn, undefined)
-  const args = ['-p', ...(model ? ['--model', model] : []), '--permission-mode', 'dontAsk', '--permission-prompts', 'none', buildNlPrompt(ctx)]
+  // Chamada interna do Turno: sem os MCPs e hooks do usuario (custo e seguranca); se uma politica da empresa
+  // recusar o --strict-mcp-config, tenta de novo sem ele (padrao do Orca).
+  const base = ['-p', ...(model ? ['--model', model] : []), '--permission-mode', 'dontAsk', '--permission-prompts', 'none', '--settings', '{"disableAllHooks":true}']
   const env = childEnv({ ...resolveProviderEnv(conn, connectionToken(conn)) })
-  return new Promise((res) => {
-    execFile('claude', args, { env, timeout: 60_000, windowsHide: true, maxBuffer: 4 * 1024 * 1024 }, (err, out) => {
-      if (err && !out) return res({ command: null, explanation: `erro ao consultar: ${err.message}` })
-      res(parseSuggestion(out))
-    })
+  const run = (extra: string[]): Promise<{ err: Error | null; out: string }> =>
+    new Promise((res) =>
+      execFile('claude', [...base, ...extra, buildNlPrompt(ctx)], { env, timeout: 60_000, windowsHide: true, maxBuffer: 4 * 1024 * 1024 }, (err, out) => res({ err, out: String(out ?? '') })),
+    )
+  return run(['--strict-mcp-config']).then(async (r) => {
+    if (r.err && !r.out) r = await run([])
+    if (r.err && !r.out) return { command: null, explanation: `erro ao consultar: ${r.err.message}` }
+    return parseSuggestion(r.out)
   })
 }

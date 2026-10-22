@@ -81,6 +81,11 @@ const schema = z.object({
   catchup_window_h: z.number().positive().max(720, 'at most 720 (30 days)').default(12),
   precheck: z.string().optional(),
   notify: z.preprocess((v) => (typeof v === 'string' ? (PT_NOTIFY[v] ?? v) : v), z.enum(['failures', 'always', 'never'])).default('failures'),
+  mcp: z.array(z.string()).optional(),
+  strict_mcp: z.boolean().optional(),
+  // conta depois do trim (bloco YAML `|` acrescenta uma quebra de linha no fim), igual a UI e ao cardText
+  context_card: z.string().refine((s) => s.trim().length <= 2000, 'at most 2000 characters').optional(),
+  account_pool: z.boolean().optional(),
 })
 
 export function defaultConfig(): RoutineConfig {
@@ -183,6 +188,11 @@ export function serialize(config: RoutineConfig, prompt: string): string {
   if (config.budget_usd == null) delete clean.budget_usd
   if (clean.sandbox === 'none') delete clean.sandbox // padrao: nao suja o arquivo
   if (clean.isolation === 'none') delete clean.isolation
+  // campos novos so aparecem no arquivo quando usados
+  if (!config.mcp?.length) delete clean.mcp
+  if (!config.strict_mcp) delete clean.strict_mcp
+  if (!config.context_card?.trim()) delete clean.context_card
+  if (!config.account_pool) delete clean.account_pool
   clean.schedule = config.schedule.cron
     ? { days: config.schedule.days, times: config.schedule.times, cron: config.schedule.cron }
     : { days: config.schedule.days, times: config.schedule.times }

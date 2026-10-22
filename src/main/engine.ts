@@ -1,4 +1,7 @@
 import { spawn } from 'node:child_process'
+import { listMcp, precheckMcp } from './mcphub'
+import { notify } from './notify'
+import { effectiveUsage, pickAccount } from './accounts'
 import { Cron } from 'croner'
 import { watch, type FSWatcher } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
@@ -250,8 +253,22 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
   if (!conn) return void skip(r, trigger, scheduledAt, `connection "${r.config.profile}" nao existe (verifique em Conexoes)`, runId)
   if (conn.bootCommand && !(await ensureProvider(conn)))
     return void skip(r, trigger, scheduledAt, `${conn.name} is not running (tried to start it, it did not come up)`, runId)
-  if (conn.kind === 'claude' && !(await claudeStatus()))
+  // sandbox (wsl/docker) nao enxerga a pasta da conta nem o --mcp-config do host: pula com o motivo em vez de falhar
+  // contas, MCP e cartao so valem para conexao Claude (o editor nem mostra o card nas outras): nas outras, ignorados
+  const claudeExtras = conn.kind === 'claude'
+  if (claudeExtras && (r.config.sandbox ?? 'none') !== 'none' && (r.config.account_pool || listMcp().some((m) => r.config.mcp?.includes(m.id))))
+    return void skip(r, trigger, scheduledAt, 'account ranking and MCP servers do not work with a sandbox; turn one of them off in the routine', runId)
+  if (conn.kind === 'claude' && r.config.account_pool) {
+    if (!pickAccount({ agent: 'claude', allowWarning: true })) return void skip(r, trigger, scheduledAt, 'no Claude account is available (every one is off, not signed in or at its usage limit)', runId)
+  } else if (conn.kind === 'claude' && !(await claudeStatus()))
     return void skip(r, trigger, scheduledAt, 'Claude Code is not logged in (run "claude" and use /login)', runId)
+  if (claudeExtras && r.config.mcp?.length) {
+    const why = await precheckMcp(r.config.mcp)
+    if (why) {
+      void notify(`${r.config.name} skipped`, why)
+      return void skip(r, trigger, scheduledAt, why, runId)
+    }
+  }
   if (r.config.precheck) {
     const p = await runPrecheck(r.config.precheck, r.dir)
     if (!p.ok) return void skip(r, trigger, scheduledAt, `precheck failed: ${p.out || 'no output'}`, runId)
@@ -287,6 +304,10 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
         permissionMode: r.config.permission_mode,
         allowedTools: r.config.allowed_tools,
         chrome: r.config.chrome,
+        pool: claudeExtras ? r.config.account_pool : undefined,
+        mcp: claudeExtras ? r.config.mcp : undefined,
+        strictMcp: claudeExtras ? r.config.strict_mcp : undefined,
+        contextCard: claudeExtras ? r.config.context_card : undefined,
       },
     })
   } catch (e) {
@@ -314,6 +335,9 @@ export async function followUp(runId: string, text: string): Promise<{ runId: st
   const base: RunRequest = saved
     ? { ...saved, cwd: run.cwd ?? saved.cwd }
     : { profile: run.profile as RunRequest['profile'], prompt: '', cwd: run.cwd ?? undefined }
+  // Conversa no ranking de contas: a conta atual passou do limiar (aviso) -> o proximo turno ja vai na proxima conta
+  if (base.pool && base.accountId && !['ok', 'unknown'].includes(effectiveUsage(base.accountId).state))
+    base.accountId = pickAccount({ agent: 'claude', exclude: [base.accountId], allowWarning: effectiveUsage(base.accountId).state !== 'warning' })?.id ?? base.accountId
   // Connection da run original pode ter sido removida: falha cedo (antes do insert) em vez de cair no provedor pago.
   requireConnection(getSettings(), base.profile)
   const r = run.routine ? findRoutine(run.routine) : undefined

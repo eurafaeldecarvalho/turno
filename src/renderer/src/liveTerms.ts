@@ -6,6 +6,7 @@ export interface ParkedTerm {
   el: HTMLElement
   alive(): boolean
   dispose(): void
+  agent?: unknown // aba de agente escondida: parametros do broker (status, conta) para quando voltar
 }
 
 const states = new Map<string, LiveState>()
@@ -50,6 +51,7 @@ export function unpark(itemId: string): ParkedTerm | undefined {
 }
 
 export const isParked = (itemId: string): boolean => !!parked.get(itemId)?.alive()
+export const parkedAgent = (itemId: string): unknown => parked.get(itemId)?.agent
 
 // Encerra o terminal escondido (o item continua na pasta).
 export function killParked(itemId: string): void {

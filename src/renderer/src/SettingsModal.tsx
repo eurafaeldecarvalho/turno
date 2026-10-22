@@ -8,13 +8,25 @@ let open = false
 const subs = new Set<() => void>()
 const emit = (): void => subs.forEach((f) => f())
 
-export function openSettingsModal(): void {
+// section: id da secao para rolar ate ela (ex. 'agents', 'mcp')
+export function openSettingsModal(section?: string): void {
   open = true
   emit()
+  if (section) setTimeout(() => document.getElementById(`settings-${section}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 120)
+}
+export const closeSettingsModal = (): void => close()
+// Secao com edicao pendente (ex.: editor de MCP) pode segurar o fechamento e perguntar antes (X, fundo, Esc)
+let closeGuard: ((next: () => void) => void) | undefined
+export const setSettingsCloseGuard = (g?: (next: () => void) => void): void => {
+  closeGuard = g
 }
 function close(): void {
-  open = false
-  emit()
+  const doClose = (): void => {
+    open = false
+    emit()
+  }
+  if (closeGuard) closeGuard(doClose)
+  else doClose()
 }
 
 export function SettingsModalHost() {

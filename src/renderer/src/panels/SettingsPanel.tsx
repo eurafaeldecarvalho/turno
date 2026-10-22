@@ -1,4 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { AgentsSection } from './AgentsSection'
+import { McpSection } from './McpSection'
 import { openOnboarding, openWhatsNew } from '../Onboarding'
 import { toast } from '../Toast'
 import { askConfirm } from '../ConfirmDialog'
@@ -308,6 +310,8 @@ export function SettingsPanel() {
         </section>
 
         <ConnectionsSection />
+        <AgentsSection />
+        <McpSection />
 
         <section className="card">
           <h3>General</h3>

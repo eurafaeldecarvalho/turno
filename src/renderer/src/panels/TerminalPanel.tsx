@@ -8,7 +8,7 @@ import { SearchAddon } from '@xterm/addon-search'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { LigaturesAddon } from '@xterm/addon-ligatures'
-import { discarded, paramsOf, type TerminalParams } from '../layout'
+import { discarded, paramsOf, type AgentTermParams, type TerminalParams } from '../layout'
 import { onSettings, useSettings } from '../appearance'
 import { terminalOptions } from '../terminalOptions'
 import { itemExists, patchItem } from '../sidebarStore'
@@ -38,6 +38,7 @@ interface TermHandle {
   redraw(): void
   findActive: boolean // busca aberta: a selecao (achado atual) usa a cor forte do achado ativo
   applyTheme(): void // reaplica o tema atual (com a cor da busca, se aberta)
+  agent?: AgentTermParams
   lastOutput(): string // ultimas linhas do buffer (contexto p/ o NL->comando)
   runCommand(cmd: string): void // injeta um comando no pty
   dispose(): void
@@ -123,7 +124,11 @@ function createTerm(params: TerminalParams): TermHandle {
       offData()
       offSession()
       offExit()
+      offSwap()
+      offType()
+      clearTimeout(typeTimer)
       if (ptyId) window.turno.pty.kill(ptyId)
+      if (agent) void window.turno.agents.close(agent.key)
       term.dispose()
       el.remove()
     },
@@ -205,7 +210,11 @@ function createTerm(params: TerminalParams): TermHandle {
   }
   el.addEventListener('contextmenu', onContext)
 
+  const agent = params.agent
   let pending = params.initialCommand
+  let typeAfter: string | undefined // agente que nao aceita prompt no comando: digita quando a tela parar de mudar
+  let typeTimer: ReturnType<typeof setTimeout> | undefined
+  let commandSent = false
   const offData = window.turno.pty.onData((id, d) => {
     if (id !== ptyId) return
     term.write(d)
@@ -214,9 +223,18 @@ function createTerm(params: TerminalParams): TermHandle {
       const cmd = pending
       pending = undefined
       setTimeout(async () => {
-        if (/^\s*claude\b/.test(cmd)) await window.turno.routines.prepareClaude(cur.lastCwd ?? params.cwd, /--chrome\b/.test(cmd)).catch(() => {})
+        // aba de agente: o main ja preparou a pasta da conta (confiavel, Chrome)
+        if (!agent && /^\s*claude\b/.test(cmd)) await window.turno.routines.prepareClaude(cur.lastCwd ?? params.cwd, /--chrome\b/.test(cmd)).catch(() => {})
         window.turno.pty.write(id, cmd + '\r')
+        commandSent = true
       }, 150)
+    } else if (typeAfter && commandSent) {
+      clearTimeout(typeTimer)
+      typeTimer = setTimeout(() => {
+        if (!typeAfter || !ptyId) return
+        window.turno.pty.write(ptyId, typeAfter + '\r')
+        typeAfter = undefined
+      }, 2000)
     }
   })
   const offSession = window.turno.pty.onSession((id, s) => {
@@ -230,11 +248,12 @@ function createTerm(params: TerminalParams): TermHandle {
     term.write(`\r\n\x1b[90m[process exited: ${code}]\x1b[0m\r\n`)
     if (!binding && h.itemId) killParked(h.itemId) // morreu escondido: some o indicador
   })
-  window.turno.pty
-    .create({ shell: params.shell, cwd: params.cwd, profile: params.profile, cols: term.cols, rows: term.rows })
+  const spawn = (launchId?: string): void => void window.turno.pty
+    .create({ shell: params.shell, cwd: cur.lastCwd ?? params.cwd, profile: params.profile, cols: term.cols, rows: term.rows, launchId })
     .then((id) => {
       if (disposed) return window.turno.pty.kill(id)
       ptyId = id
+      dead = false
     })
     .catch((e) => {
       dead = true
@@ -243,6 +262,40 @@ function createTerm(params: TerminalParams): TermHandle {
       const why = /error code: 267/.test(raw) ? 'the working folder is not a folder' : /error code: 2|not found/i.test(raw) ? 'the shell program was not found' : raw
       term.write(`\x1b[31mCouldn't start the shell: ${why}.\x1b[0m\r\n\x1b[90mCheck Default shell in Settings${params.itemId ? ' and this item' + "'" + 's working folder' : ''}.\x1b[0m\r\n`)
     })
+  // Aba de agente: o main escolhe a conta (ranking), prepara a pasta isolada + hooks e devolve o comando.
+  const launchAgent = (): void => {
+    if (!agent) return spawn(params.launchId)
+    window.turno.agents
+      .prepare({ key: agent.key, agent: agent.agent, accountId: agent.accountId, cwd: cur.lastCwd ?? params.cwd, resumeSessionId: agent.resumeSessionId, prompt: agent.prompt, chrome: agent.chrome, folderId: agent.folderId, model: agent.model })
+      .then((l) => {
+        pending = l.command
+        typeAfter = l.typeAfter
+        spawn(l.launchId)
+      })
+      .catch((e) => {
+        dead = true
+        const msg = String((e as Error)?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+        term.write(`\x1b[31m${msg}\x1b[0m\r\n`)
+      })
+  }
+  launchAgent()
+  // Troca de conta/agente na mesma aba: mata o processo atual e sobe o novo no mesmo terminal.
+  const offSwap = agent
+    ? window.turno.agents.onSwap((l) => {
+        if (l.key !== agent.key) return
+        const old = ptyId
+        ptyId = undefined
+        if (old) window.turno.pty.kill(old)
+        clearTimeout(typeTimer)
+        commandSent = false
+        term.write(`\r\n\x1b[36m── ${l.banner ?? 'continued on another account'} ──\x1b[0m\r\n`)
+        pending = l.command
+        typeAfter = l.typeAfter
+        spawn(l.launchId)
+      })
+    : () => {}
+  // O broker pede para escrever no agente (ex.: a nota de passagem antes de trocar de agente)
+  const offType = agent ? window.turno.agents.onType((key, text) => void (key === agent.key && ptyId && window.turno.pty.write(ptyId, text + '\r'))) : () => {}
   const input = term.onData((d) => ptyId && window.turno.pty.write(ptyId, d))
   term.attachCustomKeyEventHandler((e) => {
     // Shift+Enter: nova linha no prompt do Claude Code interativo (mesmo valor que o Wave envia).
@@ -315,6 +368,22 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
     return false
   }
   const [hits, setHits] = useState<{ i: number; n: number } | null>(null)
+  // Aba de agente: guarda nos parametros a sessao nativa e a conta atual (reabrir retoma a mesma conversa)
+  useEffect(() => {
+    const a = params.agent
+    if (!a) return
+    return window.turno.agents.onSessions((list) => {
+      const s = list.find((x) => x.key === a.key)
+      if (!s) return
+      const p = (api.getParameters?.() as TerminalParams | undefined) ?? params
+      const cur = p.agent ?? a
+      if (s.sessionId === cur.resumeSessionId && s.accountId === cur.accountId && s.agent === cur.agent && !cur.prompt) return
+      // trocou de agente (handoff): a sessao antiga e de outro CLI, nunca reaproveita o id
+      const sameAgent = !cur.agent || s.agent === cur.agent
+      api.updateParameters({ ...p, agent: { ...cur, agent: s.agent, resumeSessionId: sameAgent ? (s.sessionId ?? cur.resumeSessionId) : s.sessionId, accountId: s.accountId, prompt: undefined } })
+      if (p.itemId && s.sessionId && s.agent === 'claude') patchItem(p.itemId, { agent: 'claude', sessionId: s.sessionId })
+    })
+  }, [])
   const [findLow, setFindLow] = useState(false) // barra embaixo: o resultado esta nas primeiras linhas
 
   const [ai, setAi] = useState<{ ask: string; loading?: boolean; result?: { command: string | null; explanation: string } } | null>(null)
@@ -396,7 +465,10 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
       h.bind(undefined)
       handle.current = undefined
       const discard = discarded.delete(api.id) // ids chat:<item> se repetem: consome a marca
-      if (itemId && itemExists(itemId) && h.alive() && !discard) park(itemId, h)
+      if (itemId && itemExists(itemId) && h.alive() && !discard) {
+        h.agent = ((api.getParameters?.() as TerminalParams | undefined) ?? params).agent // reabrir mantem o vinculo com o broker
+        park(itemId, h)
+      }
       else {
         h.dispose()
         if (itemId) setLive(itemId)

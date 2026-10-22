@@ -12,7 +12,7 @@ import { toast } from './Toast'
 import { unseenNotes, type ReleaseNotes } from './whatsNew'
 
 // ---------- abrir/fechar (introducao e novidades sao modais do mesmo modulo) ----------
-type View = { kind: 'tour' } | { kind: 'news'; notes: ReleaseNotes[]; version: string } | null
+type View = { kind: 'tour' } | { kind: 'news'; notes: ReleaseNotes[]; version: string; all?: boolean } | null
 let view: View = null
 const subs = new Set<() => void>()
 const emit = (): void => subs.forEach((f) => f())
@@ -24,7 +24,7 @@ export async function openWhatsNew(all = false): Promise<void> {
   const s = useSettingsSnapshot()
   const notes = all ? unseenNotes('0.0.0', version) : unseenNotes(s?.seenVersion ?? '', version)
   if (!notes.length) return void (all && toast('No release notes for this version.', 'info'))
-  view = { kind: 'news', notes, version }
+  view = { kind: 'news', notes, version, all }
   emit()
 }
 let lastSettings: Settings | undefined
@@ -71,6 +71,9 @@ export function OnboardingHost() {
   }
   const skip = async (): Promise<void> => {
     if (v?.kind !== 'tour') return close()
+    // ultimo passo (ja terminou) ou tour reaberto pelo Settings: fecha direto, sem "Skip the setup?"
+    if (step >= STEPS.length) return finishTour()
+    if (s?.onboardedAt) return close()
     const ok = await askConfirm({ title: 'Skip the setup?', message: 'Everything here is also in Settings, and you can reopen this tour from there.', confirmLabel: 'Skip' })
     if (ok) await finishTour()
   }
@@ -90,7 +93,7 @@ export function OnboardingHost() {
             <img src="./icon.png" alt="" width={36} height={36} />
             <div>
               <h2 id="news-title">What's new in Turno {v.version}</h2>
-              <p className="muted">Changes since you last opened it.</p>
+              <p className="muted">{v.all ? 'Release notes of the recent versions.' : 'Changes since you last opened it.'}</p>
             </div>
           </header>
           <div className="onb-body">

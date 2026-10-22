@@ -4,6 +4,7 @@ import { ListInput } from '../ListInput'
 import { Cron } from 'croner'
 import { NumInput } from '../NumInput'
 import type { IDockviewPanelProps } from 'dockview-react'
+import type { McpServerDef } from '../../../shared/types'
 import { WEEKDAYS, type Effort, type PermissionMode, type RoutineConfig, type Weekday } from '../../../shared/types'
 import { useStore, reloadRuns } from '../store'
 import { useSettings } from '../appearance'
@@ -132,6 +133,9 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   }
   // ROUTINE.md com campo invalido: o editor mostra o padrao no lugar; so grava depois que o usuario aceitar
   const [acceptFix, setAcceptFix] = useState(false)
+  // card "Accounts, MCP and context" numa conexao nao-Claude: depois de aparecer, fica ate fechar o editor
+  // (limpar o ultimo valor desmontava o card com o foco dentro e o teclado caia no body)
+  const cardSticky = useRef(false)
   const [createTried, setCreateTried] = useState(false) // apertou Create: mostra o erro da pasta mesmo sem ter mexido nela
   // Advanced fechado esconderia o aviso de um campo invalido do arquivo (fuso/cron): abre sozinho
   const advRef = useRef<HTMLDetailsElement>(null)
@@ -157,6 +161,8 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   }, [fileGone, existing])
   // YAML que nao parseia: o formulario mostra so valores padrao (nada do arquivo); salvar daqui apagaria tudo
   const fileUnreadable = /^(invalid YAML|ROUTINE\.md has no frontmatter)/.test(existing?.error ?? '')
+  // cada erro novo no arquivo (editado por fora depois de um "Replace and save") pede confirmacao de novo
+  useEffect(() => setAcceptFix(false), [existing?.error])
   const fileBroken = !!existing?.error && /:/.test(existing.error) && !acceptFix
   useEffect(() => {
     if (!dirty || !savedId || folderFocus || fileBroken || fileGone) return
@@ -199,6 +205,14 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
       return false
     }
   }, [cfg?.schedule.cron])
+  const [mcpServers, setMcpServers] = useState<McpServerDef[]>([])
+  useEffect(() => {
+    // servidores mudaram no Settings com o editor aberto: lista, avisos de segredo e de sandbox acompanham
+    const load = (): void => void window.turno.mcp.list().then(setMcpServers)
+    load()
+    window.addEventListener('turno:mcp-changed', load)
+    return () => window.removeEventListener('turno:mcp-changed', load)
+  }, [])
   if (!cfg) return <div className="panel-empty">Loading…</div>
 
   const isNew = !savedId
@@ -341,6 +355,12 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   }
   const conn = conns.find((c) => c.id === cfg.profile)
   const isClaude = conn ? conn.kind === 'claude' : true
+  // conexao nao-Claude ignora estes campos, mas valor invalido neles ainda trava a rotina: mostra o card para corrigir
+  const claudeOnlyErr = ['account_pool', 'mcp', 'strict_mcp', 'context_card'].some((k) => fileErr(k))
+  // valores guardados nesses campos tambem mantem o card visivel (para ver e limpar), mesmo sem erro
+  const claudeOnlySet = !!(cfg?.account_pool || cfg?.mcp?.length || cfg?.strict_mcp || cfg?.context_card)
+  const showClaudeCard = isClaude || claudeOnlyErr || claudeOnlySet || cardSticky.current
+  if (!isClaude && showClaudeCard) cardSticky.current = true
   const hasPolicy = (k: 'session_limit' | 'weekly_limit'): boolean => (cfg.abort ?? []).some((p) => p.kind === k)
   const togglePolicy = (k: 'session_limit' | 'weekly_limit'): void =>
     up({ abort: hasPolicy(k) ? (cfg.abort ?? []).filter((p) => p.kind !== k) : [...(cfg.abort ?? []), { kind: k }] })
@@ -439,10 +459,17 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
           <pre className="pre banner-pre">{existing!.error}</pre>
         </div>
       )}
-      {fileBroken && dirty && !fileUnreadable && (
+      {/* aparece desde a abertura (nao so na 1a edicao): o formulario nao pula para baixo debaixo do mouse */}
+      {fileBroken && !fileUnreadable && (
         <div className="banner banner-warn">
           ROUTINE.md has invalid values (marked below). Saving replaces them with the values shown here.{' '}
-          <button className="link" onClick={() => (document.querySelector<HTMLElement>('.editor .title-input')?.focus(), setAcceptFix(true), setTimeout(() => document.querySelector<HTMLElement>('.editor [aria-invalid="true"]')?.focus(), 900))}>Replace and save</button>
+          <button className="link" onClick={() => (document.querySelector<HTMLElement>('.editor .title-input')?.focus(), setAcceptFix(true), touch() /* grava ja, mesmo sem edicao pendente */, setTimeout(() => {
+            // sem campo marcado para onde ir, o foco sai do nome (a proxima tecla renomeava a rotina)
+            const bad = document.querySelector<HTMLElement>('.editor [aria-invalid="true"]')
+            const body = document.querySelector<HTMLElement>('.editor .editor-body')
+            if (bad) bad.focus()
+            else if (body && document.activeElement?.classList.contains('title-input')) (body.tabIndex = -1, body.focus({ preventScroll: true }))
+          }, 900))}>Replace and save</button>
         </div>
       )}
       {((msg && !(msg.tone === 'err' && msg.text.split('; ').every((p) => /cron|time ?zone|^folder|^name/i.test(p)))) || (existing?.error && !fileUnreadable)) && !(fileUnreadable && msg?.text.startsWith("ROUTINE.md can't be read")) && (
@@ -643,6 +670,70 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
           </details>
         </section>
 
+        {showClaudeCard && (
+          <section className="card">
+            <h3>Accounts, MCP and context</h3>
+            {!isClaude && (
+              <small className="tone-warn">
+                {claudeOnlyErr
+                  ? "This connection doesn't use these settings, but ROUTINE.md has invalid values here: fix or clear them so the routine can run."
+                  : "This connection doesn't use these settings: they are ignored. Clear them if you don't need them."}
+              </small>
+            )}
+            <label className="field toggle-field">
+              <span>Use the account ranking: run on the best Claude account and continue on the next one at the limit</span>
+              <Switch checked={!!cfg.account_pool} onChange={(v) => up({ account_pool: v || undefined })} />
+            </label>
+            {fileErr('account_pool') && <small className="tone-warn">Invalid in ROUTINE.md (use true or false); kept off.</small>}
+            {cfg.sandbox !== 'none' && (cfg.account_pool || mcpServers.some((m) => cfg.mcp?.includes(m.id))) && (
+              <small className="tone-warn">This routine uses a sandbox ({cfg.sandbox}): the account ranking and MCP servers don't work there, so scheduled runs will be skipped. Turn the sandbox off in Limits & safety, or turn these off.</small>
+            )}
+            <fieldset className="field" id="routine-mcp" tabIndex={-1}>
+              <legend>MCP servers for this routine</legend>
+              {mcpServers.map((m) => (
+                <label key={m.id} className="check-row">
+                  <input type="checkbox" checked={(cfg.mcp ?? []).includes(m.id)} onChange={(e) => up({ mcp: e.target.checked ? [...(cfg.mcp ?? []), m.id] : (cfg.mcp ?? []).filter((x) => x !== m.id) })} />
+                  <span>{m.name}</span>
+                  <small className="muted mono">{m.url ?? m.command}</small>
+                </label>
+              ))}
+              {mcpServers
+                .filter((m) => (cfg.mcp ?? []).includes(m.id) && (m.secrets ?? []).some((n) => !m.secretSet?.[n]))
+                .map((m) => (
+                  <small key={`sec-${m.id}`} className="tone-warn">"{m.name}" has no value for its secret yet: scheduled runs will be skipped until you set it in Settings › MCP.</small>
+                ))}
+              {(cfg.mcp ?? []).filter((id) => !mcpServers.some((m) => m.id === id)).map((id) => (
+                <small key={id} className="tone-warn">
+                  A removed MCP server (id "{id}") is still listed in this routine: it is ignored.{' '}
+                  <button
+                    className="link"
+                    onClick={() => {
+                      up({ mcp: (cfg.mcp ?? []).filter((x) => x !== id) })
+                      // o link some junto com o aviso: o foco fica no grupo de servidores, nao cai no body
+                      setTimeout(() => document.getElementById('routine-mcp')?.focus())
+                    }}
+                  >
+                    Remove it
+                  </button>
+                </small>
+              ))}
+              {!mcpServers.length && <small className="muted">No servers in Settings › MCP yet.</small>}
+              {fileErr('mcp') && <small className="tone-warn">Invalid in ROUTINE.md (use a list of server ids); none selected.</small>}
+            </fieldset>
+            <label className="field toggle-field">
+              <span>Only these servers (ignore your own MCP config and the repo's .mcp.json)</span>
+              <Switch checked={!!cfg.strict_mcp} onChange={(v) => up({ strict_mcp: v || undefined })} />
+            </label>
+            {fileErr('strict_mcp') && <small className="tone-warn">Invalid in ROUTINE.md (use true or false); kept off.</small>}
+            <label className="field">
+              <span>Context card (5 to 15 lines the agent can't find out alone)</span>
+              <textarea rows={4} maxLength={2000} value={cfg.context_card ?? ''} aria-invalid={fileErr('context_card') || undefined} onChange={(e) => up({ context_card: e.target.value || undefined })} placeholder={'This repo = Sentry project "api-web".\nNever push to main.'} />
+              {fileErr('context_card') && <small className="tone-warn">Invalid in ROUTINE.md (use text, up to 2000 characters); left empty.</small>}
+              {(cfg.context_card ?? '').trim().split(/\r?\n/).length > 15 && <small className="tone-warn">Only the first 15 lines are sent.</small>}
+            </label>
+          </section>
+        )}
+
         <section className="card">
           <h3>Permissions</h3>
           {fileErr('permission_mode') && <small className="tone-warn">The permission mode in ROUTINE.md is invalid; showing the default. Pick one below.</small>}
@@ -776,6 +867,9 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
                 <option value="wsl">wsl</option>
               </select>
               <small className="muted">docker/wsl need a sandbox image with the <code>claude</code> CLI installed.</small>
+              {isClaude && cfg.sandbox !== 'none' && (cfg.account_pool || mcpServers.some((m) => cfg.mcp?.includes(m.id))) && (
+                <small className="tone-warn">The account ranking and MCP servers don't work inside a sandbox: scheduled runs will be skipped until you turn one of them off.</small>
+              )}
             </label>
             <label className="field">
               <span>Run on file change (path)</span>
