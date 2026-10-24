@@ -137,7 +137,7 @@ Prompt. Be explicit: nobody is watching to answer questions.
 
 ## Workspace: terminals, folders, themes
 
-![Turno themes and terminal settings](screenshots/themes.png)
+![Turno's color theme picker in Settings](screenshots/themes.png)
 
 - **Terminals:** xterm.js 6 with WebGL, search (Ctrl+F), clickable links, Unicode 11 and bracketed paste. Ctrl+Shift+C/V copy and paste, right click copies or pastes, and Shift+Enter inserts a newline in the Claude Code prompt.
 - **Splits:** drag a tab onto another pane and pick a cell on the drop compass, use the split buttons in each pane header, or press Alt+Shift+= / Alt+Shift+-. The layout is saved between launches.
