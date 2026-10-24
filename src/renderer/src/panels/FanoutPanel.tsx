@@ -79,6 +79,7 @@ export function FanoutPanel(_props: IDockviewPanelProps) {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           autoFocus
+          onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)} // rascunho restaurado: continua digitando no fim
           placeholder="Prompt to run across the selected connections…"
         />
         <button className="btn primary" disabled={!prompt.trim() || !picked.length || starting} onClick={() => void start()}>

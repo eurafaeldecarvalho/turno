@@ -3,6 +3,9 @@ import type { McpServerDef, McpStatusRow } from '../../../shared/types'
 import { askConfirm } from '../ConfirmDialog'
 import { toast } from '../Toast'
 import { setSettingsCloseGuard } from '../SettingsModal'
+import { getStore } from '../store'
+import { getSidebarState } from '../sidebarStore'
+import { plural } from '../fmt'
 import { Switch } from './RoutineEditor'
 
 const errText = (e: unknown): string => String((e as Error)?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
@@ -68,6 +71,8 @@ function Editor({ init, hint, onDone, guard }: { init: McpServerDef; hint?: stri
   const [secretNames, setSecretNames] = useState((init.secrets ?? []).join(', '))
   const [values, setValues] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
+  const [nameErr, setNameErr] = useState('')
+  const nameRef = useRef<HTMLInputElement>(null)
   // sem repetir, nem so por maiuscula/minuscula (as duas virariam a mesma variavel de ambiente)
   const names = secretNames
     .split(',')
@@ -88,7 +93,34 @@ function Editor({ init, hint, onDone, guard }: { init: McpServerDef; hint?: stri
   }
   guard.current = leave
   const cancel = (): void => leave(onDone)
+  // mesmas regras do main, conferidas antes: erro no proprio campo e foco nele (como em Connections)
+  const [fieldErr, setFieldErr] = useState<{ field: 'url' | 'command' | 'headers' | 'env'; msg: string } | null>(null)
+  const urlRef = useRef<HTMLInputElement>(null)
+  const cmdRef = useRef<HTMLInputElement>(null)
+  const headersRef = useRef<HTMLTextAreaElement>(null)
+  const envRef = useRef<HTMLTextAreaElement>(null)
   const save = async (): Promise<void> => {
+    // linha sem "NOME: valor" (ou com nome invalido) seria salva como nome estranho e valor vazio
+    const badLine = (t: string, re: RegExp): string | undefined =>
+      t.split('\n').map((l) => l.trim()).filter(Boolean).find((l) => { const i = l.search(/[:=]/); return i <= 0 || !re.test(l.slice(0, i).trim()) })
+    const badH = d.transport === 'http' ? badLine(headers, /^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/) : undefined
+    if (badH) {
+      setFieldErr({ field: 'headers', msg: `"${badH.slice(0, 60)}" is not "Name: value".` })
+      return void headersRef.current?.focus()
+    }
+    const badE = d.transport === 'stdio' ? badLine(env, /^[A-Za-z_][A-Za-z0-9_]*$/) : undefined
+    if (badE) {
+      setFieldErr({ field: 'env', msg: `"${badE.slice(0, 60)}" is not "NAME: value" (letters, digits and _ in the name).` })
+      return void envRef.current?.focus()
+    }
+    if (d.transport === 'http' && !/^https?:\/\//i.test((d.url ?? '').trim())) {
+      setFieldErr({ field: 'url', msg: 'URL must start with http:// or https://' })
+      return void urlRef.current?.focus()
+    }
+    if (d.transport === 'stdio' && !(d.command ?? '').trim()) {
+      setFieldErr({ field: 'command', msg: 'Type the command that starts the server (e.g. npx).' })
+      return void cmdRef.current?.focus()
+    }
     setBusy(true)
     try {
       const saved = await window.turno.mcp.save(
@@ -100,7 +132,12 @@ function Editor({ init, hint, onDone, guard }: { init: McpServerDef; hint?: stri
       if (saved.name !== d.name.trim()) toast(`"${d.name.trim()}" was already taken, so this server was saved as "${saved.name}".`, 'info')
       onDone()
     } catch (e) {
-      toast(errText(e), 'err')
+      const msg = errText(e)
+      // nome repetido: erro no proprio campo e foco nele (como em Connections); o resto continua como aviso
+      if (/already named/i.test(msg)) {
+        setNameErr(msg)
+        nameRef.current?.focus()
+      } else toast(msg, 'err')
     } finally {
       setBusy(false)
     }
@@ -110,7 +147,11 @@ function Editor({ init, hint, onDone, guard }: { init: McpServerDef; hint?: stri
     <div className="mcp-editor" data-esc-local onKeyDown={(e) => e.key === 'Escape' && (e.stopPropagation(), cancel())}>
       {hint && <p className="muted small">{hint}</p>}
       <div className="grid2">
-        <label className="field"><span>Name</span><input autoFocus value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} /></label>
+        <label className="field">
+          <span>Name</span>
+          <input ref={nameRef} autoFocus value={d.name} aria-invalid={nameErr ? true : undefined} aria-describedby={nameErr ? 'mcp-name-err' : undefined} onChange={(e) => (setD({ ...d, name: e.target.value }), setNameErr(''))} />
+          {nameErr && <small id="mcp-name-err" className="tone-err">{nameErr}</small>}
+        </label>
         <label className="field">
           <span>Transport</span>
           <select value={d.transport} onChange={(e) => setD({ ...d, transport: e.target.value as McpServerDef['transport'] })}>
@@ -121,20 +162,36 @@ function Editor({ init, hint, onDone, guard }: { init: McpServerDef; hint?: stri
       </div>
       {d.transport === 'http' ? (
         <>
-          <label className="field"><span>URL</span><input className="mono" value={d.url ?? ''} onChange={(e) => setD({ ...d, url: e.target.value })} placeholder="https://…/mcp" /></label>
-          <label className="field"><span>Headers (one per line, Name: value; use {'${SECRET}'} for secrets)</span><textarea className="mono" rows={2} value={headers} onChange={(e) => setHeaders(e.target.value)} /></label>
+          <label className="field">
+            <span>URL</span>
+            <input ref={urlRef} className="mono" value={d.url ?? ''} aria-invalid={fieldErr?.field === 'url' || undefined} aria-describedby={fieldErr?.field === 'url' ? 'mcp-url-err' : undefined} onChange={(e) => (setD({ ...d, url: e.target.value }), setFieldErr(null))} placeholder="https://…/mcp" />
+            {fieldErr?.field === 'url' && <small id="mcp-url-err" className="tone-err">{fieldErr.msg}</small>}
+          </label>
+          <label className="field">
+            <span>Headers (one per line, Name: value; use {'${SECRET}'} for secrets)</span>
+            <textarea ref={headersRef} className="mono" rows={2} value={headers} aria-invalid={fieldErr?.field === 'headers' || undefined} aria-describedby={fieldErr?.field === 'headers' ? 'mcp-headers-err' : undefined} onChange={(e) => (setHeaders(e.target.value), setFieldErr(null))} />
+            {fieldErr?.field === 'headers' && <small id="mcp-headers-err" className="tone-err">{fieldErr.msg}</small>}
+          </label>
         </>
       ) : (
         <>
           <div className="grid2">
-            <label className="field"><span>Command</span><input className="mono" value={d.command ?? ''} onChange={(e) => setD({ ...d, command: e.target.value })} /></label>
+            <label className="field">
+              <span>Command</span>
+              <input ref={cmdRef} className="mono" value={d.command ?? ''} aria-invalid={fieldErr?.field === 'command' || undefined} aria-describedby={fieldErr?.field === 'command' ? 'mcp-cmd-err' : undefined} onChange={(e) => (setD({ ...d, command: e.target.value }), setFieldErr(null))} />
+              {fieldErr?.field === 'command' && <small id="mcp-cmd-err" className="tone-err">{fieldErr.msg}</small>}
+            </label>
             <label className="field">
               <span>Arguments (quote paths with spaces)</span>
               <input className="mono" value={args} aria-invalid={!parsedArgs || undefined} onChange={(e) => setArgs(e.target.value)} />
               {!parsedArgs && <small className="tone-err">A quote is not closed.</small>}
             </label>
           </div>
-          <label className="field"><span>Environment (one per line, NAME: value)</span><textarea className="mono" rows={2} value={env} onChange={(e) => setEnv(e.target.value)} /></label>
+          <label className="field">
+            <span>Environment (one per line, NAME: value)</span>
+            <textarea ref={envRef} className="mono" rows={2} value={env} aria-invalid={fieldErr?.field === 'env' || undefined} aria-describedby={fieldErr?.field === 'env' ? 'mcp-env-err' : undefined} onChange={(e) => (setEnv(e.target.value), setFieldErr(null))} />
+            {fieldErr?.field === 'env' && <small id="mcp-env-err" className="tone-err">{fieldErr.msg}</small>}
+          </label>
         </>
       )}
       <label className="field"><span>Secret names (comma separated). Values stay in Windows' encrypted store and reach the agent session as environment variables, so commands it runs can read them: prefer read-only tokens.</span><input className="mono" value={secretNames} onChange={(e) => setSecretNames(e.target.value)} placeholder="GITHUB_TOKEN" /></label>
@@ -161,7 +218,7 @@ function Editor({ init, hint, onDone, guard }: { init: McpServerDef; hint?: stri
   )
 }
 
-// Settings › MCP: um lugar so para os servidores. O Turno os injeta por pasta/rotina (nunca edita os configs dos agentes).
+// Settings › MCP servers: um lugar so para os servidores. O Turno os injeta por pasta/rotina (nunca edita os configs dos agentes).
 export function McpSection() {
   const [list, setList] = useState<McpServerDef[]>([])
   const [status, setStatus] = useState<McpStatusRow[]>([])
@@ -192,12 +249,17 @@ export function McpSection() {
     setPreset('')
   }
   const remove = async (s: McpServerDef): Promise<void> => {
-    if (!(await askConfirm({ title: 'Remove MCP server', message: `Remove "${s.name}" and its saved secrets? Folders and routines that use it stop getting it.`, confirmLabel: 'Remove' }))) return
+    // quantas rotinas e pastas usam, como no Remove de Connections
+    const nRoutines = getStore().routines.filter((r) => r.config.mcp?.includes(s.id)).length
+    const nFolders = getSidebarState().folders.filter((f) => f.mcp?.includes(s.id)).length
+    const using = [nRoutines && plural(nRoutines, 'routine'), nFolders && plural(nFolders, 'folder')].filter(Boolean).join(' and ')
+    if (!(await askConfirm({ title: 'Remove MCP server', message: `Remove "${s.name}" and its saved secrets? ${using ? `${using} ${nRoutines + nFolders === 1 ? 'uses' : 'use'} it and will stop getting it.` : 'No folder or routine uses it.'}`, confirmLabel: 'Remove' }))) return
     await window.turno.mcp.remove(s.id).catch((e) => toast(errText(e), 'err'))
     if (edit?.def.id === s.id) setEdit(null) // o editor aberto era deste servidor: Save o traria de volta
     window.dispatchEvent(new Event('turno:mcp-changed'))
     reload()
-    document.getElementById('mcp-add')?.focus() // a linha removida tinha o foco
+    // a linha removida tinha o foco: volta para "Add a server…" ou, com o editor aberto, para ele
+    requestAnimationFrame(() => (document.getElementById('mcp-add') ?? document.querySelector<HTMLElement>('.mcp-editor input'))?.focus())
   }
   const outside = status.filter((r) => r.source !== 'turno')
   return (

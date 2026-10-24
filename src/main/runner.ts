@@ -256,6 +256,8 @@ export function startRun(o: StartOptions): string {
   // Ranking de contas (botao Agent): escolhe a melhor conta Claude com cota; a conversa e compartilhada entre contas.
   // Sandbox (WSL/Docker) nao enxerga a pasta da conta nem o --mcp-config do host: recusa em vez de rodar na conta errada.
   // (so servidores que ainda existem no hub contam: id removido ja e ignorado)
+  if ((o.sandbox ?? 'none') !== 'none' && conn.via === 'translate')
+    throw new Error(`${conn.name} goes through Turno's local translator, which a sandbox can't reach; turn the sandbox off for this routine`)
   if ((o.sandbox ?? 'none') !== 'none' && (req.pool || req.accountId || listMcp().some((m) => req.mcp?.includes(m.id))))
     throw new Error("account pool and MCP servers don't work with a sandbox; turn the sandbox off for this routine")
   if (req.pool && conn.kind === 'claude') {

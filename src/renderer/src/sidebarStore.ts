@@ -9,6 +9,8 @@ import { isParked, killParked, parkedAgent, setLive } from './liveTerms'
 let state: SidebarState = { collapsed: {}, folders: [] }
 const subs = new Set<() => void>()
 
+export const getSidebarState = (): SidebarState => state
+
 export function useSidebar(): SidebarState {
   return useSyncExternalStore(
     (cb) => (subs.add(cb), () => subs.delete(cb)),
@@ -40,8 +42,9 @@ export async function initSidebar(): Promise<void> {
 
 export const uid = (): string => crypto.randomUUID()
 
-export const toggleSection = (key: string): void =>
-  commit({ ...state, collapsed: { ...state.collapsed, [key]: !state.collapsed[key] } })
+// closedNow: estado que a tela mostra (secao fechada por padrao, como Open tabs, ainda sem valor salvo)
+export const toggleSection = (key: string, closedNow?: boolean): void =>
+  commit({ ...state, collapsed: { ...state.collapsed, [key]: !(closedNow ?? state.collapsed[key]) } })
 
 export const addFolder = (name: string): string => {
   const id = uid()

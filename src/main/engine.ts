@@ -250,7 +250,7 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
 
   // Connection inexistente (removida/typo no frontmatter): PULA com motivo. Nunca cai no provedor pago em silencio.
   const conn = findConnection(getSettings(), r.config.profile)
-  if (!conn) return void skip(r, trigger, scheduledAt, `connection "${r.config.profile}" nao existe (verifique em Conexoes)`, runId)
+  if (!conn) return void skip(r, trigger, scheduledAt, `connection "${r.config.profile}" doesn't exist anymore; pick one in the routine's Configure`, runId)
   if (conn.bootCommand && !(await ensureProvider(conn)))
     return void skip(r, trigger, scheduledAt, `${conn.name} is not running (tried to start it, it did not come up)`, runId)
   // sandbox (wsl/docker) nao enxerga a pasta da conta nem o --mcp-config do host: pula com o motivo em vez de falhar

@@ -10,6 +10,8 @@ const subs = new Set<() => void>()
 let preview: Settings['theme'] | undefined
 const effective = (): Settings | undefined => settings && (preview ? { ...settings, theme: preview } : settings)
 
+export const getSettingsSnapshot = (): Settings | undefined => settings
+
 export function useSettings(): Settings | undefined {
   return useSyncExternalStore(
     (cb) => (subs.add(cb), () => subs.delete(cb)),

@@ -44,13 +44,13 @@ export function FolderAgentDialog({ folder, onClose }: { folder: SidebarFolder; 
           ))}
           {loaded && picked.some((id) => !servers.some((s) => s.id === id)) && (
             <small className="tone-warn">
-              {picked.filter((id) => !servers.some((s) => s.id === id)).map((id) => `"${id}"`).join(', ')} {picked.filter((id) => !servers.some((s) => s.id === id)).length > 1 ? 'were' : 'was'} removed from Settings › MCP: not sent, and dropped when you save.
+              {picked.filter((id) => !servers.some((s) => s.id === id)).map((id) => `"${id}"`).join(', ')} {picked.filter((id) => !servers.some((s) => s.id === id)).length > 1 ? 'were' : 'was'} removed from Settings › MCP servers: not sent, and dropped when you save.
             </small>
           )}
           {servers
             .filter((s) => picked.includes(s.id) && (s.secrets ?? []).some((n) => !s.secretSet?.[n]))
             .map((s) => (
-              <small key={`sec-${s.id}`} className="tone-warn">"{s.name}" has no value for its secret yet: set it in Settings › MCP.</small>
+              <small key={`sec-${s.id}`} className="tone-warn">"{s.name}" has no value for its secret yet.{' '}<button className="link" onClick={() => openSettingsModal('mcp')}>Set it in MCP servers</button></small>
             ))}
           {!servers.length && (
             <small className="muted">

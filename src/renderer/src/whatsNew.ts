@@ -7,6 +7,16 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.0',
+    items: [
+      { title: 'One New menu, clearer sidebar', text: 'The "New agent" button opens everything you can create: agent, chat, terminal, routine, ad hoc run, fan-out, folder. The + of every pane has the same items (opening next to that pane). Your folders live in one Folders group.' },
+      { title: 'Settings in categories, with search', text: 'General, Appearance, Terminal, Notifications, Shortcuts, Agents & accounts, Connections, MCP servers, Integrations, Routines. Press Ctrl+F inside Settings to search.' },
+      { title: 'Command palette', text: 'Ctrl+Shift+P (or Ctrl+K outside a terminal) finds any action, tab, routine or setting.' },
+      { title: '196 model providers', text: 'Settings › Connections › Add from catalog: Groq, OpenRouter, Mistral, DeepSeek, LM Studio, vLLM and more (catalog from OmniRoute). OpenAI-format providers work with Claude Code through a built-in translator.' },
+      { title: 'Smarter account switching', text: 'Pick which account goes first (list order, most quota left, resets soonest), and use an account again right away with "Use it now".' },
+    ],
+  },
+  {
     version: '0.8.0',
     items: [
       { title: 'Agent button with ranked accounts', text: 'Works with 40+ agent CLIs, and you can add several accounts of Claude Code, Codex, Gemini, Copilot, Kiro, OpenCode and Grok. Rank them, and the Agent button opens the best one with quota left. Near the limit, the tab moves to the next account without losing the conversation.' },

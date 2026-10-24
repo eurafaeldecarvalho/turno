@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { cleanPath, folderOk, isAbsPath } from '../paths'
+import { openSettingsModal } from '../SettingsModal'
 import type { IDockviewPanelProps } from 'dockview-react'
 import type { PermissionMode } from '../../../shared/types'
 import { Conversation } from './RunViewer'
@@ -96,7 +97,12 @@ export function AgentChatPanel({ params, api }: IDockviewPanelProps<AgentChatPar
           Runs Claude Code in a structured chat on your best Claude account{best ? ` (now: ${best.label}${usageText(agents.usage[best.id]) ? `, ${usageText(agents.usage[best.id])}` : ''})` : ''}. When an account reaches its limit, the conversation continues on the next one.
         </p>
         {!claudeConn && <div className="banner banner-err">There is no Claude connection in Settings › Connections.</div>}
-        {claudeConn && why && <div className="banner banner-warn">{why}</div>}
+        {claudeConn && why && (
+          <div className="banner banner-warn">
+            {why}{' '}
+            {/Settings › Agents/.test(why) && <button className="link" onClick={() => openSettingsModal('agents')}>Open Agents & accounts</button>}
+          </div>
+        )}
         <div className="adhoc-grid">
           <label className="field">
             <span>Folder</span>
@@ -125,6 +131,8 @@ export function AgentChatPanel({ params, api }: IDockviewPanelProps<AgentChatPar
           rows={5}
           value={prompt}
           autoFocus
+          // rascunho restaurado: o cursor vai para o fim (senao o texto novo entrava antes dele)
+          onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="What should the agent do? (Ctrl+Enter starts)"
           onKeyDown={(e) => e.key === 'Enter' && (e.ctrlKey || e.metaKey) && void start()}

@@ -86,6 +86,9 @@ export const IconLink = (p: P) => (
 export const IconMore = (p: P) => (
   <svg {...base(p)}><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg>
 )
+export const IconHelp = (p: P) => (
+  <svg {...base(p)}><circle cx="12" cy="12" r="9" /><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6" /><path d="M12 17h.01" /></svg>
+)
 export const IconCoffee = (p: P) => (
   <svg {...base(p)}><path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z" /><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17" /><path d="M8 2v3M12 2v3" /></svg>
 )

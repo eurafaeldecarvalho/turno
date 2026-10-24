@@ -108,6 +108,7 @@ export function AdhocPanel({ params }: IDockviewPanelProps<AdhocParams>) {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           autoFocus
+          onFocus={(e) => e.currentTarget.setSelectionRange(e.currentTarget.value.length, e.currentTarget.value.length)} // rascunho restaurado: continua digitando no fim
           placeholder="Prompt… (Ctrl+Enter runs)"
           onKeyDown={(e) => e.key === 'Enter' && e.ctrlKey && prompt.trim() && void start()}
         />

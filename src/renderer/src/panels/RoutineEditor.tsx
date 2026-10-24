@@ -11,6 +11,7 @@ import { useSettings } from '../appearance'
 import { askConfirm } from '../ConfirmDialog'
 import { ModelSelect } from '../ModelSelect'
 import { dockApi, setRoutineEditGuard, openHistory, openRoutine } from '../layout'
+import { openSettingsModal } from '../SettingsModal'
 import { scheduleSummary, when } from '../fmt'
 import { IconFolder, IconHistory, IconPlay, IconPlus, IconClose } from '../icons'
 
@@ -520,6 +521,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
               </button>
             ))}
           </div>
+          {!conn && <small className="tone-warn">The connection this routine used was removed (saved in ROUTINE.md as "{cfg.profile}"), so scheduled runs are skipped. Pick another one above.</small>}
           <div className="stack">
             <label className="field">
               <span>Model</span>
@@ -700,11 +702,22 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
               {mcpServers
                 .filter((m) => (cfg.mcp ?? []).includes(m.id) && (m.secrets ?? []).some((n) => !m.secretSet?.[n]))
                 .map((m) => (
-                  <small key={`sec-${m.id}`} className="tone-warn">"{m.name}" has no value for its secret yet: scheduled runs will be skipped until you set it in Settings › MCP.</small>
+                  <small key={`sec-${m.id}`} className="tone-warn">"{m.name}" has no value for its secret yet: scheduled runs will be skipped until you set it.{' '}<button className="link" onClick={() => openSettingsModal('mcp')}>Open MCP servers</button></small>
                 ))}
               {(cfg.mcp ?? []).filter((id) => !mcpServers.some((m) => m.id === id)).map((id) => (
                 <small key={id} className="tone-warn">
                   A removed MCP server (id "{id}") is still listed in this routine: it is ignored.{' '}
+                  {(() => {
+                    // servidor novo com o mesmo nome (id ganhou numero): oferece trocar pelo novo
+                    const base = id.replace(/-\d+$/, '')
+                    const newer = mcpServers.find((m) => m.id !== id && m.id.replace(/-\d+$/, '') === base && !(cfg.mcp ?? []).includes(m.id))
+                    return newer ? (
+                      <>
+                        <button className="link" onClick={() => (up({ mcp: (cfg.mcp ?? []).map((x) => (x === id ? newer.id : x)) }), setTimeout(() => document.getElementById('routine-mcp')?.focus()))}>Use the new "{newer.name}" instead</button>
+                        {' · '}
+                      </>
+                    ) : null
+                  })()}
                   <button
                     className="link"
                     onClick={() => {
@@ -717,7 +730,12 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
                   </button>
                 </small>
               ))}
-              {!mcpServers.length && <small className="muted">No servers in Settings › MCP yet.</small>}
+              {!mcpServers.length && (
+                <small className="muted">
+                  No MCP servers yet.{' '}
+                  <button className="link" onClick={() => openSettingsModal('mcp')}>Add one in Settings</button>
+                </small>
+              )}
               {fileErr('mcp') && <small className="tone-warn">Invalid in ROUTINE.md (use a list of server ids); none selected.</small>}
             </fieldset>
             <label className="field toggle-field">

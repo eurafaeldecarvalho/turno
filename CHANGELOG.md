@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.0 (2026-10-23)
+
+### Navigation
+- Sidebar: a "New agent" split button opens the New menu (agent, chat, terminal, Claude Code on each connection, routine, ad hoc run, fan-out, folder, and each account). The + of every dock pane has the same items.
+- Destinations Tasks and Runs; user folders grouped under Folders; Open tabs collapsed by default; Help menu in the footer (palette, shortcuts, tour, What's new, About).
+- Settings is a two-pane window with categories (App, AI, Work, About) and search (Ctrl+F). Keep awake and window opacity moved into Settings; Jira also lives in Settings › Integrations.
+- Command palette: Ctrl+Shift+P anywhere, Ctrl+K outside a terminal. New shortcuts: Ctrl+Shift+N (new agent), Ctrl+Shift+R (ad hoc run), Ctrl+Shift+J (Tasks).
+- A render error shows a recovery panel instead of a blank window.
+
+### Providers (from OmniRoute, MIT)
+- Settings › Connections › Add from catalog: 196 API-key, free and local providers, with search and filters.
+- Built-in local translator so Claude Code can use OpenAI-format providers: tools, images and streaming are translated; the provider key stays in Turno (the agent only gets a local address). Retries with max_completion_tokens when a provider rejects max_tokens; long local generations allowed (30 min).
+- Anthropic's own API key is sent the way the API expects (x-api-key).
+
+### Accounts
+- Which account goes first: list order, most quota left, or the one that resets soonest.
+- Limit messages of non-Claude CLIs are classified (limit, credits, suspended) and their reset time is read (at most 5 hours); "Use it now" clears a limit by hand.
+
 ## 0.8.0 (2026-10-22)
 
 ### Agents and accounts

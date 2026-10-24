@@ -1,4 +1,5 @@
 import type { Connection } from '../shared/types'
+import { translatorBase, translatorInfo } from './translator'
 
 // Provedores semeados por padrao. Viram dados editaveis em settings.json; nada aqui e hardcode de codigo.
 // 'claude-max' = login do CLI. 'qwen-local' = preset de endpoint Ollama (editavel/removivel pelo usuario).
@@ -21,10 +22,14 @@ export const DEFAULT_CONNECTIONS: Connection[] = [
 // claude = sem env (auth e do proprio CLI). endpoint = aponta o CLI para o baseUrl/model/token.
 export function resolveProviderEnv(conn: Connection, token?: string): Record<string, string> {
   if (conn.kind === 'claude') return { ...(conn.extraEnv ?? {}) }
+  // via tradutor: o CLI recebe so o endereco local e o token da sessao do tradutor; a chave do provedor fica no main
+  const tr = conn.via === 'translate'
+  // a API da propria Anthropic so aceita a chave em x-api-key (ANTHROPIC_API_KEY); compativeis (z.ai etc.) usam Bearer
+  const apiKeyStyle = !tr && (/^https?:\/\/api\.anthropic\.com(\/|:|$)/i.test(conn.baseUrl ?? '') || /^sk-ant-api/.test(token ?? conn.token ?? ''))
   const env: Record<string, string> = {
-    ANTHROPIC_BASE_URL: conn.baseUrl ?? '',
-    ANTHROPIC_AUTH_TOKEN: token ?? conn.token ?? '',
-    ANTHROPIC_API_KEY: '',
+    ANTHROPIC_BASE_URL: tr ? translatorBase(conn.id) : (conn.baseUrl ?? ''),
+    ANTHROPIC_AUTH_TOKEN: tr || apiKeyStyle ? (tr ? translatorInfo().token : '') : (token ?? conn.token ?? ''),
+    ANTHROPIC_API_KEY: apiKeyStyle ? (token ?? conn.token ?? '') : '',
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
     API_TIMEOUT_MS: '1800000',
   }
@@ -61,6 +66,6 @@ export function getConnection(settings: { connections?: Connection[] }, id: stri
 // Usado por startRun, entao cobre runRoutine, followUp E adhoc de uma vez. Dinheiro > conveniencia.
 export function requireConnection(settings: { connections?: Connection[] }, id: string): Connection {
   const c = findConnection(settings, id)
-  if (!c) throw new Error(`connection "${id}" nao existe (verifique em Conexoes)`)
+  if (!c) throw new Error(`connection "${id}" doesn't exist anymore; pick one in Settings › Connections or in the routine`)
   return c
 }

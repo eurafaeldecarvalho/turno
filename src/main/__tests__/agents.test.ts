@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { AGENTS, agentCommand, agentDef, isWallText, quoteArg, unavailableText } from '../../shared/agents'
+import { AGENTS, agentCommand, agentDef, isWallText, quoteArg, unavailableText, wallKind, parseReset } from '../../shared/agents'
 
 let dir = ''
 vi.mock('electron', () => ({ app: { getPath: () => dir } }))
@@ -53,6 +53,27 @@ describe('texto de "nenhuma conta disponivel" (o mesmo no botao, no Chat e no ma
   })
 })
 
+describe('tipo de parede e horario de volta (regras do OmniRoute)', () => {
+  it('separa limite, credito e conta suspensa', () => {
+    expect(wallKind("You've hit your usage limit. Try again at 3:05 PM.")).toBe('limit')
+    expect(wallKind('Error: insufficient credits for this request')).toBe('credits')
+    expect(wallKind('■ Your account has been suspended. Contact support.')).toBe('banned')
+    expect(wallKind('+ expect(wallKind("Your account has been suspended"))')).toBeUndefined()
+    // saida comum de programa nao e parede
+    expect(wallKind('✓ rejects transfer with insufficient balance')).toBeUndefined()
+    expect(wallKind('HTTP/1.1 402 Payment Required')).toBeUndefined()
+    expect(wallKind('the account is suspended after 3 failed logins')).toBeUndefined()
+  })
+  it('le "in 1h 20m", "45 minutes" e "at 3:05 PM"', () => {
+    const now = new Date(2026, 9, 22, 10, 0, 0).getTime()
+    expect(parseReset('Try again in 1h 20m.', now)).toBe(new Date(now + 80 * 60_000).toISOString())
+    expect(parseReset('Your limit resets in 45 minutes', now)).toBe(new Date(now + 45 * 60_000).toISOString())
+    expect(new Date(parseReset('try again at 3:05 PM', now)!).getHours()).toBe(15)
+    expect(new Date(parseReset('resets at 9:00', now)!).getDate()).toBe(23) // ja passou hoje: amanha
+    expect(parseReset('limit reached', now)).toBeUndefined()
+  })
+})
+
 describe('texto de parede (limite) nos agentes sem hooks', () => {
   it('reconhece as frases fortes', () => {
     expect(isWallText("You've hit your usage limit. Resets at 3pm")).toBe(true)
@@ -97,6 +118,30 @@ describe('ranking de contas', () => {
     expect(m.pickAccount({ exclude: ['c'] })).toBeUndefined()
     // abrir com todas no limiar: ainda tem cota, usa a melhor delas em vez de recusar
     expect(m.pickAccount({ exclude: ['c'], allowWarning: true })?.id).toBe('b')
+  })
+
+  it('estrategias: mais folga primeiro e a que reseta antes primeiro', async () => {
+    const soon = new Date(Date.now() + 3600_000).toISOString()
+    const later = new Date(Date.now() + 5 * 86_400_000).toISOString()
+    writeFileSync(join(dir, 'accounts.json'), JSON.stringify({ accounts: [acc('a', 1), acc('b', 2)], thresholds: { fiveHour: 90, weekly: 95, strategy: 'headroom' } }))
+    const m = await import('../accounts')
+    m.recordUsage('a', { weekly: { pct: 70, resetsAt: later } })
+    m.recordUsage('b', { weekly: { pct: 20, resetsAt: soon } })
+    expect(m.pickAccount()?.id).toBe('b')
+    m.setThresholds({ strategy: 'rank' })
+    expect(m.pickAccount()?.id).toBe('a')
+    m.setThresholds({ strategy: 'reset-soonest' })
+    expect(m.pickAccount()?.id).toBe('b')
+  })
+
+  it('usage.json com data estragada e descartado sem quebrar', async () => {
+    seed([acc('a', 1)])
+    writeFileSync(join(dir, 'usage.json'), JSON.stringify({ a: { state: 'exhausted', until: 'garbage', weekly: { pct: 50, resetsAt: 'x' } } }))
+    const m = await import('../accounts')
+    m.agentsState() // carrega os arquivos, como o initAccounts na abertura
+    const u = m.effectiveUsage('a')
+    expect(u.until).toBeUndefined()
+    expect(u.weekly).toEqual({ pct: 50 })
   })
 
   it('esgotada volta a valer depois do reset', async () => {

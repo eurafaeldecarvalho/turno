@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import { join } from 'node:path'
 import type { AgentLaunch, AgentSessionInfo, AgentTabStatus, UsageWindow } from '../shared/types'
-import { SESSION_ID, agentCommand, agentDef, backText, isWallText, unavailableText } from '../shared/agents'
+import { SESSION_ID, agentCommand, agentDef, backText, parseReset, unavailableText, wallKind } from '../shared/agents'
 import { accountEnv, agentsState, whenText, effectiveUsage, getAccount, markAccount, nextAvailableAt, pickAccount, recordUsage, clearBlock } from './accounts'
 import { notify } from './notify'
 import { claudeLaunchExtras } from './mcphub'
@@ -245,10 +245,19 @@ export function onPtyData(ptyId: number, data: string): void {
   const lines = s.tail.split(/\r?\n|\r/).slice(-12)
   // heuristica de tela (o texto pode vir do proprio modelo): no maximo uma troca a cada 10 min por aba
   // e a conta fica de fora so 20 min (sem horario de reset confiavel), nao 1 h
-  if (lines.some(isWallText) && (!s.wallAt || Date.now() - s.wallAt > 10 * 60_000)) {
+  const hit = lines.find((l) => wallKind(l))
+  if (hit && (!s.wallAt || Date.now() - s.wallAt > 10 * 60_000)) {
     s.wallAt = Date.now()
     s.tail = ''
-    markAccount(s.accountId, 'exhausted', 'usage limit reached (seen on screen)', new Date(Date.now() + 20 * 60_000).toISOString())
+    // o texto na tela pode ser do proprio modelo: nunca bloqueia de vez, so tira a conta por um tempo (com o motivo)
+    const kind = wallKind(hit)
+    const reason = kind === 'banned' ? 'the CLI reported the account as suspended or disabled (seen on screen)' : kind === 'credits' ? 'the CLI reported no credits left (seen on screen)' : 'usage limit reached (seen on screen)'
+    // horario escrito na mensagem ("try again in 2h", "at 3:05 PM"); sem ele, 20 min
+    // horario lido da tela tem teto de 5 h (uma janela do CLI): texto de terceiros nao tira a conta por dias
+    const parsed = kind === 'limit' ? parseReset(lines.slice(lines.indexOf(hit)).join(' ')) : undefined
+    const cap = Date.now() + 5 * 3_600_000
+    const until = parsed ? new Date(Math.min(Date.parse(parsed), cap)).toISOString() : new Date(Date.now() + 20 * 60_000).toISOString()
+    markAccount(s.accountId, 'exhausted', reason, until)
     void swap(s.key, 'wall')
   }
 }
@@ -303,6 +312,7 @@ const ACCOUNT_PROBLEM: Record<string, string> = {
   account_on_hold: 'account on hold: check your plan or billing',
   oauth_org_not_allowed: "your organization doesn't allow this sign-in",
   billing_error: 'billing problem: check your plan',
+  account_disabled: 'account suspended or disabled by the provider',
 }
 
 function onHook(key: string, accountId: string, event: string, p: Record<string, unknown>): void {

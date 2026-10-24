@@ -7,7 +7,7 @@ import { askConfirm } from '../ConfirmDialog'
 import { toast } from '../Toast'
 import { NumInput } from '../NumInput'
 import { Switch } from './RoutineEditor'
-import type { AccountUsage, AgentAccount, UsageWindow } from '../../../shared/types'
+import type { AccountUsage, AgentAccount, RankStrategy, UsageWindow } from '../../../shared/types'
 
 const errText = (e: unknown): string => String((e as Error)?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
 
@@ -17,13 +17,13 @@ function Bar({ w, label }: { w?: UsageWindow; label: string }) {
   return (
     <span className="usage-bar" title={`${label}: ${w.pct}%${w.resetsAt ? ` · resets ${whenText(w.resetsAt)}` : ''}`}>
       <span className="usage-bar-label">{label}</span>
-      <span className="usage-bar-track"><span className={`usage-bar-fill tone-bg-${tone}`} style={{ width: `${Math.min(100, w.pct)}%` }} /></span>
+      <span className="usage-bar-track"><span className={`usage-bar-fill tone-bg-${tone}`} style={{ width: `${Math.min(100, Math.max(0, w.pct))}%` }} /></span>
       <span className="usage-bar-pct">{w.pct}%</span>
     </span>
   )
 }
 
-// Settings › Agents: contas ranqueadas. O Agent abre na primeira com cota; no limiar (ou no limite) troca para a proxima.
+// Settings › Agents & accounts: contas ranqueadas. O Agent abre na primeira com cota; no limiar (ou no limite) troca para a proxima.
 export function AgentsSection() {
   const st = useAgents()
   const [adding, setAdding] = useState('')
@@ -35,7 +35,10 @@ export function AgentsSection() {
   const loginExpired = (u?: AccountUsage): boolean => u?.state === 'blocked' && /^login expired/.test(u.reason ?? '')
   const commitLabel = (a: AgentAccount, el: HTMLInputElement, keepFocus: boolean): void => {
     const v = el.value.trim()
-    if (!v) el.value = a.label // nome vazio nao vale: volta ao salvo
+    if (!v) {
+      el.value = a.label // nome vazio nao vale: volta ao salvo
+      el.removeAttribute('data-esc-local')
+    }
     else if (v !== a.label)
       void window.turno.agents
         .update(a.id, { label: v })
@@ -45,6 +48,7 @@ export function AgentsSection() {
         })
         .catch((e) => {
           el.value = a.label // recusado (nome repetido): volta ao salvo
+          el.removeAttribute('data-esc-local')
           toast(errText(e), 'err')
         })
   }
@@ -60,7 +64,8 @@ export function AgentsSection() {
         // a lista e redesenhada quando o estado volta do main: o foco segue a conta movida (teclado nao cai no body)
         setTimeout(() => {
           const row = document.querySelector(`[data-acct="${moved}"]`)
-          const btn = row?.querySelector<HTMLButtonElement>(`[data-dir="${d < 0 ? 'up' : 'down'}"]:not(:disabled)`) ?? row?.querySelector<HTMLButtonElement>('[data-dir]:not(:disabled)')
+          // chegou na ponta: o foco vai para o nome (pular para a outra seta faria o proximo Enter desfazer)
+          const btn = row?.querySelector<HTMLElement>(`[data-dir="${d < 0 ? 'up' : 'down'}"]:not(:disabled)`) ?? row?.querySelector<HTMLElement>('.acct-label')
           btn?.focus()
         }, 120),
       )
@@ -105,7 +110,12 @@ export function AgentsSection() {
     <section className="card agents-card" id="settings-agents">
       <h3>Agents and accounts</h3>
       <p className="muted small">
-        The Agent button opens the first account in this list that still has quota. When an account passes the limits below, Turno moves the conversation to the next one in the same tab: same agent resumes the same conversation; another agent gets a handoff note. Sign-ins stay inside each agent's own CLI.
+        {{
+          rank: 'The Agent button opens the first account in this list that still has quota.',
+          headroom: 'The Agent button opens the account with the most quota left; the list order breaks ties.',
+          'reset-soonest': 'The Agent button opens the account whose limit resets soonest, so quota that would expire gets used first; the list order breaks ties.',
+        }[st.thresholds.strategy ?? 'rank']}{' '}
+        When an account passes the limits below, Turno moves the conversation to the next one in the same tab: same agent resumes the same conversation; another agent gets a handoff note. Sign-ins stay inside each agent's own CLI.
       </p>
       <div className="grid2">
         <label className="field">
@@ -115,6 +125,14 @@ export function AgentsSection() {
         <label className="field">
           <span>Switch at weekly usage (%)</span>
           <NumInput integer min={50} max={100} value={st.thresholds.weekly} onChange={(v) => void window.turno.agents.setThresholds({ weekly: v })} />
+        </label>
+        <label className="field" style={{ gridColumn: '1 / -1' }}>
+          <span>Which account goes first</span>
+          <select value={st.thresholds.strategy ?? 'rank'} onChange={(e) => void window.turno.agents.setThresholds({ strategy: e.target.value as RankStrategy })}>
+            <option value="rank">The order of this list</option>
+            <option value="headroom">The one with the most quota left</option>
+            <option value="reset-soonest">The one that resets soonest (use quota before it expires)</option>
+          </select>
         </label>
       </div>
       <ol className="acct-list">
@@ -155,6 +173,7 @@ export function AgentsSection() {
                     .filter(Boolean)
                     .join(' · ') || 'Uses the sign-in you already have on this PC'}
                 </small>
+                {st.best === a.id && <span className="pill pill-ok agent-best" title="The Agent button opens this account next">opens next</span>}
                 {st.signedOut.includes(a.id) && <small className="tone-warn">Not signed in: Turno skips it until you sign in.</small>}
                 {(u?.fiveHour || u?.weekly) && (
                   <span className="acct-bars">
@@ -162,7 +181,17 @@ export function AgentsSection() {
                     <Bar w={u.weekly} label="7d" />
                   </span>
                 )}
-                {u && (u.state === 'exhausted' || u.state === 'blocked') && <small className={`tone-${usageTone(u)}`}>{usageText(u)}</small>}
+                {u && (u.state === 'exhausted' || u.state === 'blocked') && (
+                  <small className={`tone-${usageTone(u)}`}>
+                    {usageText(u)}
+                    {u.state === 'exhausted' && (
+                      <>
+                        {' '}
+                        <button className="link" onClick={() => void window.turno.agents.clearLimit(a.id).then(() => setTimeout(() => document.querySelector<HTMLElement>(`[data-acct="${a.id}"] .acct-label`)?.focus(), 120))}>Use it now</button>
+                      </>
+                    )}
+                  </small>
+                )}
               </span>
               <span className="acct-actions">
                 <Switch checked={a.enabled} label={`Use ${a.label}`} onChange={(v) => void window.turno.agents.update(a.id, { enabled: v })} />

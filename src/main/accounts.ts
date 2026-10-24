@@ -4,7 +4,7 @@ import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSy
 import { homedir } from 'node:os'
 import { basename, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import type { AccountUsage, AgentAccount, AgentsState, UsageWindow } from '../shared/types'
+import type { AccountUsage, AgentAccount, AgentsState, RankStrategy, UsageWindow } from '../shared/types'
 import { AGENTS, agentDef } from '../shared/agents'
 import { readJson, writeJsonAtomic } from './jsonStore'
 import { childEnv } from './env'
@@ -18,7 +18,7 @@ export const profilesDir = (): string => join(app.getPath('userData'), 'profiles
 
 interface Store {
   accounts: AgentAccount[]
-  thresholds: { fiveHour: number; weekly: number }
+  thresholds: { fiveHour: number; weekly: number; strategy?: RankStrategy }
 }
 const DEFAULT_THRESHOLDS = { fiveHour: 90, weekly: 95 }
 
@@ -28,6 +28,29 @@ let usage: Record<string, AccountUsage> = {}
 let installed: Set<string> | undefined
 let onChange: (s: AgentsState) => void = () => {}
 
+// usage.json e cache: valor estragado (data invalida, estado desconhecido) e descartado em vez de quebrar a tela
+const STATES = ['ok', 'warning', 'exhausted', 'blocked', 'unknown']
+const okDate = (v: unknown): v is string => typeof v === 'string' && !Number.isNaN(Date.parse(v))
+function sanitizeUsage(raw: Record<string, unknown>): Record<string, AccountUsage> {
+  const out: Record<string, AccountUsage> = {}
+  for (const [id, v] of Object.entries(raw)) {
+    if (!v || typeof v !== 'object') continue
+    const u = { ...(v as AccountUsage) }
+    if (!STATES.includes(u.state)) u.state = 'unknown'
+    if (u.until !== undefined && !okDate(u.until)) delete u.until
+    for (const k of ['fiveHour', 'weekly'] as const) {
+      const w = u[k]
+      if (w && (typeof w !== 'object' || typeof w.pct !== 'number' || !Number.isFinite(w.pct))) delete u[k]
+      else if (w) {
+        const pct = Math.min(100, Math.max(0, w.pct))
+        u[k] = w.resetsAt !== undefined && !okDate(w.resetsAt) ? { pct } : { ...w, pct }
+      }
+    }
+    out[id] = u
+  }
+  return out
+}
+
 function load(): Store {
   if (store) return store
   const r = readJson<Partial<Store>>(file())
@@ -36,7 +59,7 @@ function load(): Store {
   const accounts = Array.isArray(d.accounts) ? d.accounts.filter((a) => a && typeof a.id === 'string' && typeof a.agent === 'string') : []
   store = { accounts, thresholds: { ...DEFAULT_THRESHOLDS, ...(d.thresholds ?? {}) } }
   const u = readJson<Record<string, AccountUsage>>(usageFile())
-  usage = (u.ok && u.data) || {}
+  usage = sanitizeUsage((u.ok && u.data) || {})
   return store
 }
 
@@ -73,6 +96,7 @@ export function agentsState(): AgentsState {
     thresholds: s.thresholds,
     installed: installed ? [...installed] : [],
     signedOut: s.accounts.filter((a) => !signedIn(a)).map((a) => a.id),
+    best: pickAccount({ allowWarning: true })?.id,
   }
 }
 
@@ -185,7 +209,8 @@ export function reorderAccounts(ids: string[]): void {
 export function setThresholds(t: Partial<Store['thresholds']>): void {
   const s = load()
   const clamp = (v: unknown, d: number): number => (typeof v === 'number' && v >= 50 && v <= 100 ? Math.round(v) : d)
-  s.thresholds = { fiveHour: clamp(t.fiveHour, s.thresholds.fiveHour), weekly: clamp(t.weekly, s.thresholds.weekly) }
+  const strategy = (['rank', 'headroom', 'reset-soonest'] as const).find((x) => x === (t.strategy ?? s.thresholds.strategy)) ?? 'rank'
+  s.thresholds = { fiveHour: clamp(t.fiveHour, s.thresholds.fiveHour), weekly: clamp(t.weekly, s.thresholds.weekly), strategy }
   save()
 }
 
@@ -281,6 +306,14 @@ export function markAccount(id: string, state: 'exhausted' | 'blocked', reason: 
   emit()
 }
 
+// "Use it now" no Settings: a pessoa sabe que a conta voltou (o limite visto na tela era engano, ou resetou antes)
+export function clearLimit(id: string): void {
+  if (usage[id]?.state !== 'exhausted') return
+  usage[id] = { ...usage[id], state: 'unknown', reason: undefined, until: undefined }
+  saveUsageSoon()
+  emit()
+}
+
 export function clearBlock(id: string): void {
   if (usage[id]?.state !== 'blocked') return
   usage[id] = { ...usage[id], state: 'unknown', reason: undefined }
@@ -300,9 +333,40 @@ export function pickAccount(opts: { exclude?: string[]; agent?: string; excludeA
     if (installed && !installed.has(a.agent)) return false
     return signedIn(a)
   }
-  const ranked = [...s.accounts].sort((a, b) => a.rank - b.rank).filter(usable)
+  const ranked = [...s.accounts].sort(byStrategy(s.thresholds.strategy ?? 'rank')).filter(usable)
   const st = (a: AgentAccount): string => effectiveUsage(a.id).state
   return ranked.find((a) => st(a) === 'ok' || st(a) === 'unknown') ?? (opts.allowWarning ? ranked.find((a) => st(a) === 'warning') : undefined)
+}
+
+// Ordem das contas conforme a estrategia (ideias do OmniRoute, MIT): empate sempre cai na ordem da lista.
+// headroom = a que tem mais cota sobrando (maior uso entre 5h e 7d menor primeiro); reset-soonest = a que reseta
+// antes (a cota dela se perde de qualquer jeito); conta sem dado de uso vai depois das que tem dado.
+function byStrategy(strategy: RankStrategy): (a: AgentAccount, b: AgentAccount) => number {
+  if (strategy === 'rank') return (a, b) => a.rank - b.rank
+  const used = (a: AgentAccount): number => {
+    const u = effectiveUsage(a.id)
+    // janela que ja resetou conta como 0% (o dado fica velho enquanto a conta nao e usada)
+    const pct = (w?: UsageWindow): number => (!w ? -1 : w.resetsAt && Date.parse(w.resetsAt) <= Date.now() ? 0 : w.pct)
+    return Math.max(pct(u.fiveHour), pct(u.weekly))
+  }
+  const reset = (a: AgentAccount): number => {
+    const u = effectiveUsage(a.id)
+    const t = [u.weekly?.resetsAt, u.fiveHour?.resetsAt].filter((x): x is string => !!x).map(Date.parse).filter((x) => x > Date.now())
+    return t.length ? Math.min(...t) : Infinity
+  }
+  return (a, b) => {
+    if (strategy === 'headroom') {
+      const ua = used(a)
+      const ub = used(b)
+      if (ua < 0 !== ub < 0) return ua < 0 ? 1 : -1
+      if (ua !== ub) return ua - ub
+    } else {
+      const ra = reset(a)
+      const rb = reset(b)
+      if (ra !== rb) return ra - rb
+    }
+    return a.rank - b.rank
+  }
 }
 
 // Proxima volta de alguma conta (para "todas no limite; volta as 14:00")

@@ -8,6 +8,7 @@ import { openHistory, useTerminalTotal } from './layout'
 import { IconCoffee } from './icons'
 import { useAgents, usageText, usageTone } from './agentStore'
 import { openSettingsModal } from './SettingsModal'
+import { AWAKE_MODES } from './awake'
 
 function fmtMb(kb: number): string {
   const mb = kb / 1024
@@ -85,7 +86,17 @@ function AccountUsageSegment() {
   // conta sem login fica de fora (o ranking tambem a ignora): o dado guardado dela nao diz nada sobre o que da para usar
   const withData = st.accounts.filter((a) => a.enabled && !st.signedOut.includes(a.id) && st.usage[a.id] && st.usage[a.id].state !== 'unknown')
   if (!withData.length) return null
-  const first = withData[0]
+  // a conta que seria usada agora (estrategia do Settings); sem nenhuma usavel, a primeira com dado.
+  // A melhor ainda sem dado de uso: mostra ela (neutro), nao o limite de outra conta
+  const bestAcc = st.accounts.find((a) => a.id === st.best)
+  if (bestAcc && !withData.some((a) => a.id === bestAcc.id))
+    return (
+      <button className="sb-item" title={`Next agent opens on ${bestAcc.label}\nClick to manage accounts`} onClick={() => openSettingsModal('agents')}>
+        <span className="dot dot-idle" />
+        {bestAcc.label}
+      </button>
+    )
+  const first = withData.find((a) => a.id === st.best) ?? withData[0]
   const u = st.usage[first.id]
   const tip = withData.map((a) => `${a.label}: ${usageText(st.usage[a.id]) || 'no data'}`).join('\n')
   return (
@@ -97,11 +108,7 @@ function AccountUsageSegment() {
   )
 }
 
-const MODES: Array<{ v: AwakeMode; t: string; d: string }> = [
-  { v: 'on', t: 'On', d: 'Keeps the computer awake all the time' },
-  { v: 'auto', t: 'Agent', d: 'Stays awake while an agent is working' },
-  { v: 'off', t: 'Off', d: 'Follows the normal Windows power mode' },
-]
+const MODES = AWAKE_MODES
 
 // Segmento "manter acordado" da barra de status (igual ao CaffeinateStatusSegment do Orca).
 function AwakeSegment() {
@@ -115,7 +122,8 @@ function AwakeSegment() {
   useEffect(() => {
     if (!open) return
     const close = (e: MouseEvent): void => void (!ref.current?.contains(e.target as Node) && setOpen(false))
-    ref.current?.querySelector<HTMLElement>('[role="menuitemradio"][aria-checked="true"], [role="menuitemradio"]')?.focus()
+    // a opcao marcada primeiro (a lista de seletores com virgula pegava a primeira do documento)
+    ;(ref.current?.querySelector<HTMLElement>('[role="menuitemradio"][aria-checked="true"]') ?? ref.current?.querySelector<HTMLElement>('[role="menuitemradio"]'))?.focus()
     const esc = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') return void (setOpen(false), ref.current?.querySelector<HTMLElement>('.sb-item')?.focus())
       menuKeyNav(e, ref.current?.querySelector('.sb-pop') ?? null)
@@ -155,6 +163,7 @@ function AwakeSegment() {
               onClick={() => {
                 void updateSettings({ keepAwake: m.v })
                 setOpen(false)
+                ref.current?.querySelector<HTMLElement>('.sb-item')?.focus() // como no Esc: o foco volta ao botao
               }}
             >
               <span className="sb-radio" />

@@ -7,9 +7,10 @@ import { createPortal } from 'react-dom'
 import { menuKeyNav } from './modalStack'
 import { useStore, isActive } from './store'
 import { plural, scheduleSummary, statusTone, when, STATUS_LABEL } from './fmt'
-import { openTasks, openAdhoc, openFanout, openHistory, openRoutine, openRoutineEditorModal, openTerminal, useOpenTabs, focusTab, closeTab, renameTab } from './layout'
+import { openTasks, openHistory, openRoutine, openRoutineEditorModal, openTerminal, useOpenTabs, focusTab, closeTab, renameTab } from './layout'
 import { openSettingsModal } from './SettingsModal'
-import { IconCheck, IconChat, IconChevron, IconClock, IconClose, IconFanout, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconRoutine, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
+import { openOnboarding, openWhatsNew } from './Onboarding'
+import { IconHelp, IconCheck, IconChat, IconChevron, IconClock, IconClose, IconFanout, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconRoutine, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
 import { addFolder, addTerminalItem, agentOf, closeItemTerminal, deleteFolder, deleteItem, getDragging, getItem, moveFolder, openItem, patchItem, renameFolder, saveItem, setDragging, toggleSection, useSidebar } from './sidebarStore'
 import { dockApi, paramsOf, type OpenTab } from './layout'
 import { setLive, useLive } from './liveTerms'
@@ -170,7 +171,7 @@ function RoutineOpenButton({ onOpen, onKeyDown, title, children }: { onOpen: () 
 }
 
 // Secao recolhivel da barra lateral (Rotinas e cada pasta).
-function Section({ id, title, count, actions, children, folder, dropping, onRename, onContextMenu, rename }: {
+function Section({ id, title, count, actions, children, folder, dropping, onRename, onContextMenu, rename, defaultClosed }: {
   id: string
   title: string
   onRename?: (v: string) => void
@@ -181,18 +182,19 @@ function Section({ id, title, count, actions, children, folder, dropping, onRena
   dropping?: boolean
   onContextMenu?: (e: RMouseEvent) => void
   rename?: { start: boolean; started: () => void }
+  defaultClosed?: boolean
 }) {
   const { collapsed } = useSidebar()
-  const closed = !!collapsed[id]
+  const closed = collapsed[id] ?? !!defaultClosed
   const [f2, setF2] = useState(false)
-  const delayedToggle = useSingleClick(() => toggleSection(id))
+  const delayedToggle = useSingleClick(() => toggleSection(id, closed))
   return (
     <section className={`side-section ${closed ? 'closed' : ''} ${dropping ? 'drop-target' : ''}`} data-folder-id={folder ? id : undefined}>
       <div className="section-head" onContextMenu={onContextMenu}>
         <button
           className="section-toggle"
           title={title}
-          onClick={onRename ? delayedToggle : () => toggleSection(id)}
+          onClick={onRename ? delayedToggle : () => toggleSection(id, closed)}
           onKeyDown={(e) => onRename && e.key === 'F2' && (e.preventDefault(), setF2(true))}
           aria-expanded={!closed}
         >
@@ -213,7 +215,7 @@ function Section({ id, title, count, actions, children, folder, dropping, onRena
   )
 }
 
-function Menu({ items }: { items: Array<{ label: string; danger?: boolean; onClick: () => void }> }) {
+function Menu({ items, label = 'More options', icon }: { items: Array<{ label: string; danger?: boolean; onClick: () => void }>; label?: string; icon?: ReactNode }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLSpanElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -235,8 +237,8 @@ function Menu({ items }: { items: Array<{ label: string; danger?: boolean; onCli
   }, [open])
   return (
     <span className="menu-wrap" ref={ref}>
-      <button ref={trigger} className="icon-btn" aria-label="More options" title="More options" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <IconMore size={14} />
+      <button ref={trigger} className="icon-btn" aria-label={label} title={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {icon ?? <IconMore size={14} />}
       </button>
       {open &&
         createPortal(
@@ -379,6 +381,12 @@ const NO_CONNECTIONS: never[] = []
 export function Sidebar() {
   const { folders } = useSidebar()
   const [dialog, setDialog] = useState<Dialog>()
+  // menu New (botao da sidebar ou "+" de um painel) pede uma pasta nova
+  useEffect(() => {
+    const f = (): void => setDialog({ t: 'folder' })
+    window.addEventListener('turno:new-folder', f)
+    return () => window.removeEventListener('turno:new-folder', f)
+  }, [])
   const dropFolder = useTerminalDrop()
   const live = useLive()
   // terminais vivos (aba aberta ou escondida) dos itens de uma pasta: fechados ao excluir a pasta
@@ -450,32 +458,21 @@ export function Sidebar() {
         <span>Turno</span>
       </div>
 
+      {/* topo: um botao New (verbos) e os lugares do app (destinos, com contadores) */}
       <nav className="nav" aria-label="Workspace">
-        <div className="nav-label">Workspace</div>
-        <button onClick={() => openTerminal()}>
-          <IconTerminal /> New terminal
-        </button>
         <AgentButton />
         <button onClick={() => openTasks()}>
           <IconCheck /> Tasks
         </button>
-      </nav>
-      <nav className="nav nav-automation" aria-label="Automation">
-        <div className="nav-label">Automation</div>
         <button onClick={() => openHistory()}>
           <IconHistory /> Runs
-          {running.length > 0 && <span className="count run">{running.length}</span>}
+          {running.length > 0 && <span className="count run" title="running now">{running.length}</span>}
           {problems.length > 0 && <span className="count err" title="failures in the last 24h">{problems.length}</span>}
-        </button>
-        <button onClick={() => openAdhoc()}>
-          <IconSpark /> Ad hoc run
-        </button>
-        <button onClick={() => openFanout()}>
-          <IconFanout /> Fan-out
         </button>
       </nav>
 
       <div className="side-scroll">
+      <NeedsYou />
       <Section
         id="routines"
         title="Routines"
@@ -495,10 +492,14 @@ export function Sidebar() {
         {routines.map((r) => {
           const last = r.lastRun
           const active = isActive(last)
-          const tone = r.error ? 'err' : active ? 'run' : !r.config.enabled ? 'idle' : statusTone(last?.status)
+          const tone = r.error || !connections.some((c) => c.id === r.config.profile) ? 'err' : active ? 'run' : !r.config.enabled ? 'idle' : statusTone(last?.status)
+          // conexao removida em Settings: a rotina e pulada; o subtitulo avisa em vez de parecer normal
+          const noConn = !r.error && !connections.some((c) => c.id === r.config.profile)
           const sub = r.error
             ? 'error in ROUTINE.md'
-            : active
+            : noConn
+              ? 'connection removed · pick one in Configure'
+              : active
               ? 'running now'
               : !r.config.enabled
                 ? `off · ${scheduleSummary(r.config)}`
@@ -577,53 +578,23 @@ export function Sidebar() {
       </ul>
       </Section>
 
-      <NeedsYou />
-      {openTabs.length > 0 && (
-        <Section id="open-tabs" title="Open tabs" count={openTabs.length}>
-          <ul className="routines">
-            {openTabs.map((tab) => {
-              const Icon = tab.agent ? (IconChat as IconComp) : KIND_ICON_SIDEBAR[tab.kind] ?? (IconTerminal as IconComp)
-              return (
-                <li
-                  key={tab.id}
-                  aria-current={tab.active ? 'page' : undefined}
-                  className={`routine ${tab.active ? 'current' : ''}`}
-                  draggable={tab.kind === 'terminal'}
-                  onDragStart={(e) => {
-                    // Mesmo caminho do arrasto de aba do dockview: o drop numa pasta vira item.
-                    const panel = dockApi()?.getPanel(tab.id)
-                    if (!panel) return e.preventDefault()
-                    setDragging({ id: tab.id, params: paramsOf(panel), title: tab.title || 'terminal' })
-                    e.dataTransfer.effectAllowed = 'move'
-                    e.dataTransfer.setData('application/x-turno-tab', tab.id) // tipo proprio: soltar num campo de texto nao cola o id
-                  }}
-                >
-                  <button className="routine-main" onClick={() => focusTab(tab.id)} onKeyDown={(e) => e.key === 'F2' && (e.preventDefault(), setRenaming(`tab:${tab.id}`))} title={tab.kind === 'terminal' ? `${tab.title}
-Drag onto a folder to keep it` : tab.title}>
-                    <span className="item-icon">
-                      <Icon size={14} />
-                      {(() => {
-                        const s = tab.agentKey ? agentSessions.find((x) => x.key === tab.agentKey) : undefined
-                        return s && s.status !== 'starting' ? <span className={`tab-status st-${s.status}`} aria-hidden /> : null
-                      })()}
-                    </span>
-                    <span className="routine-text">
-                      <InlineName className="routine-name" value={tab.title || tab.kind} onRename={(v) => renameTab(tab.id, v)} {...renameProps(`tab:${tab.id}`)} />
-                      {tabLine(tab) && <span className="routine-sub">{tabLine(tab)}</span>}
-                    </span>
-                  </button>
-                  <span className="routine-actions">
-                    <button className="icon-btn" title="Close tab" aria-label="Close tab" onClick={() => closeTab(tab.id)}>
-                      <IconClose size={14} />
-                    </button>
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
-        </Section>
+      {/* pastas do usuario num grupo so, com o "+" sempre visivel no cabecalho */}
+      <Section
+        id="folders"
+        title="Folders"
+        count={folders.length}
+        actions={
+          <button className="icon-btn new-folder" title="New folder" aria-label="New folder" onClick={() => setDialog({ t: 'folder' })}>
+            <IconPlus size={14} />
+          </button>
+        }
+      >
+      {!folders.length && (
+        <p className="empty muted small side-empty">
+          No folders yet. Use <b>+</b> to keep agent chats, terminals and links together.
+        </p>
       )}
-
+      <div className="folder-list">
       {folders.map((f, i) => {
         const delFolder = (): void => {
           void askConfirm({
@@ -725,9 +696,54 @@ Drag onto a folder to keep it` : tab.title}>
         )
       })}
 
-      <button className="new-folder" onClick={() => setDialog({ t: 'folder' })}>
-        <IconFolder size={14} /> New folder
-      </button>
+      </div>
+      </Section>
+      {openTabs.length > 0 && (
+        <Section id="open-tabs" title="Open tabs" count={openTabs.length} defaultClosed>
+          <ul className="routines">
+            {openTabs.map((tab) => {
+              const Icon = tab.agent ? (IconChat as IconComp) : KIND_ICON_SIDEBAR[tab.kind] ?? (IconTerminal as IconComp)
+              return (
+                <li
+                  key={tab.id}
+                  aria-current={tab.active ? 'page' : undefined}
+                  className={`routine ${tab.active ? 'current' : ''}`}
+                  draggable={tab.kind === 'terminal'}
+                  onDragStart={(e) => {
+                    // Mesmo caminho do arrasto de aba do dockview: o drop numa pasta vira item.
+                    const panel = dockApi()?.getPanel(tab.id)
+                    if (!panel) return e.preventDefault()
+                    setDragging({ id: tab.id, params: paramsOf(panel), title: tab.title || 'terminal' })
+                    e.dataTransfer.effectAllowed = 'move'
+                    e.dataTransfer.setData('application/x-turno-tab', tab.id) // tipo proprio: soltar num campo de texto nao cola o id
+                  }}
+                >
+                  <button className="routine-main" onClick={() => focusTab(tab.id)} onKeyDown={(e) => e.key === 'F2' && (e.preventDefault(), setRenaming(`tab:${tab.id}`))} title={tab.kind === 'terminal' ? `${tab.title}
+Drag onto a folder to keep it` : tab.title}>
+                    <span className="item-icon">
+                      <Icon size={14} />
+                      {(() => {
+                        const s = tab.agentKey ? agentSessions.find((x) => x.key === tab.agentKey) : undefined
+                        return s && s.status !== 'starting' ? <span className={`tab-status st-${s.status}`} aria-hidden /> : null
+                      })()}
+                    </span>
+                    <span className="routine-text">
+                      <InlineName className="routine-name" value={tab.title || tab.kind} onRename={(v) => renameTab(tab.id, v)} {...renameProps(`tab:${tab.id}`)} />
+                      {tabLine(tab) && <span className="routine-sub">{tabLine(tab)}</span>}
+                    </span>
+                  </button>
+                  <span className="routine-actions">
+                    <button className="icon-btn" title="Close tab" aria-label="Close tab" onClick={() => closeTab(tab.id)}>
+                      <IconClose size={14} />
+                    </button>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </Section>
+      )}
+
       </div>
 
       <div className="sidebar-foot">
@@ -735,6 +751,18 @@ Drag onto a folder to keep it` : tab.title}>
           <IconSettings /> Settings
           <kbd>Ctrl+,</kbd>
         </button>
+        <Menu
+          label="Help"
+          icon={<IconHelp size={16} />}
+          items={[
+            { label: 'Command palette  (Ctrl+Shift+P)', onClick: () => window.dispatchEvent(new Event('turno:palette')) },
+            { label: 'Keyboard shortcuts', onClick: () => openSettingsModal('shortcuts') },
+            { label: 'Show the setup tour', onClick: () => openOnboarding() },
+            { label: "What's new", onClick: () => void openWhatsNew(true) },
+            { label: 'Open routines folder', onClick: () => void window.turno.routines.openFolder() },
+            { label: 'About Turno', onClick: () => openSettingsModal('about') },
+          ]}
+        />
       </div>
 
       {ctx && <ContextMenu x={ctx.x} y={ctx.y} items={ctx.items} onClose={closeCtx} opener={ctx.opener} />}

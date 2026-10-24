@@ -4,14 +4,14 @@ import { stat } from 'node:fs/promises'
 import { LINK_RE } from '../shared/links'
 import { join } from 'node:path'
 import { mkdirSync, writeFileSync } from 'node:fs'
-import type { McpServerDef, Task, RoutineDraft, RunRecord, RunRequest, Settings, SidebarState } from '../shared/types'
+import type { McpServerDef, RankStrategy, Task, RoutineDraft, RunRecord, RunRequest, Settings, SidebarState } from '../shared/types'
 import { claudeSessionExists, getSidebar, listClaudeSessions, saveSidebar } from './sidebar'
 import { registerPty, killAllPtys } from './pty'
 import { activeCount, answerPermission, initRunner, readRunEvents, rotatedFrom, setRotateHandler, startRun, stopAllRuns, stopRun, type PermissionDecision } from './runner'
 import { openDb, getRun, listRuns, threadOf, renameRoutineRuns } from './db'
 import { getSettings, setSettings } from './settings'
 import { takeNotices } from './jsonStore'
-import { accountEnv, addAccount, agentsState, clearBlock, detectInstalled, getAccount, initAccounts, refreshLogin, removeAccount, reorderAccounts, setThresholds, updateAccount } from './accounts'
+import { accountEnv, addAccount, agentsState, clearBlock, clearLimit, detectInstalled, getAccount, initAccounts, refreshLogin, removeAccount, reorderAccounts, setThresholds, updateAccount } from './accounts'
 import { closeSession, initBroker, listSessions, prepareLaunch, prepareRaw, swap, type PrepareOpts } from './agentBroker'
 import { listMcp, mcpStatus, removeMcp, saveMcp } from './mcphub'
 import { connectJira, disconnectJira, listTasks, startTask } from './tasks'
@@ -25,8 +25,9 @@ import { themeById } from '../shared/themes'
 import { detectShells, listFonts } from './shells'
 import { prepareClaude } from './claudeprep'
 import { claudeLogin, claudeLogout, claudeStatus } from './provider-auth'
-import { setSecret, deleteSecret } from './secrets'
-import { getConnection } from './providers'
+import { setSecret, deleteSecret, connectionToken } from './secrets'
+import { findConnection, getConnection } from './providers'
+import { startTranslator } from './translator'
 import { checkConnection } from './doctor'
 import { suggestCommand } from './ai'
 
@@ -60,6 +61,11 @@ openDb(join(userData, 'turno.db'))
 // Depois de fechar a janela, ptys e runs ainda podem emitir saida: nunca enviar para um webContents destruido.
 const liveWc = () => (win && !win.isDestroyed() && !win.webContents.isDestroyed() ? win.webContents : undefined)
 const send = (ch: string, ...args: unknown[]): void => liveWc()?.send(ch, ...args)
+
+// Sem o menu padrao do Electron no Windows/Linux: os aceleradores dele (Ctrl+R recarrega, Ctrl+Shift+R forca,
+// Ctrl+Shift+I, zoom) disparavam fora do terminal e com dialogos abertos, perdendo o que estava digitado.
+// Copiar/colar em campos de texto nao depende do menu nesses sistemas.
+if (process.platform !== 'darwin') Menu.setApplicationMenu(null)
 
 function createWindow(): void {
   win = new BrowserWindow({
@@ -96,6 +102,14 @@ function createWindow(): void {
   win.on('closed', () => {
     win = undefined
     killAllPtys()
+  })
+  // A pagina recarregou (crash panel "Reload window", ou F5 em dev): os terminais da pagina velha morrem junto,
+  // senao ficavam shells orfaos rodando e acumulando memoria a cada recarga.
+  let loadedOnce = false
+  win.webContents.on('did-start-navigation', (d) => {
+    if (!d.isMainFrame || d.isSameDocument) return
+    if (loadedOnce) killAllPtys()
+    loadedOnce = true
   })
   win.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url)
@@ -209,6 +223,11 @@ registerPty(liveWc)
 // ---- botao Agent: contas, broker de troca, hub de MCP ----
 initAccounts((s) => send('agents:state', s))
 const brokerReady = initBroker(send, () => showWindow())
+// tradutor Anthropic -> OpenAI das conexoes via='translate' (sobe cedo: o env dos agentes precisa da porta)
+void startTranslator((id) => {
+  const conn = findConnection(getSettings(), id)
+  return conn?.via === 'translate' ? { conn, key: connectionToken(conn) } : undefined
+})
 ipcMain.handle('agents:state', () => agentsState())
 ipcMain.handle('agents:detect', () => detectInstalled())
 ipcMain.handle('agents:sessions', () => listSessions())
@@ -223,6 +242,7 @@ ipcMain.handle('agents:login', (_e, id: string) => {
   const def = agentDef(a.agent)
   return prepareRaw(accountEnv(a), def?.login ?? def?.launch ?? def?.cmd ?? '')
 })
+ipcMain.handle('agents:clearLimit', (_e, id: string) => clearLimit(id))
 ipcMain.handle('agents:refreshLogin', (_e, id: string) => {
   const ok = refreshLogin(id)
   if (ok) clearBlock(id) // entrou de novo: volta para o ranking
@@ -231,7 +251,7 @@ ipcMain.handle('agents:refreshLogin', (_e, id: string) => {
 ipcMain.handle('agents:update', (_e, id: string, patch: { label?: string; enabled?: boolean }) => updateAccount(id, patch))
 ipcMain.handle('agents:reorder', (_e, ids: string[]) => reorderAccounts(ids))
 ipcMain.handle('agents:remove', (_e, id: string) => removeAccount(id))
-ipcMain.handle('agents:thresholds', (_e, t: { fiveHour?: number; weekly?: number }) => setThresholds(t))
+ipcMain.handle('agents:thresholds', (_e, t: { fiveHour?: number; weekly?: number; strategy?: RankStrategy }) => setThresholds(t))
 ipcMain.handle('agents:swap', (_e, key: string, accountId?: string) => swap(key, 'manual', accountId))
 ipcMain.handle('agents:close', (_e, key: string) => closeSession(key))
 ipcMain.handle('tasks:list', () => listTasks())

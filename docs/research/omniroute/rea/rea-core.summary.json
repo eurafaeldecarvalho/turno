@@ -1,0 +1,6051 @@
+{
+ "tool": {
+  "id": "rea-javascript-application",
+  "name": "REA JavaScript application analyzer",
+  "version": "1"
+ },
+ "evidence_id": "ev_7119e466d56da9685c34b44d0cf70ae32f8a407570a535a93e023ee96be49395",
+ "operation": "analyze_javascript_application",
+ "subject": {
+  "name": "omni-rea-subset",
+  "sha256": "cc7224717fd04ad4504ef7519311f5e6bfd4c8e0ff20b2780ee4a6a332559c7e"
+ },
+ "parameters": {
+  "format": "auto",
+  "integrity_policy": "fail"
+ },
+ "statistics": {
+  "relevant_files": 563,
+  "nested_asar_containers": 0,
+  "text_bytes_read": 3269961,
+  "invalid_utf8_files": 0,
+  "parsed_javascript_files": 560,
+  "skipped_javascript_files": 0,
+  "visited_ast_nodes": 277713,
+  "findings": 6412,
+  "modules": 0,
+  "parse_failures": 0
+ },
+ "electron_summary": {
+  "browser_windows": 0,
+  "explicit_web_preferences": 0,
+  "preload_entrypoints": 0,
+  "context_bridge_apis": 0,
+  "exposed_api_members": 0,
+  "ipc": {
+   "operations": 0,
+   "literal_channels": 0,
+   "dynamic_channel_operations": 0,
+   "renderer_transmissions": 0,
+   "renderer_listeners": 0,
+   "main_handlers": 0,
+   "paired_renderer_transmissions": 0,
+   "ambiguous_renderer_transmissions": 0,
+   "unpaired_literal_renderer_transmissions": 0
+  },
+  "sender_validation_observations": 0,
+  "utility_processes": 0,
+  "resolved_utility_entrypoints": 0,
+  "native_addon_bindings": 0,
+  "resolved_native_addon_bindings": 0
+ },
+ "limitations": [
+  "CommonJS and ESM binding relationships were recovered from inert syntax and resolved only within the inventoried artifact container.",
+  "Graph coverage is incomplete; unavailable facts remain explicit and must not be read as absence.",
+  "JavaScript and HTML were parsed as inert text; bundle bootstrap code was never executed.",
+  "Static imports, entrypoints, workers, endpoints, and storage relationships do not prove runtime execution.",
+  "Static paths and relationships may remain unresolved when expressions are dynamic or obfuscated.",
+  "Webpack/Rspack factories were recovered from AST literals; REA did not invoke push handlers or bundle bootstrap code."
+ ],
+ "semantic_coverage": {
+  "status": "partial",
+  "truncated": true,
+  "limits": [
+   {
+    "name": "semantic_graph_file_node_ceiling",
+    "value": 20000,
+    "unit": "items"
+   },
+   {
+    "name": "semantic_graph_node_ceiling",
+    "value": 100000,
+    "unit": "items"
+   }
+  ],
+  "nodes": 100000,
+  "relations": 88916,
+  "unknowns": 21534
+ },
+ "graph_node_kinds": {
+  "javascript-module": 3823,
+  "javascript-asset": 560,
+  "artifact": 4,
+  "package": 1,
+  "endpoint": 12
+ },
+ "semantic_node_kinds": {
+  "expression": 45633,
+  "property-slot": 21006,
+  "function": 1758,
+  "binding": 6349,
+  "literal": 13439,
+  "call-site": 5581,
+  "return-site": 2909,
+  "parameter": 2483,
+  "module": 453,
+  "config-source": 58,
+  "boundary": 143,
+  "task": 123,
+  "promise": 53,
+  "timer": 12
+ },
+ "network_endpoint_candidates": [
+  {
+   "endpoint_kind": "network",
+   "value": "x-omni-fallback-hint",
+   "mechanism": "call:headers.get",
+   "interpretation": "candidate",
+   "label": "x-omni-fallback-hint",
+   "location": {
+    "kind": "source-range",
+    "source": "open-sse/config/errorConfig.ts",
+    "start": {
+     "line": 272,
+     "column": 8
+    },
+    "end": {
+     "line": 272,
+     "column": 56
+    }
+   }
+  },
+  {
+   "endpoint_kind": "network",
+   "value": "x-omniroute-budget",
+   "mechanism": "call:headers.get",
+   "interpretation": "candidate",
+   "label": "x-omniroute-budget",
+   "location": {
+    "kind": "source-range",
+    "source": "open-sse/services/autoCombo/requestControls.ts",
+    "start": {
+     "line": 117,
+     "column": 23
+    },
+    "end": {
+     "line": 117,
+     "column": 56
+    }
+   }
+  },
+  {
+   "endpoint_kind": "network",
+   "value": "user-agent",
+   "mechanism": "call:headers.get",
+   "interpretation": "candidate",
+   "label": "user-agent",
+   "location": {
+    "kind": "source-range",
+    "source": "src/app/api/v1/models/catalogRequest.ts",
+    "start": {
+     "line": 103,
+     "column": 20
+    },
+    "end": {
+     "line": 103,
+     "column": 45
+    }
+   }
+  },
+  {
+   "endpoint_kind": "network",
+   "value": "q",
+   "mechanism": "call:searchParams.get",
+   "interpretation": "candidate",
+   "label": "q",
+   "location": {
+    "kind": "source-range",
+    "source": "src/app/api/v1/models/catalogFilters.ts",
+    "start": {
+     "line": 164,
+     "column": 7
+    },
+    "end": {
+     "line": 164,
+     "column": 28
+    }
+   }
+  },
+  {
+   "endpoint_kind": "network",
+   "value": "kind",
+   "mechanism": "call:searchParams.get",
+   "interpretation": "candidate",
+   "label": "kind",
+   "location": {
+    "kind": "source-range",
+    "source": "src/app/api/v1/models/catalogFilters.ts",
+    "start": {
+     "line": 163,
+     "column": 10
+    },
+    "end": {
+     "line": 163,
+     "column": 34
+    }
+   }
+  },
+  {
+   "endpoint_kind": "network",
+   "value": "retry-after",
+   "mechanism": "call:headers.get",
+   "interpretation": "candidate",
+   "label": "retry-after",
+   "location": {
+    "kind": "source-range",
+    "source": "open-sse/services/accountFallback.ts",
+    "start": {
+     "line": 1785,
+     "column": 10
+    },
+    "end": {
+     "line": 1785,
+     "column": 49
+    }
+   }
+  },
+  {
+   "endpoint_kind": "network",
+   "value": "codex",
+   "mechanism": "call:syncedModelIdsByCanonicalProvider.get",
+   "interpretation": "candidate",
+   "label": "codex",
+   "location": {
+    "kind": "source-range",
+    "source": "src/app/api/v1/models/catalog.ts",
+    "start": {
+     "line": 1210,
+     "column": 29
+    },
+    "end": {
+     "line": 1210,
+     "column": 75
+    }
+   }
+  },
+  {
+   "endpoint_kind": "network",
+   "value": "x-ratelimit-reset",
+   "mechanism": "call:headers.get",
+   "interpretation": "candidate",
+   "label": "x-ratelimit-reset",
+   "location": {
+    "kind": "source-range",
+    "source": "open-sse/services/accountFallback.ts",
+    "start": {
+     "line": 1800,
+     "column": 10
+    },
+    "end": {
+     "line": 1800,
+     "column": 55
+    }
+   }
+  },
+  {
+   "endpoint_kind": "network",
+   "value": "min_context",
+   "mechanism": "call:searchParams.get",
+   "interpretation": "candidate",
+   "label": "min_context",
+   "location": {
+    "kind": "source-range",
+    "source": "src/app/api/v1/models/catalogFilters.ts",
+    "start": {
+     "line": 162,
+     "column": 32
+    },
+    "end": {
+     "line": 162,
+     "column": 63
+    }
+   }
+  },
+  {
+   "endpoint_kind": "network",
+   "value": "x-omniroute-budget-fallback",
+   "mechanism": "call:headers.get",
+   "interpretation": "candidate",
+   "label": "network endpoint candidate",
+   "location": {
+    "kind": "source-range",
+    "source": "open-sse/services/autoCombo/requestControls.ts",
+    "start": {
+     "line": 118,
+     "column": 31
+    },
+    "end": {
+     "line": 118,
+     "column": 73
+    }
+   }
+  },
+  {
+   "endpoint_kind": "network",
+   "value": "originator",
+   "mechanism": "call:headers.get",
+   "interpretation": "candidate",
+   "label": "originator",
+   "location": {
+    "kind": "source-range",
+    "source": "src/app/api/v1/models/catalogRequest.ts",
+    "start": {
+     "line": 101,
+     "column": 21
+    },
+    "end": {
+     "line": 101,
+     "column": 46
+    }
+   }
+  },
+  {
+   "endpoint_kind": "network",
+   "value": "x-omniroute-mode",
+   "mechanism": "call:headers.get",
+   "interpretation": "candidate",
+   "label": "x-omniroute-mode",
+   "location": {
+    "kind": "source-range",
+    "source": "open-sse/services/autoCombo/requestControls.ts",
+    "start": {
+     "line": 116,
+     "column": 21
+    },
+    "end": {
+     "line": 116,
+     "column": 52
+    }
+   }
+  }
+ ],
+ "config_sources_env": [
+  {
+   "label": "environment",
+   "key": null,
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerHeaderProfiles.ts",
+   "line": 28
+  },
+  {
+   "label": "DASHBOARD_PORT",
+   "key": "DASHBOARD_PORT",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerPluginManifestUrl.ts",
+   "line": 17
+  },
+  {
+   "label": "OMNIROUTE_AUTO_FREE_FALLBACK_TO_FULL_POOL",
+   "key": "OMNIROUTE_AUTO_FREE_FALLBACK_TO_FULL_POOL",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/services/autoCombo/virtualFactory.ts",
+   "line": 1029
+  },
+  {
+   "label": "COPILOT_INTEGRATION_ID",
+   "key": "COPILOT_INTEGRATION_ID",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerHeaderProfiles.ts",
+   "line": 160
+  },
+  {
+   "label": "OMNIROUTE_NADIR_BASE_URL",
+   "key": "OMNIROUTE_NADIR_BASE_URL",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/services/autoCombo/nadirStrategy.ts",
+   "line": 183
+  },
+  {
+   "label": "OMNIROUTE_CHAOS_MAX_PANEL",
+   "key": "OMNIROUTE_CHAOS_MAX_PANEL",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/services/autoCombo/virtualFactory.ts",
+   "line": 1170
+  },
+  {
+   "label": "default",
+   "key": null,
+   "source_kind": "default",
+   "value": null,
+   "file": "open-sse/config/providerRegistry.ts",
+   "line": 78
+  },
+  {
+   "label": "environment",
+   "key": null,
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providers/registry/kimi/coding/runtime.ts",
+   "line": 105
+  },
+  {
+   "label": "QODER_OAUTH_AUTHORIZE_URL",
+   "key": "QODER_OAUTH_AUTHORIZE_URL",
+   "source_kind": "default",
+   "value": "",
+   "file": "open-sse/config/providers/registry/qoder/index.ts",
+   "line": 17
+  },
+  {
+   "label": "OMNIROUTE_CHAOS_MIN_PANEL",
+   "key": "OMNIROUTE_CHAOS_MIN_PANEL",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/services/autoCombo/virtualFactory.ts",
+   "line": 1219
+  },
+  {
+   "label": "API_PORT",
+   "key": "API_PORT",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerPluginManifestUrl.ts",
+   "line": 17
+  },
+  {
+   "label": "environment",
+   "key": null,
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/codexClient.ts",
+   "line": 55
+  },
+  {
+   "label": "CLI_COMPAT_ALL",
+   "key": "CLI_COMPAT_ALL",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/cliFingerprints.ts",
+   "line": 407
+  },
+  {
+   "label": "environment",
+   "key": null,
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/cliFingerprints.ts",
+   "line": 404
+  },
+  {
+   "label": "GROK_SUBSCRIPTION_IMAGES_ENABLED",
+   "key": "GROK_SUBSCRIPTION_IMAGES_ENABLED",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/imageRegistry.ts",
+   "line": 42
+  },
+  {
+   "label": "CLI_COMPAT_ALL",
+   "key": "CLI_COMPAT_ALL",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/cliFingerprints.ts",
+   "line": 407
+  },
+  {
+   "label": "environment",
+   "key": null,
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerRegistry.ts",
+   "line": 78
+  },
+  {
+   "label": "OMNIROUTE_PUBLIC_PROTOCOL",
+   "key": "OMNIROUTE_PUBLIC_PROTOCOL",
+   "source_kind": "default",
+   "value": "http",
+   "file": "open-sse/config/providerPluginManifestUrl.ts",
+   "line": 18
+  },
+  {
+   "label": "HOST",
+   "key": "HOST",
+   "source_kind": "default",
+   "value": "127.0.0.1",
+   "file": "open-sse/config/providerPluginManifestUrl.ts",
+   "line": 16
+  },
+  {
+   "label": "OMNIROUTE_PUBLIC_PROTOCOL",
+   "key": "OMNIROUTE_PUBLIC_PROTOCOL",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerPluginManifestUrl.ts",
+   "line": 18
+  },
+  {
+   "label": "file",
+   "key": null,
+   "source_kind": "file",
+   "value": null,
+   "file": "open-sse/config/credentialLoader.ts",
+   "line": 77
+  },
+  {
+   "label": "environment",
+   "key": null,
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerRegistry.ts",
+   "line": 82
+  },
+  {
+   "label": "HOST",
+   "key": "HOST",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerPluginManifestUrl.ts",
+   "line": 16
+  },
+  {
+   "label": "OMNIROUTE_EGRESS_IP_LOCK_PROVIDERS",
+   "key": "OMNIROUTE_EGRESS_IP_LOCK_PROVIDERS",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerErrorRules.ts",
+   "line": 411
+  },
+  {
+   "label": "NODE_TEST_CONTEXT",
+   "key": "NODE_TEST_CONTEXT",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerHeaderProfiles.ts",
+   "line": 241
+  },
+  {
+   "label": "GITLAB_OAUTH_CLIENT_SECRET",
+   "key": "GITLAB_OAUTH_CLIENT_SECRET",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providers/registry/gitlab-duo/index.ts",
+   "line": 21
+  },
+  {
+   "label": "STATUS_SOFT_DEPRIORITIZE_FACTOR",
+   "key": "STATUS_SOFT_DEPRIORITIZE_FACTOR",
+   "source_kind": "default",
+   "value": "0.5",
+   "file": "open-sse/services/combo/autoStrategy.ts",
+   "line": 76
+  },
+  {
+   "label": "OMNIROUTE_EGRESS_IP_LOCK_PROVIDERS",
+   "key": "OMNIROUTE_EGRESS_IP_LOCK_PROVIDERS",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerErrorRules.ts",
+   "line": 458
+  },
+  {
+   "label": "OMNIROUTE_API_KEY_COOLDOWN_MS",
+   "key": "OMNIROUTE_API_KEY_COOLDOWN_MS",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/services/apiKeyRotator.ts",
+   "line": 80
+  },
+  {
+   "label": "OMNIROUTE_CHAOS_PANEL_TIMEOUT_MS",
+   "key": "OMNIROUTE_CHAOS_PANEL_TIMEOUT_MS",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/services/autoCombo/virtualFactory.ts",
+   "line": 1218
+  },
+  {
+   "label": "PORT",
+   "key": "PORT",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerPluginManifestUrl.ts",
+   "line": 17
+  },
+  {
+   "label": "GITHUB_COPILOT_MACHINE_ID",
+   "key": "GITHUB_COPILOT_MACHINE_ID",
+   "source_kind": "default",
+   "value": "",
+   "file": "open-sse/config/providerHeaderProfiles.ts",
+   "line": 172
+  },
+  {
+   "label": "QODER_OAUTH_TOKEN_URL",
+   "key": "QODER_OAUTH_TOKEN_URL",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providers/registry/qoder/index.ts",
+   "line": 16
+  },
+  {
+   "label": "NODE_TEST_CONTEXT",
+   "key": "NODE_TEST_CONTEXT",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerHeaderProfiles.ts",
+   "line": 128
+  },
+  {
+   "label": "STATUS_SOFT_DEPRIORITIZE_FACTOR",
+   "key": "STATUS_SOFT_DEPRIORITIZE_FACTOR",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/services/combo/autoStrategy.ts",
+   "line": 76
+  },
+  {
+   "label": "OMNIROUTE_EGRESS_IP_LOCK_PROVIDERS",
+   "key": "OMNIROUTE_EGRESS_IP_LOCK_PROVIDERS",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerErrorRules.ts",
+   "line": 460
+  },
+  {
+   "label": "OMNIROUTE_PROVIDER_MANIFEST_URL",
+   "key": "OMNIROUTE_PROVIDER_MANIFEST_URL",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerPluginManifestUrl.ts",
+   "line": 9
+  },
+  {
+   "label": "OMNIROUTE_EGRESS_QUOTA_ROTATION_PROVIDERS",
+   "key": "OMNIROUTE_EGRESS_QUOTA_ROTATION_PROVIDERS",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerErrorRules.ts",
+   "line": 521
+  },
+  {
+   "label": "default",
+   "key": null,
+   "source_kind": "default",
+   "value": null,
+   "file": "open-sse/config/providerRegistry.ts",
+   "line": 82
+  },
+  {
+   "label": "GITLAB_OAUTH_CLIENT_SECRET",
+   "key": "GITLAB_OAUTH_CLIENT_SECRET",
+   "source_kind": "default",
+   "value": "",
+   "file": "open-sse/config/providers/registry/gitlab-duo/index.ts",
+   "line": 21
+  },
+  {
+   "label": "environment",
+   "key": null,
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/cliFingerprints.ts",
+   "line": 404
+  },
+  {
+   "label": "GITHUB_COPILOT_MACHINE_ID",
+   "key": "GITHUB_COPILOT_MACHINE_ID",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providerHeaderProfiles.ts",
+   "line": 172
+  },
+  {
+   "label": "GITLAB_OAUTH_CLIENT_ID",
+   "key": "GITLAB_OAUTH_CLIENT_ID",
+   "source_kind": "default",
+   "value": "",
+   "file": "open-sse/config/providers/registry/gitlab-duo/index.ts",
+   "line": 19
+  },
+  {
+   "label": "GROK_CLI_CLIENT_VERSION",
+   "key": "GROK_CLI_CLIENT_VERSION",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/grokBuild.ts",
+   "line": 73
+  },
+  {
+   "label": "NODE_TEST_CONTEXT",
+   "key": "NODE_TEST_CONTEXT",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/codexClient.ts",
+   "line": 160
+  },
+  {
+   "label": "GITLAB_OAUTH_CLIENT_ID",
+   "key": "GITLAB_OAUTH_CLIENT_ID",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providers/registry/gitlab-duo/index.ts",
+   "line": 19
+  },
+  {
+   "label": "QUOTA_SOFT_DEPRIORITIZE_FACTOR",
+   "key": "QUOTA_SOFT_DEPRIORITIZE_FACTOR",
+   "source_kind": "default",
+   "value": "0.7",
+   "file": "open-sse/services/combo/autoStrategy.ts",
+   "line": 65
+  },
+  {
+   "label": "QUOTA_SOFT_DEPRIORITIZE_FACTOR",
+   "key": "QUOTA_SOFT_DEPRIORITIZE_FACTOR",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/services/combo/autoStrategy.ts",
+   "line": 65
+  },
+  {
+   "label": "NODE_TEST_CONTEXT",
+   "key": "NODE_TEST_CONTEXT",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providers/registry/kimi/coding/runtime.ts",
+   "line": 126
+  },
+  {
+   "label": "QODER_OAUTH_TOKEN_URL",
+   "key": "QODER_OAUTH_TOKEN_URL",
+   "source_kind": "default",
+   "value": "",
+   "file": "open-sse/config/providers/registry/qoder/index.ts",
+   "line": 16
+  },
+  {
+   "label": "OMNIROUTE_NADIR_API_KEY",
+   "key": "OMNIROUTE_NADIR_API_KEY",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/services/autoCombo/nadirStrategy.ts",
+   "line": 216
+  },
+  {
+   "label": "DATA_DIR",
+   "key": "DATA_DIR",
+   "source_kind": "default",
+   "value": null,
+   "file": "open-sse/config/credentialLoader.ts",
+   "line": 49
+  },
+  {
+   "label": "QODER_OAUTH_AUTHORIZE_URL",
+   "key": "QODER_OAUTH_AUTHORIZE_URL",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/providers/registry/qoder/index.ts",
+   "line": 17
+  },
+  {
+   "label": "file",
+   "key": null,
+   "source_kind": "file",
+   "value": null,
+   "file": "open-sse/services/autoCombo/taskFitness.ts",
+   "line": 66
+  },
+  {
+   "label": "OMNIROUTE_AUTO_FREE_FALLBACK_TO_FULL_POOL",
+   "key": "OMNIROUTE_AUTO_FREE_FALLBACK_TO_FULL_POOL",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/services/autoCombo/virtualFactory.ts",
+   "line": 1030
+  },
+  {
+   "label": "GROK_CLI_CLIENT_VERSION",
+   "key": "GROK_CLI_CLIENT_VERSION",
+   "source_kind": "default",
+   "value": "",
+   "file": "open-sse/config/grokBuild.ts",
+   "line": 73
+  },
+  {
+   "label": "PORT",
+   "key": "PORT",
+   "source_kind": "default",
+   "value": null,
+   "file": "open-sse/config/providerPluginManifestUrl.ts",
+   "line": 17
+  },
+  {
+   "label": "DATA_DIR",
+   "key": "DATA_DIR",
+   "source_kind": "environment",
+   "value": null,
+   "file": "open-sse/config/credentialLoader.ts",
+   "line": 49
+  }
+ ],
+ "timers": [
+  {
+   "label": "setTimeout",
+   "delay_milliseconds": null,
+   "method": "setTimeout",
+   "file": "open-sse/config/providers/registry/kimi/coding/runtime.ts",
+   "line": 153
+  },
+  {
+   "label": "setInterval",
+   "delay_milliseconds": 60000,
+   "method": "setInterval",
+   "file": "open-sse/services/accountFallback.ts",
+   "line": 206
+  },
+  {
+   "label": "setTimeout",
+   "delay_milliseconds": null,
+   "method": "setTimeout",
+   "file": "open-sse/services/autoCombo/chaosEngine.ts",
+   "line": 107
+  },
+  {
+   "label": "setTimeout",
+   "delay_milliseconds": null,
+   "method": "setTimeout",
+   "file": "open-sse/config/codexClient.ts",
+   "line": 89
+  },
+  {
+   "label": "setImmediate",
+   "delay_milliseconds": null,
+   "method": "setImmediate",
+   "file": "open-sse/services/autoCombo/virtualFactory.ts",
+   "line": 483
+  },
+  {
+   "label": "setTimeout",
+   "delay_milliseconds": null,
+   "method": "setTimeout",
+   "file": "open-sse/config/providerHeaderProfiles.ts",
+   "line": 83
+  },
+  {
+   "label": "setTimeout",
+   "delay_milliseconds": null,
+   "method": "setTimeout",
+   "file": "open-sse/services/combo/comboAttemptLoop.ts",
+   "line": 297
+  },
+  {
+   "label": "setTimeout",
+   "delay_milliseconds": null,
+   "method": "setTimeout",
+   "file": "open-sse/services/combo/comboAttemptLoop.ts",
+   "line": 473
+  },
+  {
+   "label": "setTimeout",
+   "delay_milliseconds": null,
+   "method": "setTimeout",
+   "file": "open-sse/services/combo/comboAttemptLoop.ts",
+   "line": 248
+  },
+  {
+   "label": "setTimeout",
+   "delay_milliseconds": null,
+   "method": "setTimeout",
+   "file": "open-sse/config/providerHeaderProfiles.ts",
+   "line": 269
+  },
+  {
+   "label": "setTimeout",
+   "delay_milliseconds": null,
+   "method": "setTimeout",
+   "file": "open-sse/services/combo/comboAttemptLoop.ts",
+   "line": 422
+  },
+  {
+   "label": "setInterval",
+   "delay_milliseconds": 15000,
+   "method": "setInterval",
+   "file": "open-sse/services/accountFallback.ts",
+   "line": 719
+  }
+ ],
+ "electron_nodes": [],
+ "hub_modules_by_fan_in": [
+  [
+   "open-sse/config/providers/shared.ts",
+   127
+  ],
+  [
+   "open-sse/services/combo/comboPredicates.ts",
+   18
+  ],
+  [
+   "open-sse/services/accountFallback.ts",
+   15
+  ],
+  [
+   "open-sse/services/combo/strategyRegistry.ts",
+   11
+  ],
+  [
+   "open-sse/services/combo/comboStructure.ts",
+   8
+  ],
+  [
+   "open-sse/services/combo/comboData.ts",
+   8
+  ],
+  [
+   "open-sse/services/combo/decisionTrace.ts",
+   7
+  ],
+  [
+   "open-sse/services/combo/comboErrorAggregation.ts",
+   7
+  ],
+  [
+   "open-sse/services/combo/validateQuality.ts",
+   6
+  ],
+  [
+   "open-sse/services/combo/executeTargetClassify.ts",
+   6
+  ],
+  [
+   "open-sse/services/combo/autoStrategy.ts",
+   5
+  ],
+  [
+   "open-sse/services/combo/concurrencyCaps.ts",
+   5
+  ],
+  [
+   "open-sse/services/combo/pinRecovery.ts",
+   5
+  ],
+  [
+   "open-sse/services/combo/promptCacheAffinity.ts",
+   5
+  ],
+  [
+   "open-sse/services/combo/quotaStrategies.ts",
+   5
+  ],
+  [
+   "open-sse/services/combo/rrState.ts",
+   5
+  ],
+  [
+   "open-sse/config/constants.ts",
+   5
+  ],
+  [
+   "open-sse/config/providerHeaderProfiles.ts",
+   5
+  ],
+  [
+   "open-sse/services/autoCombo/scoring.ts",
+   4
+  ],
+  [
+   "open-sse/services/combo/failureTracker.ts",
+   4
+  ],
+  [
+   "open-sse/services/combo/sessionStickiness.ts",
+   4
+  ],
+  [
+   "src/shared/constants/providers.ts",
+   4
+  ],
+  [
+   "open-sse/services/combo/emptyTurnTrust.ts",
+   4
+  ],
+  [
+   "open-sse/services/combo/quotaShareInflight.ts",
+   4
+  ],
+  [
+   "open-sse/config/providerModels.ts",
+   4
+  ],
+  [
+   "open-sse/config/providers/registry/alibaba/index.ts",
+   3
+  ],
+  [
+   "open-sse/services/combo/executeTargetGates.ts",
+   3
+  ],
+  [
+   "open-sse/services/combo/quotaExhaustionCutoff.ts",
+   3
+  ],
+  [
+   "open-sse/services/combo/quotaScoring.ts",
+   3
+  ],
+  [
+   "open-sse/services/combo/types.ts",
+   3
+  ],
+  [
+   "open-sse/services/combo/budgetExhaustion.ts",
+   3
+  ],
+  [
+   "open-sse/services/combo/connectionAwareExpansion.ts",
+   3
+  ],
+  [
+   "open-sse/services/combo/quotaSkipDiagnostics.ts",
+   3
+  ],
+  [
+   "open-sse/services/combo/quotaExhaustion.ts",
+   3
+  ],
+  [
+   "open-sse/config/codexClient.ts",
+   3
+  ],
+  [
+   "open-sse/services/accountFallback/perModelFailureScope.ts",
+   3
+  ],
+  [
+   "open-sse/config/anthropicHeaders.ts",
+   3
+  ],
+  [
+   "open-sse/services/combo/comboCooldownRetry.ts",
+   3
+  ],
+  [
+   "open-sse/services/combo/skippedConnectionCooldown.ts",
+   3
+  ],
+  [
+   "open-sse/services/autoCombo/taskFitness.ts",
+   3
+  ]
+ ],
+ "module_graph": {
+  "open-sse/config/providers/registry/apmix/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "apmixProvider"
+   ]
+  },
+  "open-sse/config/providers/index.ts": {
+   "imports": [
+    "open-sse/config/providers/registry/adapta-web/index.ts",
+    "open-sse/config/providers/registry/agentrouter/index.ts",
+    "open-sse/config/providers/registry/agnes/cn/index.ts",
+    "open-sse/config/providers/registry/agnes/index.ts",
+    "open-sse/config/providers/registry/agy/index.ts",
+    "open-sse/config/providers/registry/ai21/index.ts",
+    "open-sse/config/providers/registry/aihorde/index.ts",
+    "open-sse/config/providers/registry/aimlapi/index.ts",
+    "open-sse/config/providers/registry/ainative/index.ts",
+    "open-sse/config/providers/registry/aion/index.ts",
+    "open-sse/config/providers/registry/alibaba/cn/index.ts",
+    "open-sse/config/providers/registry/alibaba/index.ts",
+    "open-sse/config/providers/registry/ant-ling/index.ts",
+    "open-sse/config/providers/registry/anthropic/index.ts",
+    "open-sse/config/providers/registry/antigravity/index.ts",
+    "open-sse/config/providers/registry/anyapi/index.ts",
+    "open-sse/config/providers/registry/api-airforce/index.ts",
+    "open-sse/config/providers/registry/apmix/index.ts",
+    "open-sse/config/providers/registry/arcee-ai/index.ts",
+    "open-sse/config/providers/registry/auggie/index.ts",
+    "open-sse/config/providers/registry/auriko/index.ts",
+    "open-sse/config/providers/registry/bai/index.ts",
+    "open-sse/config/providers/registry/baichuan/index.ts",
+    "open-sse/config/providers/registry/baidu/index.ts",
+    "open-sse/config/providers/registry/bailian-coding-plan/index.ts",
+    "open-sse/config/providers/registry/baseten/index.ts",
+    "open-sse/config/providers/registry/bazaarlink/index.ts",
+    "open-sse/config/providers/registry/beatapi/index.ts",
+    "open-sse/config/providers/registry/bedrock/index.ts",
+    "open-sse/config/providers/registry/bigmodel/index.ts",
+    "open-sse/config/providers/registry/blackbox/index.ts",
+    "open-sse/config/providers/registry/blackbox/web/index.ts",
+    "open-sse/config/providers/registry/bluesminds/index.ts",
+    "open-sse/config/providers/registry/byteplus/index.ts",
+    "open-sse/config/providers/registry/bytez/index.ts",
+    "open-sse/config/providers/registry/cerebras/index.ts",
+    "open-sse/config/providers/registry/charm-hyper/index.ts",
+    "open-sse/config/providers/registry/chat-oripe/index.ts",
+    "open-sse/config/providers/registry/chatanywhere/index.ts",
+    "open-sse/config/providers/registry/chatgpt-web-codex/index.ts",
+    "open-sse/config/providers/registry/chatgpt-web/index.ts",
+    "open-sse/config/providers/registry/chatplayground/index.ts",
+    "open-sse/config/providers/registry/cheaperinference/index.ts",
+    "open-sse/config/providers/registry/chenzk/index.ts",
+    "open-sse/config/providers/registry/chutes/index.ts",
+    "open-sse/config/providers/registry/claude/index.ts",
+    "open-sse/config/providers/registry/claude/web/index.ts",
+    "open-sse/config/providers/registry/cline/index.ts",
+    "open-sse/config/providers/registry/clinepass/index.ts",
+    "open-sse/config/providers/registry/cloudcode-one/index.ts",
+    "open-sse/config/providers/registry/cloudflare-ai/index.ts",
+    "open-sse/config/providers/registry/cloudflare-playground/index.ts",
+    "open-sse/config/providers/registry/clova-studio/index.ts",
+    "open-sse/config/providers/registry/codebuddy-cn/index.ts",
+    "open-sse/config/providers/registry/codebuddy-intl/index.ts",
+    "open-sse/config/providers/registry/codestral/index.ts",
+    "open-sse/config/providers/registry/codex-app-server/index.ts",
+    "open-sse/config/providers/registry/codex/index.ts",
+    "open-sse/config/providers/registry/cohere/index.ts",
+    "open-sse/config/providers/registry/command-code/index.ts",
+    "open-sse/config/providers/registry/conol-web/index.ts",
+    "open-sse/config/providers/registry/copilot-m365-web/index.ts",
+    "open-sse/config/providers/registry/copilot-web/index.ts",
+    "open-sse/config/providers/registry/coze/index.ts",
+    "open-sse/config/providers/registry/crof/index.ts",
+    "open-sse/config/providers/registry/cursor/index.ts",
+    "open-sse/config/providers/registry/dahl/index.ts",
+    "open-sse/config/providers/registry/daoxe/index.ts",
+    "open-sse/config/providers/registry/databricks/index.ts",
+    "open-sse/config/providers/registry/deepai/index.ts",
+    "open-sse/config/providers/registry/deepinfra/index.ts",
+    "open-sse/config/providers/registry/deepseek/index.ts",
+    "open-sse/config/providers/registry/deepseek/web/index.ts",
+    "open-sse/config/providers/registry/demonroute/index.ts",
+    "open-sse/config/providers/registry/devin-cli-agentic/index.ts",
+    "open-sse/config/providers/registry/devin-cli/index.ts",
+    "open-sse/config/providers/registry/devin-desktop/index.ts",
+    "open-sse/config/providers/registry/dgrid/index.ts",
+    "open-sse/config/providers/registry/dify/index.ts",
+    "open-sse/config/providers/registry/digitalocean/index.ts",
+    "open-sse/config/providers/registry/dit/index.ts",
+    "open-sse/config/providers/registry/doubao/index.ts",
+    "open-sse/config/providers/registry/doubao/web/index.ts",
+    "open-sse/config/providers/registry/duckduckgo-web/index.ts",
+    "open-sse/config/providers/registry/dxnt/index.ts",
+    "open-sse/config/providers/registry/electronhub/index.ts",
+    "open-sse/config/providers/registry/eurouter/index.ts",
+    "open-sse/config/providers/registry/factory/index.ts",
+    "open-sse/config/providers/registry/fastrouter/index.ts",
+    "open-sse/config/providers/registry/featherless-ai/index.ts",
+    "open-sse/config/providers/registry/fireworks/index.ts",
+    "open-sse/config/providers/registry/free-ai/index.ts",
+    "open-sse/config/providers/registry/freeaiapikey/index.ts",
+    "open-sse/config/providers/registry/freebuff/index.ts",
+    "open-sse/config/providers/registry/freeinference/index.ts",
+    "open-sse/config/providers/registry/freemodel-dev/index.ts",
+    "open-sse/config/providers/registry/freetheai/index.ts",
+    "open-sse/config/providers/registry/friendliai/index.ts",
+    "open-sse/config/providers/registry/g4f-gemini/index.ts",
+    "open-sse/config/providers/registry/g4f-groq/index.ts",
+    "open-sse/config/providers/registry/g4f-nvidia/index.ts",
+    "open-sse/config/providers/registry/g4f-ollama/index.ts",
+    "open-sse/config/providers/registry/g4f-pollinations/index.ts",
+    "open-sse/config/providers/registry/galadriel/index.ts",
+    "open-sse/config/providers/registry/gemini/index.ts",
+    "open-sse/config/providers/registry/gemini/web/index.ts",
+    "open-sse/config/providers/registry/ghe-copilot/index.ts",
+    "open-sse/config/providers/registry/gigachat/index.ts",
+    "open-sse/config/providers/registry/github/index.ts",
+    "open-sse/config/providers/registry/gitlab-duo/index.ts",
+    "open-sse/config/providers/registry/gitlawb/gmi/index.ts",
+    "open-sse/config/providers/registry/gitlawb/index.ts",
+    "open-sse/config/providers/registry/glm/cn/index.ts",
+    "open-sse/config/providers/registry/glm/index.ts",
+    "open-sse/config/providers/registry/glm/t/index.ts",
+    "open-sse/config/providers/registry/greenpt/index.ts",
+    "open-sse/config/providers/registry/grok-cli/index.ts",
+    "open-sse/config/providers/registry/grok-web/index.ts",
+    "open-sse/config/providers/registry/groq/index.ts",
+    "open-sse/config/providers/registry/haiper/index.ts",
+    "open-sse/config/providers/registry/hcnsec/index.ts",
+    "open-sse/config/providers/registry/helixmind/index.ts",
+    "open-sse/config/providers/registry/helyxai/index.ts",
+    "open-sse/config/providers/registry/heroku/index.ts",
+    "open-sse/config/providers/registry/huggingchat/index.ts",
+    "open-sse/config/providers/registry/huggingface/index.ts",
+    "open-sse/config/providers/registry/hyperagent/index.ts",
+    "open-sse/config/providers/registry/hyperbolic/index.ts",
+    "open-sse/config/providers/registry/ideogram/index.ts",
+    "open-sse/config/providers/registry/iflytek/index.ts",
+    "open-sse/config/providers/registry/inception/index.ts",
+    "open-sse/config/providers/registry/inference-net/index.ts",
+    "open-sse/config/providers/registry/inner-ai/index.ts",
+    "open-sse/config/providers/registry/internlm/index.ts",
+    "open-sse/config/providers/registry/kenari/index.ts",
+    "open-sse/config/providers/registry/kie/index.ts",
+    "open-sse/config/providers/registry/kilo-gateway/index.ts",
+    "open-sse/config/providers/registry/kilocode/index.ts",
+    "open-sse/config/providers/registry/kimi/coding-apikey/index.ts",
+    "open-sse/config/providers/registry/kimi/coding/index.ts",
+    "open-sse/config/providers/registry/kimi/index.ts",
+    "open-sse/config/providers/registry/kimi/web/index.ts",
+    "open-sse/config/providers/registry/kiro/index.ts",
+    "open-sse/config/providers/registry/lambda-ai/index.ts",
+    "open-sse/config/providers/registry/leonardo/index.ts",
+    "open-sse/config/providers/registry/liquid/index.ts",
+    "open-sse/config/providers/registry/literouter/index.ts",
+    "open-sse/config/providers/registry/llamagate/index.ts",
+    "open-sse/config/providers/registry/llm-kiwi/index.ts",
+    "open-sse/config/providers/registry/llm7/index.ts",
+    "open-sse/config/providers/registry/llmgateway/index.ts",
+    "open-sse/config/providers/registry/lmarena/index.ts",
+    "open-sse/config/providers/registry/logfare/index.ts",
+    "open-sse/config/providers/registry/longcat/index.ts",
+    "open-sse/config/providers/registry/lyceum/index.ts",
+    "open-sse/config/providers/registry/maritalk/index.ts",
+    "open-sse/config/providers/registry/maxai/index.ts",
+    "open-sse/config/providers/registry/meganova-ai/index.ts",
+    "open-sse/config/providers/registry/meta-llama/index.ts",
+    "open-sse/config/providers/registry/minimax/cn/index.ts",
+    "open-sse/config/providers/registry/minimax/index.ts",
+    "open-sse/config/providers/registry/mistral/index.ts",
+    "open-sse/config/providers/registry/mixlayer/index.ts",
+    "open-sse/config/providers/registry/mlx/index.ts",
+    "open-sse/config/providers/registry/mnn-ai/index.ts",
+    "open-sse/config/providers/registry/modal/index.ts",
+    "open-sse/config/providers/registry/modelscope/index.ts",
+    "open-sse/config/providers/registry/monsterapi/index.ts",
+    "open-sse/config/providers/registry/moonshot/index.ts",
+    "open-sse/config/providers/registry/morph/index.ts",
+    "open-sse/config/providers/registry/muse-code/index.ts",
+    "open-sse/config/providers/registry/muse-spark-web/index.ts",
+    "open-sse/config/providers/registry/naga-ac/index.ts",
+    "open-sse/config/providers/registry/naga-ai/index.ts",
+    "open-sse/config/providers/registry/nan/index.ts",
+    "open-sse/config/providers/registry/nanogpt/index.ts",
+    "open-sse/config/providers/registry/nara/index.ts",
+    "open-sse/config/providers/registry/navy/index.ts",
+    "open-sse/config/providers/registry/nebius/index.ts",
+    "open-sse/config/providers/registry/nlpcloud/index.ts",
+    "open-sse/config/providers/registry/notion-web/index.ts",
+    "open-sse/config/providers/registry/notrack-web/index.ts",
+    "open-sse/config/providers/registry/nous-research/index.ts",
+    "open-sse/config/providers/registry/novita/index.ts",
+    "open-sse/config/providers/registry/nscale/index.ts",
+    "open-sse/config/providers/registry/nube/index.ts",
+    "open-sse/config/providers/registry/nvidia/index.ts",
+    "open-sse/config/providers/registry/ofoxai/index.ts",
+    "open-sse/config/providers/registry/ollama-cloud/index.ts",
+    "open-sse/config/providers/registry/oneminai/index.ts",
+    "open-sse/config/providers/registry/onomeo/index.ts",
+    "open-sse/config/providers/registry/openadapter/index.ts",
+    "open-sse/config/providers/registry/openai/index.ts",
+    "open-sse/config/providers/registry/opencode/go/index.ts",
+    "open-sse/config/providers/registry/opencode/zen/index.ts",
+    "open-sse/config/providers/registry/openference-api/index.ts",
+    "open-sse/config/providers/registry/openference/index.ts",
+    "open-sse/config/providers/registry/openrouter/index.ts",
+    "open-sse/config/providers/registry/openvecta/index.ts",
+    "open-sse/config/providers/registry/opper/index.ts",
+    "open-sse/config/providers/registry/orcarouter/index.ts",
+    "open-sse/config/providers/registry/ovhcloud/index.ts",
+    "open-sse/config/providers/registry/perplexity/agent/index.ts",
+    "open-sse/config/providers/registry/perplexity/index.ts",
+    "open-sse/config/providers/registry/perplexity/web/index.ts",
+    "open-sse/config/providers/registry/pioneer/index.ts",
+    "open-sse/config/providers/registry/plamo/index.ts",
+    "open-sse/config/providers/registry/poe/index.ts",
+    "open-sse/config/providers/registry/poixe-ai/index.ts",
+    "open-sse/config/providers/registry/pollinations/index.ts",
+    "open-sse/config/providers/registry/poolside/index.ts",
+    "open-sse/config/providers/registry/predibase/index.ts",
+    "open-sse/config/providers/registry/promptql/index.ts",
+    "open-sse/config/providers/registry/publicai/index.ts",
+    "open-sse/config/providers/registry/qianfan/index.ts",
+    "open-sse/config/providers/registry/qiniu/index.ts",
+    "open-sse/config/providers/registry/qoder/index.ts",
+    "open-sse/config/providers/registry/qwen-cloud-token-plan/index.ts",
+    "open-sse/config/providers/registry/qwen-cloud/index.ts",
+    "open-sse/config/providers/registry/regolo/index.ts",
+    "open-sse/config/providers/registry/reka/index.ts",
+    "open-sse/config/providers/registry/requesty/index.ts",
+    "open-sse/config/providers/registry/routeway/index.ts",
+    "open-sse/config/providers/registry/sambanova/index.ts",
+    "open-sse/config/providers/registry/sarvam/index.ts",
+    "open-sse/config/providers/registry/scaleway/index.ts",
+    "open-sse/config/providers/registry/sealion/index.ts",
+    "open-sse/config/providers/registry/seekai/index.ts",
+    "open-sse/config/providers/registry/sensenova/index.ts",
+    "open-sse/config/providers/registry/siliconflow/index.ts",
+    "open-sse/config/providers/registry/snowflake/index.ts",
+    "open-sse/config/providers/registry/sparkdesk/index.ts",
+    "open-sse/config/providers/registry/speka/index.ts",
+    "open-sse/config/providers/registry/stepfun/index.ts",
+    "open-sse/config/providers/registry/sumopod/index.ts",
+    "open-sse/config/providers/registry/synthetic/index.ts",
+    "open-sse/config/providers/registry/syntx/index.ts",
+    "open-sse/config/providers/registry/t3-web/index.ts",
+    "open-sse/config/providers/registry/tabitoken/index.ts",
+    "open-sse/config/providers/registry/tencent-aistudio-web/index.ts",
+    "open-sse/config/providers/registry/tencent/index.ts",
+    "open-sse/config/providers/registry/tinycms/index.ts",
+    "open-sse/config/providers/registry/together/index.ts",
+    "open-sse/config/providers/registry/token-kiosk/index.ts",
+    "open-sse/config/providers/registry/tokenmarket/index.ts",
+    "open-sse/config/providers/registry/tokenreply/index.ts",
+    "open-sse/config/providers/registry/tokenrouter/index.ts",
+    "open-sse/config/providers/registry/trae/index.ts",
+    "open-sse/config/providers/registry/twinmind/index.ts",
+    "open-sse/config/providers/registry/typhoon/index.ts",
+    "open-sse/config/providers/registry/uc-direct/index.ts",
+    "open-sse/config/providers/registry/uc/index.ts",
+    "open-sse/config/providers/registry/udio/index.ts",
+    "open-sse/config/providers/registry/uncloseai/index.ts",
+    "open-sse/config/providers/registry/unifically/index.ts",
+    "open-sse/config/providers/registry/unorouter/index.ts",
+    "open-sse/config/providers/registry/upstage/index.ts",
+    "open-sse/config/providers/registry/v0-vercel/index.ts",
+    "open-sse/config/providers/registry/venice/index.ts",
+    "open-sse/config/providers/registry/veoaifree-web/index.ts",
+    "open-sse/config/providers/registry/vercel-ai-gateway/index.ts",
+    "open-sse/config/providers/registry/vertex/index.ts",
+    "open-sse/config/providers/registry/vertex/partner/index.ts",
+    "open-sse/config/providers/registry/void-ai/index.ts",
+    "open-sse/config/providers/registry/volcengine/agent-plan/index.ts",
+    "open-sse/config/providers/registry/volcengine/coding-plan/index.ts",
+    "open-sse/config/providers/registry/volcengine/index.ts",
+    "open-sse/config/providers/registry/wafer/index.ts",
+    "open-sse/config/providers/registry/wandb/index.ts",
+    "open-sse/config/providers/registry/workbuddy/index.ts",
+    "open-sse/config/providers/registry/writer/index.ts",
+    "open-sse/config/providers/registry/x5lab/index.ts",
+    "open-sse/config/providers/registry/xai/index.ts",
+    "open-sse/config/providers/registry/xiaomi-mimo-token-plan/index.ts",
+    "open-sse/config/providers/registry/xiaomi-mimo/index.ts",
+    "open-sse/config/providers/registry/xkiro/index.ts",
+    "open-sse/config/providers/registry/y-api/index.ts",
+    "open-sse/config/providers/registry/yi/index.ts",
+    "open-sse/config/providers/registry/yolo-auto/index.ts",
+    "open-sse/config/providers/registry/yuanbao-web/index.ts",
+    "open-sse/config/providers/registry/zai-web/index.ts",
+    "open-sse/config/providers/registry/zai/index.ts",
+    "open-sse/config/providers/registry/zcode/index.ts",
+    "open-sse/config/providers/registry/zed-hosted/index.ts",
+    "open-sse/config/providers/registry/zenmux-free/index.ts",
+    "open-sse/config/providers/registry/zenmux/index.ts",
+    "open-sse/config/providers/registry/zerolimitai/index.ts",
+    "open-sse/config/providers/registry/zylo-api/index.ts"
+   ],
+   "exports": [
+    "REGISTRY"
+   ]
+  },
+  "open-sse/services/combo.ts": {
+   "imports": [
+    "open-sse/services/autoCombo/chaosEngine.ts",
+    "open-sse/services/autoCombo/scoring.ts",
+    "open-sse/services/combo/autoStrategy.ts",
+    "open-sse/services/combo/candidateCost.ts",
+    "open-sse/services/combo/chaosHeaderBarrier.ts",
+    "open-sse/services/combo/comboAttemptLoop.ts",
+    "open-sse/services/combo/comboPredicates.ts",
+    "open-sse/services/combo/comboSetup.ts",
+    "open-sse/services/combo/comboStructure.ts",
+    "open-sse/services/combo/concurrencyCaps.ts",
+    "open-sse/services/combo/context.ts",
+    "open-sse/services/combo/decisionTrace.ts",
+    "open-sse/services/combo/dispatchPrelude.ts",
+    "open-sse/services/combo/executeTargetAttempt.ts",
+    "open-sse/services/combo/executeTargetGates.ts",
+    "open-sse/services/combo/failureTracker.ts",
+    "open-sse/services/combo/fingerprintExpansion.ts",
+    "open-sse/services/combo/nativeCodexTurnPin.ts",
+    "open-sse/services/combo/pinRecovery.ts",
+    "open-sse/services/combo/promptCacheAffinity.ts",
+    "open-sse/services/combo/quotaExhaustionCutoff.ts",
+    "open-sse/services/combo/quotaScoring.ts",
+    "open-sse/services/combo/quotaShareConcurrency.ts",
+    "open-sse/services/combo/quotaStrategies.ts",
+    "open-sse/services/combo/roundRobinCombo.ts",
+    "open-sse/services/combo/safetyStopLatch.ts",
+    "open-sse/services/combo/sessionStickiness.ts",
+    "open-sse/services/combo/shadowRouting.ts",
+    "open-sse/services/combo/staleLkgpClear.ts",
+    "open-sse/services/combo/strategyRegistry.ts",
+    "open-sse/services/combo/targetResolution.ts",
+    "open-sse/services/combo/targetTimeoutRunner.ts",
+    "open-sse/services/combo/types.ts",
+    "open-sse/services/combo/validateQuality.ts",
+    "src/shared/constants/providers.ts"
+   ],
+   "exports": [
+    "MAX_GLOBAL_ATTEMPTS",
+    "MAX_GLOBAL_ATTEMPTS_HARD_CAP",
+    "QUOTA_SOFT_DEPRIORITIZE_FACTOR",
+    "RESET_WINDOW_NAMES",
+    "bootstrapMs",
+    "bootstrapSourceCounts",
+    "clampComboDepth",
+    "clampGlobalAttempts",
+    "clearStaleLKGP",
+    "expandAutoComboCandidatePool",
+    "filterTargetsByRequestCompatibility",
+    "formatBootstrapWarning",
+    "getConnectionStatusQuotaCutoffReason",
+    "getPersistedConnectionCooldownSkipReason",
+    "isContextOverflow400",
+    "isModelScoped400",
+    "isParamValidation400",
+    "isRequestScopedUpstreamFailure",
+    "pinIsDurablyUnhealthy",
+    "poolMedianP95Ms",
+    "preScreenTargets",
+    "releaseStickyPinOnFailure",
+    "resolveComboRuntimeUnits",
+    "resolveComboTargets",
+    "resolvePersistedConnectionCooldownSkipReason",
+    "resolveShadowTargets",
+    "scheduleShadowRouting",
+    "scoreAutoTargets",
+    "setCandidateQuotaSoftPenalty",
+    "shouldRecordProviderBreakerFailure",
+    "shouldSkipConnDisable",
+    "shouldSkipForPredictedTtft",
+    "shouldWarnBootstrap",
+    "validateResponseQuality"
+   ]
+  },
+  "open-sse/services/combo/roundRobinCombo.ts": {
+   "imports": [
+    "open-sse/services/accountFallback.ts",
+    "open-sse/services/combo.ts",
+    "open-sse/services/combo/autoStrategy.ts",
+    "open-sse/services/combo/budgetExhaustion.ts",
+    "open-sse/services/combo/comboCompatFallback.ts",
+    "open-sse/services/combo/comboDailyResetClock.ts",
+    "open-sse/services/combo/comboData.ts",
+    "open-sse/services/combo/comboDiagFormat.ts",
+    "open-sse/services/combo/comboErrorAggregation.ts",
+    "open-sse/services/combo/comboPredicates.ts",
+    "open-sse/services/combo/comboStructure.ts",
+    "open-sse/services/combo/concurrencyCaps.ts",
+    "open-sse/services/combo/connectionAwareExpansion.ts",
+    "open-sse/services/combo/emptyContentRetry.ts",
+    "open-sse/services/combo/emptyTurnTrust.ts",
+    "open-sse/services/combo/executeTargetClassify.ts",
+    "open-sse/services/combo/localCircuitRefusal.ts",
+    "open-sse/services/combo/pinRecovery.ts",
+    "open-sse/services/combo/promptCacheAffinity.ts",
+    "open-sse/services/combo/providerWildcard.ts",
+    "open-sse/services/combo/quotaSkipDiagnostics.ts",
+    "open-sse/services/combo/recordLkgpPin.ts",
+    "open-sse/services/combo/rrDashboardEvents.ts",
+    "open-sse/services/combo/rrState.ts",
+    "open-sse/services/combo/sessionStickiness.ts",
+    "open-sse/services/combo/shadowRouting.ts",
+    "open-sse/services/combo/targetExhaustion.ts",
+    "open-sse/services/combo/targetTokenLimit.ts",
+    "open-sse/services/combo/unavailableRetryGate.ts",
+    "open-sse/services/combo/validateQuality.ts"
+   ],
+   "exports": []
+  },
+  "open-sse/config/providers/registry/openference/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "openferenceProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/alibaba/cn/index.ts": {
+   "imports": [
+    "open-sse/config/providers/registry/alibaba/index.ts"
+   ],
+   "exports": [
+    "alibaba_cnProvider"
+   ]
+  },
+  "open-sse/config/providerRegistry.ts": {
+   "imports": [
+    "open-sse/config/providers/index.ts",
+    "open-sse/config/providers/registry/alibaba/index.ts",
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "generateAliasMap",
+    "getClaudeCodeDefaultModels",
+    "getPassthroughProviders",
+    "getRegistryModelThinkingEfforts",
+    "getRegistryThinkingEfforts",
+    "getUnsupportedParams",
+    "isLocalProvider",
+    "requireCompatibleBaseUrl"
+   ]
+  },
+  "open-sse/services/combo/executeTargetAttempt.ts": {
+   "imports": [
+    "open-sse/services/accountFallback.ts",
+    "open-sse/services/combo/budgetExhaustion.ts",
+    "open-sse/services/combo/comboDailyResetClock.ts",
+    "open-sse/services/combo/comboErrorAggregation.ts",
+    "open-sse/services/combo/comboPredicates.ts",
+    "open-sse/services/combo/decisionTrace.ts",
+    "open-sse/services/combo/emptyContentRetry.ts",
+    "open-sse/services/combo/emptyTurnTrust.ts",
+    "open-sse/services/combo/executeTargetClassify.ts",
+    "open-sse/services/combo/executeTargetGates.ts",
+    "open-sse/services/combo/failureTracker.ts",
+    "open-sse/services/combo/localCircuitRefusal.ts",
+    "open-sse/services/combo/nativeCodexTurnPin.ts",
+    "open-sse/services/combo/quotaExhaustion.ts",
+    "open-sse/services/combo/recordLkgpPin.ts",
+    "open-sse/services/combo/rrState.ts",
+    "open-sse/services/combo/sessionStickiness.ts",
+    "open-sse/services/combo/strategyRegistry.ts",
+    "open-sse/services/combo/targetExhaustion.ts",
+    "open-sse/services/combo/validateQuality.ts"
+   ],
+   "exports": [
+    "executeTargetAttempt"
+   ]
+  },
+  "open-sse/config/providers/registry/agentrouter/index.ts": {
+   "imports": [
+    "open-sse/config/codexClient.ts"
+   ],
+   "exports": [
+    "agentrouterProvider"
+   ]
+  },
+  "open-sse/services/accountFallback/requestScoped400.ts": {
+   "imports": [
+    "open-sse/config/constants.ts",
+    "open-sse/services/accountFallback.ts"
+   ],
+   "exports": []
+  },
+  "open-sse/config/providers/registry/muse-code/imageModels.ts": {
+   "imports": [
+    "open-sse/config/museCode.ts"
+   ],
+   "exports": [
+    "MUSE_CODE_IMAGE_PROVIDER"
+   ]
+  },
+  "open-sse/config/providers/registry/greenpt/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "greenptProvider"
+   ]
+  },
+  "open-sse/services/combo/targetExhaustion.ts": {
+   "imports": [
+    "open-sse/config/constants.ts",
+    "open-sse/services/accountFallback.ts",
+    "open-sse/services/accountFallback/modelScopedAccessDenial.ts",
+    "open-sse/services/accountFallback/perModelFailureScope.ts",
+    "open-sse/services/accountFallback/sharedWalletCredits.ts",
+    "open-sse/services/combo/comboPredicates.ts"
+   ],
+   "exports": [
+    "applyComboTargetExhaustion"
+   ]
+  },
+  "open-sse/config/providers/registry/eurouter/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "eurouterProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/claude/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "claudeProvider"
+   ]
+  },
+  "open-sse/config/glmProvider.ts": {
+   "imports": [
+    "open-sse/config/anthropicHeaders.ts"
+   ],
+   "exports": [
+    "GLMT_REQUEST_DEFAULTS",
+    "GLMT_TIMEOUT_MS",
+    "GLM_ANTHROPIC_BETA",
+    "GLM_ANTHROPIC_DEFAULT_BASE_URLS",
+    "GLM_CLAUDE_CODE_USER_AGENT",
+    "GLM_COUNT_TOKENS_TIMEOUT_MS",
+    "GLM_DEFAULT_BASE_URLS",
+    "GLM_MODELS_URLS",
+    "GLM_QUOTA_URLS",
+    "GLM_REQUEST_DEFAULTS",
+    "GLM_RESET_CARD_URLS",
+    "GLM_SHARED_MODELS",
+    "GLM_TEAM_QUOTA_ALIAS_KEYS",
+    "GLM_TEAM_QUOTA_ORGANIZATION_KEYS",
+    "GLM_TEAM_QUOTA_PROJECT_KEYS",
+    "GLM_TIMEOUT_MS",
+    "buildGlmBaseHeaders",
+    "buildGlmCodingHeaders",
+    "buildGlmResetCardFetch",
+    "getGlmBaseUrl",
+    "getGlmPrimaryTransport",
+    "getGlmQuotaUrl",
+    "isAnthropicGlmBaseUrl",
+    "isCodingGlmBaseUrl"
+   ]
+  },
+  "open-sse/config/providers/shared.ts": {
+   "imports": [
+    "open-sse/config/agyModels.ts",
+    "open-sse/config/anthropicHeaders.ts",
+    "open-sse/config/antigravityModelAliases.ts",
+    "open-sse/config/antigravityUpstream.ts",
+    "open-sse/config/codexClient.ts",
+    "open-sse/config/glmProvider.ts",
+    "open-sse/config/maritalk.ts",
+    "open-sse/config/opencodeZenGoSharedModels.ts",
+    "open-sse/config/providerHeaderProfiles.ts"
+   ],
+   "exports": [
+    "AGY_PUBLIC_MODELS",
+    "ANTHROPIC_BETA_API_KEY",
+    "ANTHROPIC_BETA_CLAUDE_OAUTH",
+    "ANTHROPIC_VERSION_HEADER",
+    "ANTIGRAVITY_PUBLIC_MODELS",
+    "ANTIGRAVITY_RUNTIME_BASE_URLS",
+    "CHAT_OPENAI_COMPAT_MODELS",
+    "CLAUDE_CLI_STAINLESS_PACKAGE_VERSION",
+    "CLAUDE_CLI_STAINLESS_RUNTIME_VERSION",
+    "CLAUDE_CLI_USER_AGENT",
+    "CURSOR_REGISTRY_VERSION",
+    "GITLAB_DUO_DEFAULT_BASE_URL",
+    "GLMT_REQUEST_DEFAULTS",
+    "GLMT_TIMEOUT_MS",
+    "GLM_REQUEST_DEFAULTS",
+    "GLM_SHARED_MODELS",
+    "GLM_TIMEOUT_MS",
+    "GPT_5_5_CODEX_CAPABILITIES",
+    "GPT_5_5_CONTEXT_LENGTH",
+    "GPT_5_6_API_CAPABILITIES",
+    "GPT_5_6_CODEX_CAPABILITIES",
+    "MARITALK_DEFAULT_BASE_URL",
+    "OPENCODE_ZEN_GO_SHARED_MODELS",
+    "REASONING_UNSUPPORTED",
+    "buildAntigravityUrl",
+    "buildGeminiGenerateContentUrl",
+    "buildGitLabOAuthEndpoints",
+    "buildOpenAiCompatibleRegistryEntry",
+    "getAntigravityProviderHeaders",
+    "getCodexDefaultHeaders",
+    "getCursorRegistryHeaders",
+    "getGitHubCopilotChatHeaders",
+    "getKiroServiceHeaders",
+    "getQoderDefaultHeaders",
+    "getRuntimeArch",
+    "getRuntimePlatform",
+    "resolvePublicCred"
+   ]
+  },
+  "open-sse/config/providers/registry/codex/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "codexProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/sealion/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "sealionProvider"
+   ]
+  },
+  "open-sse/services/combo/targetResolution.ts": {
+   "imports": [
+    "open-sse/services/accountFallback.ts",
+    "open-sse/services/autoCombo/autoPrefix.ts",
+    "open-sse/services/autoCombo/pipelineRouter.ts",
+    "open-sse/services/combo/applyStrategyOrdering.ts",
+    "open-sse/services/combo/autoStrategy.ts",
+    "open-sse/services/combo/comboPredicates.ts",
+    "open-sse/services/combo/comboStructure.ts",
+    "open-sse/services/combo/connectionAwareExpansion.ts",
+    "open-sse/services/combo/contextRequirements.ts",
+    "open-sse/services/combo/failureTracker.ts",
+    "open-sse/services/combo/pinRecovery.ts",
+    "open-sse/services/combo/promptCacheAffinity.ts",
+    "open-sse/services/combo/providerWildcard.ts",
+    "open-sse/services/combo/quotaShareInflight.ts",
+    "open-sse/services/combo/quotaStrategies.ts",
+    "open-sse/services/combo/resolveAutoStrategy.ts",
+    "open-sse/services/combo/rrState.ts",
+    "open-sse/services/combo/sessionStickiness.ts",
+    "open-sse/services/combo/strategyRegistry.ts"
+   ],
+   "exports": [
+    "resolveComboTargetPipeline"
+   ]
+  },
+  "open-sse/config/cliFingerprints.ts": {
+   "imports": [
+    "open-sse/config/providerHeaderProfiles.ts"
+   ],
+   "exports": [
+    "CLI_FINGERPRINTS",
+    "EXECUTOR_CONSUMED_BODY_FIELDS",
+    "applyFingerprint",
+    "isCliCompatEnabled",
+    "setCliCompatProviders"
+   ]
+  },
+  "open-sse/services/combo/comboStructure.ts": {
+   "imports": [
+    "open-sse/services/combo/comboData.ts",
+    "open-sse/services/combo/comboPredicates.ts",
+    "open-sse/services/combo/comboVisibility.ts",
+    "open-sse/services/combo/contextOverrideGate.ts",
+    "open-sse/services/combo/targetSorters.ts",
+    "src/shared/constants/providers.ts"
+   ],
+   "exports": [
+    "deriveRequestCompatibilityRequirements",
+    "providerSupportsEmulatedToolCalling",
+    "resolveComboRuntimeUnits",
+    "resolveWeightedTargets",
+    "sortTargetsByContextSize"
+   ]
+  },
+  "open-sse/config/providers/registry/arcee-ai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "arceeAiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/cursor/index.ts": {
+   "imports": [
+    "open-sse/config/providers/registry/cursor/grok47.ts",
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "cursorProvider",
+    "cursor_apiProvider"
+   ]
+  },
+  "open-sse/services/combo/comboAttemptLoop.ts": {
+   "imports": [
+    "open-sse/services/accountFallback.ts",
+    "open-sse/services/combo/comboCompatFallback.ts",
+    "open-sse/services/combo/comboCooldownRetry.ts",
+    "open-sse/services/combo/comboErrorAggregation.ts",
+    "open-sse/services/combo/comboPredicates.ts",
+    "open-sse/services/combo/decisionTrace.ts",
+    "open-sse/services/combo/executeTargetAttempt.ts",
+    "open-sse/services/combo/executeTargetClassify.ts",
+    "open-sse/services/combo/executeTargetGates.ts",
+    "open-sse/services/combo/failureTracker.ts",
+    "open-sse/services/combo/pinRecovery.ts",
+    "open-sse/services/combo/quotaExhaustion.ts",
+    "open-sse/services/combo/quotaSkipDiagnostics.ts",
+    "open-sse/services/combo/skippedConnectionCooldown.ts",
+    "open-sse/services/combo/strategyRegistry.ts",
+    "open-sse/services/combo/unavailableRetryGate.ts",
+    "open-sse/services/combo/validateQuality.ts",
+    "src/shared/constants/providers.ts"
+   ],
+   "exports": [
+    "dispatchWithCooldownRetry"
+   ]
+  },
+  "open-sse/services/accountFallback/perModelFailureScope.ts": {
+   "imports": [
+    "open-sse/services/accountFallback.ts"
+   ],
+   "exports": []
+  },
+  "open-sse/services/combo/shadowRouting.ts": {
+   "imports": [
+    "open-sse/services/combo/comboData.ts",
+    "open-sse/services/combo/comboPredicates.ts",
+    "open-sse/services/combo/comboStructure.ts"
+   ],
+   "exports": []
+  },
+  "open-sse/services/combo/resolveAutoStrategy.ts": {
+   "imports": [
+    "open-sse/services/autoCombo/engine.ts",
+    "open-sse/services/autoCombo/modePacks.ts",
+    "open-sse/services/autoCombo/requestControls.ts",
+    "open-sse/services/autoCombo/routerStrategy.ts",
+    "open-sse/services/combo/autoConfig.ts",
+    "open-sse/services/combo/autoStrategy.ts",
+    "open-sse/services/combo/comboData.ts",
+    "open-sse/services/combo/comboStructure.ts",
+    "open-sse/services/combo/promptCacheAffinity.ts",
+    "open-sse/services/combo/protectedPriorityStopStatus.ts",
+    "open-sse/services/combo/rungOrder.ts"
+   ],
+   "exports": [
+    "evaluateAutoCandidates"
+   ]
+  },
+  "open-sse/services/combo/concurrencyCaps.ts": {
+   "imports": [
+    "open-sse/services/combo/comboPredicates.ts"
+   ],
+   "exports": [
+    "resolveMaxConcurrentByConnection"
+   ]
+  },
+  "open-sse/config/providers/registry/galadriel/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "galadrielProvider"
+   ]
+  },
+  "open-sse/config/antigravityModelAliases.ts": {
+   "imports": [
+    "open-sse/config/antigravitySharedModels.ts"
+   ],
+   "exports": [
+    "ANTIGRAVITY_MODEL_ALIASES",
+    "ANTIGRAVITY_PRO_FALLBACK_CHAINS",
+    "ANTIGRAVITY_PUBLIC_MODELS",
+    "ANTIGRAVITY_QUOTA_VISIBLE_NON_CHAT_MODEL_IDS",
+    "ANTIGRAVITY_REVERSE_MODEL_ALIASES",
+    "isUserVisibleAntigravityQuotaModelId"
+   ]
+  },
+  "open-sse/config/providers/registry/nan/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "nanProvider"
+   ]
+  },
+  "open-sse/services/autoCombo/pipelineRouter.ts": {
+   "imports": [
+    "open-sse/services/autoCombo/intentTaskFitnessMap.ts",
+    "open-sse/services/autoCombo/taskFitness.ts"
+   ],
+   "exports": [
+    "FITNESS_TIERS",
+    "buildPipelineResponse",
+    "handlePipelineCombo",
+    "resolveModelForTier"
+   ]
+  },
+  "open-sse/config/anthropicHeaders.ts": {
+   "imports": [
+    "open-sse/config/context1m.ts"
+   ],
+   "exports": [
+    "ANTHROPIC_BETA_API_KEY",
+    "ANTHROPIC_BETA_CLAUDE_OAUTH",
+    "ANTHROPIC_BETA_FULL",
+    "ANTHROPIC_VERSION_HEADER",
+    "CLAUDE_CLI_BILLING_VERSION",
+    "CLAUDE_CLI_BUILD_REVISION",
+    "CLAUDE_CLI_STAINLESS_PACKAGE_VERSION",
+    "CLAUDE_CLI_STAINLESS_RUNTIME_VERSION",
+    "CLAUDE_CLI_USER_AGENT",
+    "CLAUDE_CLI_VERSION",
+    "FORWARDABLE_CLIENT_BETAS",
+    "MID_CONVERSATION_SYSTEM_BETA",
+    "SKILLS_BETA_HEADER",
+    "appendAnthropicBetaHeader",
+    "getClaudeCliBillingVersion",
+    "getClaudeCodeUserAgent",
+    "hasMidConversationSystemTurn",
+    "mergeCcHeaders",
+    "mergeClientAnthropicBeta",
+    "normalizeAnthropicHeaderVariants",
+    "syncSkillsBeta"
+   ]
+  },
+  "open-sse/services/combo/comboPredicates.ts": {
+   "imports": [
+    "open-sse/config/constants.ts",
+    "open-sse/services/accountFallback.ts",
+    "open-sse/services/accountFallback/perModelFailureScope.ts",
+    "open-sse/services/accountFallback/requestScoped400.ts",
+    "open-sse/services/combo/comboErrorAggregation.ts"
+   ],
+   "exports": [
+    "ALL_ACCOUNTS_RATE_LIMITED_PATTERNS",
+    "COMBO_LOOP_SAFETY_TIMEOUT_MS",
+    "COMBO_SAFETY_DRAIN_MS",
+    "IDENTICAL_MODEL_ERROR_STREAK",
+    "MAX_COMBO_DEPTH",
+    "MAX_COMBO_DEPTH_HARD_CAP",
+    "MAX_FALLBACK_WAIT_MS",
+    "MAX_GLOBAL_ATTEMPTS",
+    "MAX_GLOBAL_ATTEMPTS_HARD_CAP",
+    "PREDICTIVE_TTFT_MIN_SAMPLES",
+    "QUOTA_BLOCKING_CONNECTION_STATUSES",
+    "TRANSIENT_FOR_SEMAPHORE",
+    "clampPercent",
+    "comboModelNotFoundResponse",
+    "getConnectionStatusQuotaCutoffReason",
+    "getTargetProvider",
+    "isAllAccountsRateLimitedResponse",
+    "isContextOverflow400",
+    "isLocalKeyPolicyBreachErrorBody",
+    "isProviderCircuitOpenResult",
+    "isStreamEarlyEofErrorBody",
+    "isStreamReadinessFailureErrorBody",
+    "isTokenLimitBreachErrorBody",
+    "normalizeConnectionStatus",
+    "requestScopedReplayKey",
+    "resolveDelayMs",
+    "shouldRecordModelLockoutForComboFailure"
+   ]
+  },
+  "open-sse/config/mediaServiceKinds.ts": {
+   "imports": [
+    "open-sse/config/audioRegistry.ts",
+    "open-sse/config/embeddingRegistry.ts",
+    "open-sse/config/imageRegistryData.ts",
+    "open-sse/config/musicRegistry.ts",
+    "open-sse/config/ocrRegistry.ts",
+    "open-sse/config/videoRegistry.ts"
+   ],
+   "exports": [
+    "MEDIA_KIND_REGISTRIES",
+    "REGISTRY_MEDIA_KINDS",
+    "getRegistryMediaKinds"
+   ]
+  },
+  "open-sse/config/imageRegistryData.ts": {
+   "imports": [
+    "open-sse/config/providers/registry/aihorde/imageModels.ts",
+    "open-sse/config/providers/registry/cheaperinference/imageModels.ts",
+    "open-sse/config/providers/registry/kie/imageModels.ts",
+    "open-sse/config/providers/registry/lmarena/directModels.ts",
+    "open-sse/config/providers/registry/magnific/index.ts",
+    "open-sse/config/providers/registry/muse-code/imageModels.ts",
+    "open-sse/config/providers/registry/segmind/imageModels.ts",
+    "open-sse/config/providers/registry/stability-ai/imageModels.ts",
+    "open-sse/config/providers/registry/zenmux/imageModels.ts"
+   ],
+   "exports": [
+    "IMAGE_MODEL_ALIASES",
+    "IMAGE_PROVIDERS",
+    "XAI_API_KEY_IMAGE_PROVIDER",
+    "XAI_IMAGE_CONFIG",
+    "XAI_SUBSCRIPTION_IMAGE_PROVIDERS"
+   ]
+  },
+  "open-sse/config/providers/registry/publicai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "publicaiProvider"
+   ]
+  },
+  "open-sse/services/combo/emptyContentRetry.ts": {
+   "imports": [
+    "open-sse/services/combo/comboErrorAggregation.ts",
+    "open-sse/services/combo/comboPredicates.ts"
+   ],
+   "exports": [
+    "handleEmptyContentRetry",
+    "isEarlyEofResponse"
+   ]
+  },
+  "open-sse/config/providers/registry/seekai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "seekaiProvider"
+   ]
+  },
+  "open-sse/services/combo/comboSetup.ts": {
+   "imports": [
+    "open-sse/config/constants.ts",
+    "open-sse/services/combo/autoStrategy.ts",
+    "open-sse/services/combo/strategyRegistry.ts"
+   ],
+   "exports": []
+  },
+  "open-sse/config/providers/registry/snowflake/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "snowflakeProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/lmarena/index.ts": {
+   "imports": [
+    "open-sse/config/providers/registry/lmarena/directModels.ts"
+   ],
+   "exports": [
+    "lmarenaProvider"
+   ]
+  },
+  "open-sse/config/freeTierProviders.ts": {
+   "imports": [
+    "open-sse/config/freeModelCatalog.data.ts",
+    "open-sse/config/freeModelCatalog.ts"
+   ],
+   "exports": [
+    "FREE_TIER_PROVIDER_SET",
+    "hasFreeTierProvider"
+   ]
+  },
+  "open-sse/services/accountFallback.ts": {
+   "imports": [
+    "open-sse/config/codexQuotaScopes.ts",
+    "open-sse/config/constants.ts",
+    "open-sse/config/errorConfig.ts",
+    "open-sse/config/providerErrorRules.ts",
+    "open-sse/config/providerRegistry.ts",
+    "open-sse/services/accountFallback/concurrencyLimit429.ts",
+    "open-sse/services/accountFallback/cooldownCap.ts",
+    "open-sse/services/accountFallback/creditExhaustionSignals.ts",
+    "open-sse/services/accountFallback/exactModelLock.ts",
+    "open-sse/services/accountFallback/lockoutEviction.ts",
+    "open-sse/services/accountFallback/mistralAmbiguousAuth.ts",
+    "open-sse/services/accountFallback/nonRetryableUpstream.ts",
+    "open-sse/services/accountFallback/perModelFailureScope.ts",
+    "open-sse/services/accountFallback/sharedWalletCredits.ts",
+    "open-sse/services/combo/comboCooldownRetry.ts"
+   ],
+   "exports": [
+    "ACCOUNT_DEACTIVATED_SIGNALS",
+    "ACCOUNT_SUSPENDED_BILLING_PATTERNS",
+    "AUTH_CREDENTIAL_ERROR_PATTERNS",
+    "CANONICAL_PROVIDER_CACHE_LIMIT",
+    "CONTEXT_OVERFLOW_PATTERNS",
+    "ENDPOINT_PERMANENTLY_MOVED_PATTERNS",
+    "MALFORMED_REQUEST_PATTERNS",
+    "MODEL_ACCESS_DENIED_PATTERNS",
+    "MODEL_PERMANENTLY_UNAVAILABLE_PATTERNS",
+    "OAUTH_INVALID_TOKEN_SIGNALS",
+    "PARAM_VALIDATION_PATTERNS",
+    "RATE_LIMIT_TEXT_PATTERNS",
+    "canonicalProviderCache",
+    "classifyErrorText",
+    "clearProviderFailure",
+    "cooldownUntilMs",
+    "evictModelLockoutOverflow",
+    "filterAvailableAccounts",
+    "getCanonicalLockProvider",
+    "getMergedBannedSignals",
+    "getModelLockoutInfo",
+    "getProviderProfile",
+    "getProvidersInCooldown",
+    "isAccountDeactivated",
+    "isAccountUnavailable",
+    "isEndpointPermanentlyMoved",
+    "isModelPermanentlyUnavailable",
+    "isModelScoped400",
+    "isProviderInCooldown",
+    "isProviderModelUnsupported400",
+    "lockExactModel",
+    "parseRetryAfterFromBody",
+    "parseRetryFromErrorText",
+    "recordCoreOwnedAntigravityQuotaState",
+    "recordModelLockoutFailure",
+    "recordProviderFailure",
+    "recordProviderSuccess",
+    "resetAccountState",
+    "retryHintBypassesMaxCooldownMs",
+    "selectLockoutCooldownMs",
+    "shouldDeferAntigravityQuotaStateToCaller",
+    "shouldMarkAccountExhaustedFrom429"
+   ]
+  },
+  "open-sse/services/combo/quotaScoring.ts": {
+   "imports": [
+    "open-sse/services/combo/comboData.ts",
+    "open-sse/services/combo/types.ts",
+    "src/shared/constants/providers.ts"
+   ],
+   "exports": [
+    "getResetWindowTimestampMs",
+    "resolveAutoResetWindowConfig",
+    "resolveQuotaWindowByName",
+    "resolveResetAwareConfig",
+    "resolveResetWindowConfig",
+    "scoreResetAwareQuota"
+   ]
+  },
+  "open-sse/config/constants.ts": {
+   "imports": [
+    "open-sse/config/credentialLoader.ts",
+    "open-sse/config/errorConfig.ts",
+    "open-sse/config/providerRegistry.ts"
+   ],
+   "exports": [
+    "ANTIGRAVITY_DEFAULT_SYSTEM",
+    "ANTIGRAVITY_PRE_RESPONSE_TIMEOUT_CODE",
+    "BACKOFF_STEPS_MS",
+    "CACHE_TTL",
+    "CLAUDE_SYSTEM_PROMPT",
+    "CREDENTIAL_HEALTH_CACHE_TTL",
+    "CREDENTIAL_HEALTH_CHECK_INTERVAL",
+    "DEFAULT_API_LIMITS",
+    "DEFAULT_MAX_TOKENS",
+    "DEFAULT_MIN_TOKENS",
+    "DEFAULT_PROVIDER_MAX_TOKENS",
+    "EXECUTOR_CONTRACT_VIOLATION_CODE",
+    "FETCH_BODY_TIMEOUT_MS",
+    "FETCH_TIMEOUT_MS",
+    "HTTP_STATUS",
+    "HUGGINGCHAT_MAX_BODY_BYTES",
+    "MAX_TOOLS_LIMIT",
+    "OAUTH_ENDPOINTS",
+    "PROVIDERS",
+    "PROVIDER_MAX_TOKENS",
+    "PROVIDER_PROFILES",
+    "RateLimitReason",
+    "SKIP_PATTERNS",
+    "SSE_HEARTBEAT_INTERVAL_MS",
+    "STREAM_ACTIVE_TIMEOUT_MS",
+    "STREAM_DISCONNECT_GRACE_PERIOD_MS",
+    "STREAM_IDLE_TIMEOUT_MS",
+    "STREAM_READINESS_MAX_TIMEOUT_MS",
+    "STREAM_READINESS_TIMEOUT_MS",
+    "STREAM_RECOVERY",
+    "STREAM_THROUGHPUT_WATCHDOG"
+   ]
+  },
+  "open-sse/services/combo/quotaShareStrategy.ts": {
+   "imports": [
+    "open-sse/services/combo/quotaShareInflight.ts"
+   ],
+   "exports": [
+    "_getDrrDeficitForTest",
+    "selectQuotaShareTarget"
+   ]
+  },
+  "open-sse/config/providers/registry/lyceum/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "lyceumProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/zerolimitai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "zerolimitaiProvider"
+   ]
+  },
+  "open-sse/services/combo/applyStrategyOrdering.ts": {
+   "imports": [
+    "open-sse/services/combo/comboStructure.ts",
+    "open-sse/services/combo/concurrencyCaps.ts",
+    "open-sse/services/combo/promptCacheAffinity.ts",
+    "open-sse/services/combo/quotaShareInflight.ts",
+    "open-sse/services/combo/quotaShareStrategy.ts",
+    "open-sse/services/combo/quotaStrategies.ts",
+    "open-sse/services/combo/strategyRegistry.ts",
+    "open-sse/services/combo/targetSorters.ts"
+   ],
+   "exports": [
+    "applyStrategyOrdering"
+   ]
+  },
+  "open-sse/services/combo/strategyDispatch.ts": {
+   "imports": [
+    "open-sse/services/combo/applyStrategyOrdering.ts",
+    "open-sse/services/combo/dispatchPrelude.ts",
+    "open-sse/services/combo/resolveAutoStrategy.ts",
+    "open-sse/services/combo/strategyRegistry.ts",
+    "open-sse/services/combo/targetResolution.ts"
+   ],
+   "exports": [
+    "COMBO_STRATEGY_DISPATCH_LEAVES",
+    "HANDLED_COMBO_STRATEGIES"
+   ]
+  },
+  "open-sse/services/combo/dispatchPrelude.ts": {
+   "imports": [
+    "open-sse/services/combo/comboPredicates.ts",
+    "open-sse/services/combo/comboStructure.ts",
+    "open-sse/services/combo/comboVisibility.ts",
+    "open-sse/services/combo/connectionAwareExpansion.ts",
+    "open-sse/services/combo/emptyTurnTrust.ts",
+    "open-sse/services/combo/fusionPanel.ts",
+    "open-sse/services/combo/rrState.ts",
+    "open-sse/services/combo/runtimeUnits.ts",
+    "open-sse/services/combo/strategyRegistry.ts",
+    "open-sse/services/combo/validateQuality.ts"
+   ],
+   "exports": [
+    "tryPipelineDispatch",
+    "tryRuntimeUnitDispatch"
+   ]
+  },
+  "open-sse/config/providers/registry/databricks/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "databricksProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/codestral/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "codestralProvider"
+   ]
+  },
+  "open-sse/services/combo/promptCacheAffinity.ts": {
+   "imports": [
+    "open-sse/services/combo/strategyRegistry.ts"
+   ],
+   "exports": [
+    "applyPromptCacheAffinity",
+    "calculatePromptCacheAffinityScores",
+    "expandPromptCacheAffinityTargetsFromConnections",
+    "resolvePromptCacheAffinityKey",
+    "shouldProtectOriginalFirst"
+   ]
+  },
+  "open-sse/services/autoCombo/scoresAs.ts": {
+   "imports": [
+    "open-sse/config/providerModels.ts"
+   ],
+   "exports": []
+  },
+  "open-sse/config/imageRegistry.ts": {
+   "imports": [
+    "open-sse/config/imageRegistryData.ts",
+    "open-sse/config/providerModels.ts"
+   ],
+   "exports": [
+    "IMAGE_PROVIDERS",
+    "XAI_API_KEY_IMAGE_PROVIDER",
+    "XAI_IMAGE_CONFIG",
+    "XAI_SUBSCRIPTION_IMAGE_PROVIDERS",
+    "getImageModelAliases",
+    "getImageModelEntry",
+    "isGrokSubscriptionImagesEnabled",
+    "isRegisteredImageModel",
+    "modalitiesRequireImageInput"
+   ]
+  },
+  "open-sse/config/providers/registry/logfare/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "logfareProvider"
+   ]
+  },
+  "open-sse/services/combo/providerWildcard.ts": {
+   "imports": [
+    "open-sse/config/providerModels.ts",
+    "open-sse/services/combo/comboData.ts"
+   ],
+   "exports": [
+    "expandProviderWildcardsInCollection"
+   ]
+  },
+  "open-sse/config/providers/registry/poolside/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "poolsideProvider"
+   ]
+  },
+  "open-sse/config/providerModels.ts": {
+   "imports": [
+    "open-sse/config/providerRegistry.ts",
+    "open-sse/config/vertexModels.ts"
+   ],
+   "exports": [
+    "CLAUDE_EFFORT_SUFFIXES",
+    "PROVIDER_ID_TO_ALIAS",
+    "PROVIDER_MODELS",
+    "findModelName",
+    "findRegistryModelById",
+    "findRegistryScoresAs",
+    "getDefaultModel",
+    "getModelStripTypes",
+    "getModelTimeoutMs",
+    "resetRegistryLookupCache",
+    "splitClaudeEffortSuffix",
+    "supportsXHighEffort",
+    "supportsXHighEffortForMaxNormalization"
+   ]
+  },
+  "open-sse/services/autoCombo/resilienceCandidateFilter.ts": {
+   "imports": [
+    "open-sse/services/accountFallback.ts"
+   ],
+   "exports": [
+    "SYNTHETIC_NOAUTH_CONNECTION_ID",
+    "buildConnectionResilienceMap",
+    "filterResilienceBlockedCandidates"
+   ]
+  },
+  "open-sse/config/providerPluginManifestRegistry.ts": {
+   "imports": [
+    "open-sse/config/providerPluginManifest.ts",
+    "open-sse/config/providers/index.ts"
+   ],
+   "exports": [
+    "generateProviderPluginManifest",
+    "getProviderPluginManifestEntryForModel"
+   ]
+  },
+  "open-sse/config/providers/registry/sambanova/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "sambanovaProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/muse-code/index.ts": {
+   "imports": [
+    "open-sse/config/museCode.ts",
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "muse_codeProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/xkiro/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "xkiroProvider"
+   ]
+  },
+  "open-sse/services/combo/executeTargetClassify.ts": {
+   "imports": [
+    "open-sse/services/combo/comboDiagFormat.ts",
+    "open-sse/services/combo/comboErrorAggregation.ts",
+    "open-sse/services/combo/comboPredicates.ts",
+    "open-sse/services/combo/decisionTrace.ts",
+    "open-sse/services/combo/pinRecovery.ts",
+    "open-sse/services/combo/protectedPriorityStopStatus.ts",
+    "open-sse/services/combo/quotaSkipDiagnostics.ts",
+    "open-sse/services/combo/statusDecisionTable.ts"
+   ],
+   "exports": [
+    "qualityValidationFailure",
+    "shouldSurfaceBodySpecific400",
+    "stopProtectedPriorityTarget"
+   ]
+  },
+  "open-sse/config/grokBuild.ts": {
+   "imports": [
+    "open-sse/config/providerHeaderProfiles.ts"
+   ],
+   "exports": [
+    "GROK_BUILD_CLIENT_IDENTIFIER",
+    "GROK_BUILD_DEFAULT_CLIENT_VERSION",
+    "GROK_BUILD_DEFAULT_REASONING_EFFORT",
+    "GROK_BUILD_DEVICE_CODE_URL",
+    "GROK_BUILD_MODELS_URL",
+    "GROK_BUILD_OAUTH_ISSUER",
+    "GROK_BUILD_OAUTH_REFERRER",
+    "GROK_BUILD_OAUTH_SCOPES",
+    "GROK_BUILD_PROXY_BASE_URL",
+    "GROK_BUILD_REASONING_INCLUDE",
+    "GROK_BUILD_RESPONSES_URL",
+    "GROK_BUILD_SUPPORTED_REASONING_EFFORTS",
+    "GROK_BUILD_TOKEN_AUTH",
+    "GROK_BUILD_TOKEN_URL",
+    "getGrokBuildModelsHeaders",
+    "getGrokBuildOAuthHeaders"
+   ]
+  },
+  "open-sse/config/providers/registry/devin-cli/index.ts": {
+   "imports": [
+    "open-sse/config/providers/registry/devin/catalog.ts"
+   ],
+   "exports": [
+    "devin_cliProvider"
+   ]
+  },
+  "open-sse/services/combo/quotaStrategies.ts": {
+   "imports": [
+    "open-sse/services/accountFallback.ts",
+    "open-sse/services/combo/headroomRanking.ts",
+    "open-sse/services/combo/quotaScoring.ts",
+    "open-sse/services/combo/quotaShareInflight.ts",
+    "open-sse/services/combo/rrState.ts"
+   ],
+   "exports": [
+    "QUOTA_WEIGHTED_MAX_SNAPSHOT_AGE_MS",
+    "__setHeadroomSaturationFetcherForTests",
+    "expandTargetsByQuotaAwareConnections",
+    "orderTargetsByQuotaWeighted",
+    "orderTargetsByResetAwareQuota",
+    "pickWeightedIndex",
+    "preScreenTargets"
+   ]
+  },
+  "open-sse/config/providers/registry/bailian-coding-plan/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "BAILIAN_CODING_PLAN_MODELS",
+    "bailian_coding_planProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/onomeo/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "onomeoProvider"
+   ]
+  },
+  "open-sse/services/combo/autoStrategy.ts": {
+   "imports": [
+    "open-sse/config/providerModels.ts",
+    "open-sse/services/autoCombo/scoring.ts",
+    "open-sse/services/autoCombo/taskFitness.ts",
+    "open-sse/services/combo/comboData.ts"
+   ],
+   "exports": [
+    "QUOTA_SOFT_DEPRIORITIZE_FACTOR",
+    "STATUS_SOFT_DEPRIORITIZE_FACTOR",
+    "UNREADABLE_QUOTA_SOFT_DEPRIORITIZE_FACTOR",
+    "_unregisterExecutionCandidates",
+    "deriveComboSessionKey",
+    "expandAutoComboCandidatePool",
+    "extractPromptForIntent",
+    "mapIntentToTaskType",
+    "scoreAutoTargets"
+   ]
+  },
+  "open-sse/config/providers/registry/openai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "openaiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/dxnt/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "dxntProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/grok-cli/index.ts": {
+   "imports": [
+    "open-sse/config/grokBuild.ts",
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "grok_cliProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/helyxai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "helyxaiProvider"
+   ]
+  },
+  "open-sse/config/musicRegistry.ts": {
+   "imports": [
+    "open-sse/config/registryUtils.ts"
+   ],
+   "exports": [
+    "MUSIC_PROVIDERS",
+    "getMusicProvider",
+    "parseMusicModel"
+   ]
+  },
+  "open-sse/config/providers/registry/antigravity/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "antigravityProvider"
+   ]
+  },
+  "open-sse/services/combo/localCircuitRefusal.ts": {
+   "imports": [
+    "open-sse/services/combo/comboErrorAggregation.ts",
+    "open-sse/services/combo/comboPredicates.ts"
+   ],
+   "exports": [
+    "recordLocalCircuitRefusal"
+   ]
+  },
+  "open-sse/config/providers/registry/ai21/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "ai21Provider"
+   ]
+  },
+  "open-sse/config/providers/registry/beatapi/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "beatapiProvider"
+   ]
+  },
+  "open-sse/services/combo/quotaExhaustionCutoff.ts": {
+   "imports": [
+    "open-sse/services/combo/quotaStrategies.ts"
+   ],
+   "exports": [
+    "resolveQuotaExhaustionCutoffForTarget"
+   ]
+  },
+  "open-sse/config/providers/registry/volcengine/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "volcengineProvider"
+   ]
+  },
+  "open-sse/services/combo/runtimeUnits.ts": {
+   "imports": [
+    "open-sse/services/combo/budgetExhaustion.ts",
+    "open-sse/services/combo/comboPredicates.ts",
+    "open-sse/services/combo/emptyTurnTrust.ts",
+    "open-sse/services/combo/executeTargetClassify.ts",
+    "open-sse/services/combo/quotaExhaustion.ts",
+    "open-sse/services/combo/runtimeUnitCapacity.ts",
+    "open-sse/services/combo/strategyRegistry.ts",
+    "open-sse/services/combo/validateQuality.ts"
+   ],
+   "exports": [
+    "executeComboRefUnit",
+    "executeRuntimeUnitCombo"
+   ]
+  },
+  "open-sse/config/providers/registry/deepinfra/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "deepinfraProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/anyapi/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "anyapiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/helixmind/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "helixmindProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/anthropic/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "anthropicProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/navy/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "navyProvider"
+   ]
+  },
+  "open-sse/services/combo/targetTimeoutRunner.ts": {
+   "imports": [
+    "open-sse/services/combo/comboAbortReasons.ts"
+   ],
+   "exports": [
+    "COMBO_TARGET_TIMEOUT_CODE",
+    "buildTargetTimeoutRunner"
+   ]
+  },
+  "open-sse/config/providers/registry/openference-api/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "openference_apiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/gitlawb/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "gitlawbProvider"
+   ]
+  },
+  "open-sse/services/autoCombo/taskFitness.ts": {
+   "imports": [
+    "open-sse/services/autoCombo/intelligenceLookupCache.ts",
+    "open-sse/services/autoCombo/scoresAs.ts"
+   ],
+   "exports": [
+    "getModelsDevTierFitness",
+    "getStaticFitnessTableScore",
+    "getTaskFitness",
+    "getTaskFitnessWithSource",
+    "getTaskTypes",
+    "invalidateCapabilitiesCache",
+    "setUserFitnessOverride"
+   ]
+  },
+  "open-sse/services/combo/executeTargetGates.ts": {
+   "imports": [
+    "open-sse/services/accountFallback.ts",
+    "open-sse/services/combo/comboPredicates.ts",
+    "open-sse/services/combo/concurrencyCaps.ts",
+    "open-sse/services/combo/decisionTrace.ts",
+    "open-sse/services/combo/executeTargetClassify.ts",
+    "open-sse/services/combo/persistedConnectionCooldown.ts",
+    "open-sse/services/combo/quotaExhaustionCutoff.ts",
+    "open-sse/services/combo/skippedConnectionCooldown.ts",
+    "open-sse/services/combo/strategyRegistry.ts",
+    "open-sse/services/combo/types.ts"
+   ],
+   "exports": [
+    "collectCircuitOpenExclusions",
+    "findOpenCircuitBreaker",
+    "readConnectionForCooldownGate"
+   ]
+  },
+  "open-sse/config/providers/registry/speka/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "spekaProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/deepseek/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "deepseekProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/moonshot/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "KIMI_K27_MODELS",
+    "KIMI_K3_MODEL",
+    "MOONSHOT_KIMI_MODELS",
+    "moonshotProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/auriko/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "aurikoProvider"
+   ]
+  },
+  "open-sse/services/autoCombo/routerStrategy.ts": {
+   "imports": [
+    "open-sse/services/autoCombo/nadirStrategy.ts",
+    "open-sse/services/autoCombo/scoring.ts",
+    "open-sse/services/autoCombo/speedRanking.ts",
+    "open-sse/services/autoCombo/taskFitness.ts"
+   ],
+   "exports": [
+    "listStrategies",
+    "selectWithStrategyAsync"
+   ]
+  },
+  "open-sse/services/combo/runtimeUnitCapacity.ts": {
+   "imports": [
+    "open-sse/services/combo/comboStructure.ts",
+    "open-sse/services/combo/concurrencyCaps.ts"
+   ],
+   "exports": []
+  },
+  "open-sse/config/providers/registry/unorouter/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "unorouterProvider"
+   ]
+  },
+  "open-sse/services/combo/budgetExhaustion.ts": {
+   "imports": [
+    "open-sse/services/combo/comboPredicates.ts",
+    "open-sse/services/combo/executeTargetClassify.ts"
+   ],
+   "exports": [
+    "CONTEXT_OVERFLOW_BUDGET_MESSAGE",
+    "buildBudgetExhaustedResponse"
+   ]
+  },
+  "open-sse/config/codexIdentity.ts": {
+   "imports": [
+    "open-sse/config/codexClient.ts",
+    "open-sse/config/codexTurnState.ts"
+   ],
+   "exports": [
+    "CODEX_FINGERPRINT_MODES",
+    "CODEX_FINGERPRINT_MODE_KEY",
+    "CODEX_FINGERPRINT_SEED_KEY",
+    "CODEX_PROMPT_CACHE_KEY_SCOPES",
+    "CODEX_PROMPT_CACHE_KEY_SCOPE_KEY",
+    "applyCodexClientIdentityHeaders",
+    "applyCodexClientMetadata",
+    "codexFingerprintModeRequiresSeed",
+    "deriveStableUUIDv4",
+    "getCodexClientSessionId",
+    "getCodexConvergedSessionId",
+    "getCodexConvergedThreadId",
+    "getCodexFingerprintSeed",
+    "isClaudeCodeOriginatedHeaders",
+    "isCodexOAuthCredentials"
+   ]
+  },
+  "open-sse/config/providers/registry/gitlab-duo/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "gitlab_duoProvider"
+   ]
+  },
+  "open-sse/services/combo/safetyStopLatch.ts": {
+   "imports": [
+    "open-sse/services/combo/comboAbortReasons.ts",
+    "open-sse/services/combo/decisionTrace.ts"
+   ],
+   "exports": []
+  },
+  "open-sse/config/providers/registry/unifically/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "unificallyProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/github/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "githubProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/predibase/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "predibaseProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/mixlayer/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "mixlayerProvider"
+   ]
+  },
+  "open-sse/services/autoCombo/autoEvaluationTrace.ts": {
+   "imports": [
+    "open-sse/services/combo/decisionTrace.ts"
+   ],
+   "exports": [
+    "recordAutoCandidatePool",
+    "recordAutoDroppedCandidates",
+    "recordAutoSurvivors"
+   ]
+  },
+  "open-sse/services/combo/nativeCodexTurnPin.ts": {
+   "imports": [
+    "open-sse/services/accountFallback.ts",
+    "open-sse/services/combo/comboCooldownRetry.ts",
+    "open-sse/services/combo/quotaExhaustionCutoff.ts"
+   ],
+   "exports": [
+    "MAX_AUTORESUMES_PER_TURN",
+    "NATIVE_CODEX_PINNED_MODEL_UNAVAILABLE_CODE",
+    "NATIVE_CODEX_PINNED_MODEL_UNAVAILABLE_MESSAGE",
+    "advanceNativeCodexTurnGeneration",
+    "areAllPinnedTargetsModelScopedUnusable",
+    "clearNativeCodexTurnPinsForTests",
+    "createPinnedModelRetryResponse",
+    "getNativeCodexTurnActiveGeneration",
+    "getNativeCodexTurnPin",
+    "hasUnresolvedToolCalls",
+    "pinNativeCodexTurn",
+    "releaseNativeCodexTurnPin",
+    "resolvePinnedTurnUnusable",
+    "revokeNativeCodexTurnPinsForConnection"
+   ]
+  },
+  "open-sse/config/providers/registry/zcode/index.ts": {
+   "imports": [
+    "open-sse/config/glmProvider.ts"
+   ],
+   "exports": [
+    "ZCODE_MODELS",
+    "zcodeProvider"
+   ]
+  },
+  "open-sse/services/combo/autoConfig.ts": {
+   "imports": [
+    "open-sse/services/autoCombo/modePacks.ts",
+    "open-sse/services/autoCombo/nadirStrategy.ts",
+    "open-sse/services/autoCombo/scoring.ts",
+    "open-sse/services/combo/comboData.ts",
+    "open-sse/services/combo/quotaScoring.ts"
+   ],
+   "exports": []
+  },
+  "open-sse/config/providers/registry/poixe-ai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "poixeAiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/ovhcloud/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "ovhcloudProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/wandb/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "wandbProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/llamagate/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "llamagateProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/kimi/coding-apikey/index.ts": {
+   "imports": [
+    "open-sse/config/providers/registry/kimi/coding/index.ts"
+   ],
+   "exports": [
+    "kimi_coding_apikeyProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/ainative/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "ainativeProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/nanogpt/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "nanogptProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/mnn-ai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "mnnAiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/qoder/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "qoderProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/siliconflow/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "siliconflowProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/codex-app-server/index.ts": {
+   "imports": [
+    "open-sse/config/providers/registry/codex/index.ts"
+   ],
+   "exports": [
+    "codexAppServerProvider"
+   ]
+  },
+  "open-sse/services/combo/persistedConnectionCooldown.ts": {
+   "imports": [
+    "open-sse/services/accountFallback.ts",
+    "open-sse/services/combo/comboPredicates.ts",
+    "open-sse/services/combo/skippedConnectionCooldown.ts"
+   ],
+   "exports": []
+  },
+  "open-sse/config/providers/registry/cloudcode-one/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "cloudcodeOneProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/heroku/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "herokuProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/maritalk/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "maritalkProvider"
+   ]
+  },
+  "open-sse/config/providerPluginManifest.ts": {
+   "imports": [
+    "open-sse/config/freeTierProviders.ts"
+   ],
+   "exports": [
+    "createProviderPluginManifestEntry",
+    "createServiceBackendManifestEntry",
+    "generateProviderPluginManifestFromRegistry",
+    "getProviderPluginManifestEntryFromRegistry"
+   ]
+  },
+  "open-sse/config/providers/registry/zai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "zaiProvider"
+   ]
+  },
+  "open-sse/services/combo/statusDecisionTable.ts": {
+   "imports": [
+    "open-sse/services/combo/comboPredicates.ts"
+   ],
+   "exports": [
+    "COMBO_400_STOP_ROWS",
+    "comboTargetDecision"
+   ]
+  },
+  "open-sse/config/providers/registry/demonroute/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "demonrouteProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/literouter/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "literouterProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/codebuddy-cn/index.ts": {
+   "imports": [
+    "open-sse/config/providerHeaderProfiles.ts"
+   ],
+   "exports": [
+    "codebuddy_cnProvider",
+    "default"
+   ]
+  },
+  "open-sse/config/providers/registry/meta-llama/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "meta_llamaProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/venice/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "veniceProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/kimi/coding/index.ts": {
+   "imports": [
+    "open-sse/config/anthropicHeaders.ts",
+    "open-sse/config/providers/registry/kimi/coding/runtime.ts",
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "KIMI_CODING_MODELS",
+    "KIMI_CODING_SHARED",
+    "kimi_codingProvider"
+   ]
+  },
+  "open-sse/config/freeModelCatalog.ts": {
+   "imports": [
+    "open-sse/config/freeModelCatalog.data.ts"
+   ],
+   "exports": [
+    "FREE_REGIME_TRAITS",
+    "FREE_TIER_BOOSTS",
+    "computeFreeModelTotals",
+    "grantsFreeAccess"
+   ]
+  },
+  "open-sse/config/providers/registry/zylo-api/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "zyloApiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/nara/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "naraProvider"
+   ]
+  },
+  "open-sse/services/combo/connectionAwareExpansion.ts": {
+   "imports": [
+    "open-sse/services/combo/quotaStrategies.ts"
+   ],
+   "exports": [
+    "CONNECTION_AWARE_EXPANSION_GROUP_B",
+    "DEFAULT_CONNECTION_AWARE_EXPANSION_MAX_PER_TARGET"
+   ]
+  },
+  "open-sse/config/providers/registry/chat-oripe/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "chatOripeProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/agy/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "agyProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/hcnsec/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "hcnsecProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/opencode/zen/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "opencode_zenProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/opper/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "opperProvider"
+   ]
+  },
+  "open-sse/config/agyModels.ts": {
+   "imports": [
+    "open-sse/config/antigravityModelAliases.ts",
+    "open-sse/config/antigravitySharedModels.ts"
+   ],
+   "exports": [
+    "AGY_PUBLIC_MODELS",
+    "getClientVisibleAgyModelName",
+    "isUserVisibleAgyQuotaModelId"
+   ]
+  },
+  "open-sse/config/providers/registry/regolo/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "regoloProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/codebuddy-intl/index.ts": {
+   "imports": [
+    "open-sse/config/providerHeaderProfiles.ts"
+   ],
+   "exports": [
+    "codebuddy_intlProvider",
+    "default"
+   ]
+  },
+  "open-sse/config/providers/registry/xiaomi-mimo-token-plan/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "xiaomi_mimo_token_planProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/devin-desktop/index.ts": {
+   "imports": [
+    "open-sse/config/providers/registry/devin/catalog.ts"
+   ],
+   "exports": [
+    "devin_desktopProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/llm-kiwi/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "llmKiwiProvider"
+   ]
+  },
+  "open-sse/services/accountSelector.ts": {
+   "imports": [
+    "open-sse/services/accountFallback.ts"
+   ],
+   "exports": [
+    "selectAccount",
+    "selectAccountP2C"
+   ]
+  },
+  "open-sse/config/providers/registry/vertex/index.ts": {
+   "imports": [
+    "open-sse/config/vertexModels.ts"
+   ],
+   "exports": [
+    "vertexProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/morph/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "morphProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/ghe-copilot/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "gheCopilotProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/glm/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "glmProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/xiaomi-mimo/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "xiaomi_mimoProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/daoxe/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "daoxeProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/fastrouter/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "fastrouterProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/gigachat/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "gigachatProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/tokenmarket/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "tokenmarketProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/gitlawb/gmi/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "gitlawb_gmiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/chatanywhere/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "chatanywhereProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/opencode/go/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "opencode_goProvider"
+   ]
+  },
+  "open-sse/config/videoRegistry.ts": {
+   "imports": [
+    "open-sse/config/providers/registry/segmind/videoModels.ts",
+    "open-sse/config/registryUtils.ts",
+    "open-sse/config/runway.ts"
+   ],
+   "exports": [
+    "VIDEO_PROVIDERS",
+    "getVideoProvider",
+    "parseVideoModel"
+   ]
+  },
+  "open-sse/config/upscaleRegistry.ts": {
+   "imports": [
+    "open-sse/config/registryUtils.ts"
+   ],
+   "exports": [
+    "DEFAULT_UPSCALE_FACTORS",
+    "UPSCALE_PROVIDERS",
+    "getUpscaleProvider",
+    "isRegisteredUpscaleModel",
+    "normalizeUpscaleFactor",
+    "parseUpscaleModel"
+   ]
+  },
+  "open-sse/config/providers/registry/ofoxai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "ofoxaiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/glm/t/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "glmtProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/friendliai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "friendliaiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/aihorde/imageModels.ts": {
+   "imports": [
+    "open-sse/config/dynamicImageModelSources.ts"
+   ],
+   "exports": [
+    "AI_HORDE_IMAGE_PROVIDER"
+   ]
+  },
+  "open-sse/config/providers/registry/kiro/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "kiroProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/llmgateway/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "llmgatewayProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/nscale/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "nscaleProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/baseten/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "basetenProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/void-ai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "voidAiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/vercel-ai-gateway/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "vercel_ai_gatewayProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/glm/cn/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "glm_cnProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/devin-cli-agentic/index.ts": {
+   "imports": [
+    "open-sse/config/providers/registry/devin/catalog.ts"
+   ],
+   "exports": [
+    "devin_cli_agenticProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/digitalocean/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "digitaloceanProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/openvecta/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "openvectaProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/nebius/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "nebiusProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/upstage/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "upstageProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/xai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "xaiProvider",
+    "xai_oauthProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/kimi/index.ts": {
+   "imports": [
+    "open-sse/config/providers/registry/moonshot/index.ts"
+   ],
+   "exports": [
+    "kimiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/routeway/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "routewayProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/tokenreply/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "tokenreplyProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/featherless-ai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "featherless_aiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/freeinference/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "freeinferenceProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/tabitoken/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "tabitokenProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/inference-net/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "inference_netProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/vertex/partner/index.ts": {
+   "imports": [
+    "open-sse/config/vertexModels.ts"
+   ],
+   "exports": [
+    "vertex_partnerProvider"
+   ]
+  },
+  "open-sse/services/autoCombo/virtualFactory.ts": {
+   "imports": [
+    "open-sse/services/autoCombo/snapshotBreaker.ts"
+   ],
+   "exports": [
+    "computeAdvertisedLimits",
+    "computeSnapshotWeights",
+    "createVirtualAutoCombo",
+    "prepareVirtualAutoComboInputs",
+    "resetEmptyAutoPoolWarnStateForTests"
+   ]
+  },
+  "open-sse/config/providers/registry/aion/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "aionProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/y-api/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "yApiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/gemini/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "geminiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/naga-ai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "nagaAiProvider"
+   ]
+  },
+  "open-sse/services/combo/validateQuality.ts": {
+   "imports": [
+    "open-sse/services/combo/responseValidation.ts"
+   ],
+   "exports": [
+    "toRetryAfterDisplayValue"
+   ]
+  },
+  "open-sse/services/combo/fusionPanel.ts": {
+   "imports": [
+    "open-sse/services/combo/runtimeUnits.ts"
+   ],
+   "exports": [
+    "buildFusionHandleSingleModel"
+   ]
+  },
+  "open-sse/config/providers/registry/together/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "togetherProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/mlx/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "MLX_DEFAULT_CONTEXT_LIMIT",
+    "mlxGemmaProvider",
+    "mlxQwenProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/v0-vercel/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "v0_vercelProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/free-ai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "freeAiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/requesty/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "requestyProvider"
+   ]
+  },
+  "open-sse/services/combo/sessionStickiness.ts": {
+   "imports": [
+    "open-sse/services/combo/headroomRanking.ts"
+   ],
+   "exports": [
+    "STICKINESS_HEADROOM_THRESHOLD",
+    "__setStickinessConnectionFetcherForTests",
+    "clearStickyBinding",
+    "deriveMessageHash",
+    "normalizeStickinessMessages",
+    "peekStickyConnectionId",
+    "resolveDisableSessionStickiness"
+   ]
+  },
+  "open-sse/config/providers/registry/aihorde/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "aihordeProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/meganova-ai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "meganovaAiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/yolo-auto/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "yoloAutoProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/electronhub/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "electronhubProvider"
+   ]
+  },
+  "open-sse/services/autoCombo/builtinCatalog.ts": {
+   "imports": [
+    "open-sse/services/autoCombo/virtualFactory.ts"
+   ],
+   "exports": [
+    "AUTO_FAMILY_IDS",
+    "AUTO_SUFFIX_VARIANTS",
+    "AUTO_TEMPLATE_VARIANTS",
+    "FLAT_TIER_OVERLAY_IDS",
+    "VALID_AUTO_VARIANTS",
+    "isPaidTierAutoId",
+    "isRecognizedBuiltinAuto",
+    "prepareBuiltinAutoComboInputs",
+    "resolveBuiltinAutoMaterialization",
+    "resolveBuiltinAutoSpec"
+   ]
+  },
+  "open-sse/config/providers/registry/wafer/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "waferProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/bytez/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "bytezProvider"
+   ]
+  },
+  "open-sse/services/combo/quotaExhaustion.ts": {
+   "imports": [
+    "open-sse/services/accountFallback.ts"
+   ],
+   "exports": [
+    "isQuotaExhaustionResponse",
+    "recordQuotaExhaustionClassification"
+   ]
+  },
+  "open-sse/config/providers/registry/lambda-ai/index.ts": {
+   "imports": [
+    "open-sse/config/providers/shared.ts"
+   ],
+   "exports": [
+    "lambda_aiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/kimi/coding/runtime.ts": {
+   "imports": [],
+   "exports": [
+    "KIMI_CODE_CLI_PLATFORM",
+    "KIMI_CODE_CLI_VERSION",
+    "KIMI_CODE_VERSION_CACHE_TTL_MS",
+    "KIMI_CODE_VERSION_FETCH_TIMEOUT_MS",
+    "KIMI_CODING_ANTHROPIC_URL",
+    "KIMI_CODING_BASE_URL",
+    "KIMI_CODING_MODELS_URL",
+    "KIMI_CODING_OPENAI_URL",
+    "KIMI_CODING_WIRE_MODEL_ALIASES",
+    "buildKimiCodeIdentityHeaders",
+    "refreshKimiCodeCliVersion",
+    "resetKimiCodeCliVersionCache",
+    "resetKimiCodeCliVersionFetch",
+    "sanitizeKimiHeaderValue"
+   ]
+  },
+  "open-sse/services/autoCombo/selfHealing.ts": {
+   "imports": [],
+   "exports": [
+    "SelfHealingManager",
+    "getSelfHealingManager"
+   ]
+  },
+  "open-sse/config/codexClient.ts": {
+   "imports": [],
+   "exports": [
+    "CODEX_VERSION_CACHE_TTL_MS",
+    "CODEX_VERSION_FETCH_TIMEOUT_MS",
+    "getCachedCodexClientVersion",
+    "getCodexBackendIdentityHeaders",
+    "getCodexClientVersionFromHeaders",
+    "getCodexDefaultHeaders",
+    "resetCodexClientVersionCacheForTests",
+    "resolveCodexClientVersion"
+   ]
+  },
+  "open-sse/config/providerHeaderProfiles.ts": {
+   "imports": [],
+   "exports": [
+    "CODEBUDDY_CN_USER_AGENT",
+    "CODEBUDDY_CN_VERSION_CACHE_TTL_MS",
+    "CODEBUDDY_CN_VERSION_FETCH_TIMEOUT_MS",
+    "CODEBUDDY_INTL_USER_AGENT",
+    "CURSOR_REGISTRY_VERSION",
+    "GITHUB_COPILOT_API_VERSION",
+    "GITHUB_COPILOT_CHAT_INTEGRATION_ID",
+    "GITHUB_COPILOT_CHAT_PLUGIN_VERSION",
+    "GITHUB_COPILOT_CHAT_USER_AGENT",
+    "GITHUB_COPILOT_CLI_INTEGRATION_ID",
+    "GITHUB_COPILOT_CLI_USER_AGENT",
+    "GITHUB_COPILOT_CLI_VERSION",
+    "GITHUB_COPILOT_DEFAULT_INITIATOR",
+    "GITHUB_COPILOT_EDITOR_VERSION",
+    "GITHUB_COPILOT_HARNESS_ID",
+    "GITHUB_COPILOT_INTEGRATION_ID",
+    "GITHUB_COPILOT_INTERACTION_TYPE",
+    "GITHUB_COPILOT_OPENAI_INTENT",
+    "GITHUB_COPILOT_REFRESH_PLUGIN_VERSION",
+    "GITHUB_COPILOT_REFRESH_USER_AGENT",
+    "GITHUB_COPILOT_VERSION_CACHE_TTL_MS",
+    "GITHUB_COPILOT_VERSION_FETCH_TIMEOUT_MS",
+    "KIRO_AMZ_USER_AGENT",
+    "KIRO_SDK_USER_AGENT",
+    "KIRO_STREAMING_TARGET",
+    "QODER_DEFAULT_USER_AGENT",
+    "QWEN_CLI_VERSION",
+    "QWEN_CLI_VERSION_CACHE_TTL_MS",
+    "QWEN_CLI_VERSION_FETCH_TIMEOUT_MS",
+    "QWEN_STAINLESS_LANG",
+    "getCodeBuddyCnUserAgent",
+    "getCursorRegistryHeaders",
+    "getCursorUserAgent",
+    "getRuntimeVersion",
+    "normalizeCopilotIntegrationId",
+    "normalizeStainlessArch",
+    "refreshCodeBuddyCnUserAgent",
+    "resetQwenCliVersionCache",
+    "resolveGitHubCopilotCliVersion"
+   ]
+  },
+  "src/app/api/v1/models/catalogHelpers.ts": {
+   "imports": [],
+   "exports": [
+    "getConnectionScopedEffortTiers",
+    "getThinkingCapabilityFields",
+    "hasRoutableComboConnection",
+    "intersectKnownStringArrays",
+    "maybeOmitCatalogModelName",
+    "memoizeTargetMetadata",
+    "parseJsonStringArray",
+    "selectComboLimitPool",
+    "visionDerivedModalities"
+   ]
+  },
+  "src/shared/constants/providers/apikey/regional.ts": {
+   "imports": [],
+   "exports": [
+    "APIKEY_PROVIDERS_REGIONAL"
+   ]
+  },
+  "open-sse/services/accountFallback/concurrencyLimit429.ts": {
+   "imports": [],
+   "exports": [
+    "CONCURRENCY_LIMITED_REASON",
+    "CONCURRENCY_LIMIT_COOLDOWN_MS"
+   ]
+  },
+  "open-sse/services/accountFallback/exactModelLock.ts": {
+   "imports": [],
+   "exports": [
+    "buildExactModelLockKey",
+    "clearMultiKeyLock",
+    "collectModelLockKeys",
+    "createGetModelLockKeys",
+    "createLockExactModel",
+    "findLatestLockEntry",
+    "isAnyKeyLocked"
+   ]
+  },
+  "src/app/api/v1/models/catalogPagination.ts": {
+   "imports": [],
+   "exports": [
+    "CATALOG_BODY_CHUNK_BYTES",
+    "CATALOG_PAGE_LIMIT_MAX",
+    "applyCatalogPage",
+    "catalogJsonResponse",
+    "catalogPageCacheKey",
+    "catalogStringResponse",
+    "parseCatalogPage"
+   ]
+  },
+  "open-sse/config/providers/registry/g4f-pollinations/index.ts": {
+   "imports": [],
+   "exports": [
+    "g4f_pollinationsProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/duckduckgo-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "duckduckgo_webProvider"
+   ]
+  },
+  "open-sse/services/combo/protectedPriorityStopStatus.ts": {
+   "imports": [],
+   "exports": [
+    "isComboEmptyPoolNoEligibleTargetsEnabled"
+   ]
+  },
+  "open-sse/config/runway.ts": {
+   "imports": [],
+   "exports": [
+    "RUNWAYML_API_VERSION",
+    "RUNWAYML_DEFAULT_BASE_URL",
+    "RUNWAYML_IMAGE_REQUIRED_MODELS",
+    "RUNWAYML_SUPPORTED_VIDEO_MODELS",
+    "buildRunwayApiUrl",
+    "normalizeRunwayBaseUrl"
+   ]
+  },
+  "src/shared/constants/providers.ts": {
+   "imports": [],
+   "exports": [
+    "AGGREGATOR_PROVIDER_IDS",
+    "AI_PROVIDERS",
+    "ALIAS_TO_ID",
+    "ANTHROPIC_COMPATIBLE_PREFIX",
+    "APIKEY_PROVIDERS",
+    "AUDIO_ONLY_PROVIDERS",
+    "AUTH_METHODS",
+    "CLAUDE_CODE_COMPATIBLE_PREFIX",
+    "CLOUD_AGENT_PROVIDERS",
+    "EMBEDDING_RERANK_PROVIDER_IDS",
+    "ENTERPRISE_CLOUD_PROVIDER_IDS",
+    "FREE_APIKEY_PROVIDER_IDS",
+    "FREE_PROVIDERS",
+    "IDE_PROVIDER_IDS",
+    "ID_TO_ALIAS",
+    "IMAGE_ONLY_PROVIDER_IDS",
+    "LOCAL_PROVIDERS",
+    "NOAUTH_PROVIDERS",
+    "OAUTH_PROVIDERS",
+    "OPENAI_COMPATIBLE_PREFIX",
+    "PROVIDER_CONNECTION_FAMILY_ALIASES",
+    "SEARCH_PROVIDERS",
+    "SELF_HOSTED_CHAT_PROVIDER_IDS",
+    "SYSTEM_PROVIDERS",
+    "UPSTREAM_PROXY_PROVIDERS",
+    "VIDEO_PROVIDER_IDS",
+    "WEB_COOKIE_PROVIDERS",
+    "getProviderConnectionFamilyIds",
+    "isAnthropicCompatibleProvider",
+    "isClaudeCodeCompatibleProvider",
+    "isLocalProvider",
+    "isOpenAICompatibleProvider",
+    "isSelfHostedChatProvider",
+    "providerAllowsOptionalApiKey",
+    "resolveProviderId",
+    "resolveWebProviderHost",
+    "supportsApiKeyOnFreeProvider"
+   ]
+  },
+  "src/app/api/v1/models/catalogCache.ts": {
+   "imports": [],
+   "exports": [
+    "CATALOG_BUILD_TIMEOUT_MS_DEFAULT",
+    "CATALOG_CACHE_TTL_MS_DEFAULT",
+    "CATALOG_STALE_WHILE_REVALIDATE_MS",
+    "CatalogBuildTimeoutError",
+    "__forceCatalogInFlightRejectionForTest",
+    "__setCatalogCacheEntryForTest",
+    "defaultBackgroundRefreshScheduler",
+    "mergeCatalogHeaders",
+    "resolveCachedCatalogResponse"
+   ]
+  },
+  "src/app/api/v1/models/catalogFilters.ts": {
+   "imports": [],
+   "exports": [
+    "CATALOG_CAPABILITY_FILTERS",
+    "CATALOG_DISCOVERY_PARAMS",
+    "CATALOG_KIND_FILTERS",
+    "CATALOG_QUERY_DEFAULT_LIMIT",
+    "CATALOG_QUERY_MAX_LIMIT",
+    "catalogQueryBodySchema",
+    "compareCatalogQueryRows",
+    "filterCatalogModels",
+    "normalizeCatalogQueryBody"
+   ]
+  },
+  "open-sse/config/errorConfig.ts": {
+   "imports": [],
+   "exports": [
+    "BACKOFF_CONFIG",
+    "COOLDOWN_MS",
+    "DEFAULT_ERROR_MESSAGES",
+    "ERROR_RULES",
+    "ERROR_TYPES",
+    "TRANSIENT_COOLDOWN_MS",
+    "calculateBackoffCooldown",
+    "findMatchingErrorRule",
+    "getDefaultErrorMessage",
+    "getErrorInfo",
+    "isNimFunctionDegraded",
+    "matchErrorRuleByText",
+    "serviceSupervisorCooldown"
+   ]
+  },
+  "open-sse/config/providers/registry/kenari/index.ts": {
+   "imports": [],
+   "exports": [
+    "kenariProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/g4f-gemini/index.ts": {
+   "imports": [],
+   "exports": [
+    "g4f_geminiProvider"
+   ]
+  },
+  "open-sse/config/sap.ts": {
+   "imports": [],
+   "exports": [
+    "SAP_DEFAULT_BASE_URL",
+    "buildSapModelsUrl",
+    "getSapResourceGroup",
+    "isSapDeploymentUrl",
+    "normalizeSapBaseUrl"
+   ]
+  },
+  "open-sse/config/searchRegistry.ts": {
+   "imports": [],
+   "exports": [
+    "SEARCH_CREDENTIAL_FALLBACKS",
+    "SEARCH_PROVIDERS",
+    "SEARCH_PROVIDER_ALIASES",
+    "getAllSearchProviders",
+    "getSearchCredentialFallbacks",
+    "isUnconfiguredLoopbackSearchProvider",
+    "resolveSearchProvider",
+    "resolveSearchProviderId"
+   ]
+  },
+  "src/shared/constants/providers/web-cookie-chatplayground.ts": {
+   "imports": [],
+   "exports": [
+    "CHATPLAYGROUND_WEB_COOKIE_ENTRY"
+   ]
+  },
+  "src/shared/constants/providers/web-cookie-notrack.ts": {
+   "imports": [],
+   "exports": [
+    "NOTRACK_WEB_COOKIE_ENTRY"
+   ]
+  },
+  "open-sse/services/combo/rrState.ts": {
+   "imports": [],
+   "exports": [
+    "MAX_RR_COUNTERS",
+    "clampStickyRoundRobinTargetLimit",
+    "getStickyRoundRobinStartIndex",
+    "resolveComboStickyRoundRobinLimit",
+    "rrCounters",
+    "rrStickyTargets",
+    "weightedStickyTargets"
+   ]
+  },
+  "open-sse/services/autoCombo/nadirStrategy.ts": {
+   "imports": [],
+   "exports": [
+    "NADIR_DEFAULT_BASE_URL",
+    "NADIR_DEFAULT_TIMEOUT_MS",
+    "NADIR_FAILURE_COOLDOWN_MS",
+    "NADIR_MAX_PROMPT_CHARS",
+    "NADIR_MAX_TIMEOUT_MS",
+    "NadirStrategyImpl"
+   ]
+  },
+  "open-sse/services/autoCombo/requestControls.ts": {
+   "imports": [],
+   "exports": [
+    "parseRequestBudgetCap",
+    "parseRequestBudgetFallback",
+    "resolveRequestModePack"
+   ]
+  },
+  "open-sse/config/providers/registry/fireworks/index.ts": {
+   "imports": [],
+   "exports": [
+    "fireworksProvider"
+   ]
+  },
+  "open-sse/services/apiKeyRotator.ts": {
+   "imports": [],
+   "exports": [
+    "DEFAULT_KEY_COOLDOWN_MS",
+    "connectionHasExtraKeys",
+    "getApiKeyCount",
+    "getRotatingApiKey",
+    "getValidApiKey",
+    "hasEligibleKey",
+    "parseRetryAfterMs",
+    "recordKeyFailure",
+    "recordKeySuccess",
+    "removeConnectionHealth",
+    "removeConnectionIndex",
+    "resetKeyStatus"
+   ]
+  },
+  "open-sse/services/combo/failureTracker.ts": {
+   "imports": [],
+   "exports": [
+    "COMBO_FAILURE_THRESHOLD",
+    "__resetComboFailureTrackerForTests",
+    "getComboFailureCount"
+   ]
+  },
+  "open-sse/config/providers/registry/clinepass/index.ts": {
+   "imports": [],
+   "exports": [
+    "clinepassProvider"
+   ]
+  },
+  "open-sse/config/contextEditing.ts": {
+   "imports": [],
+   "exports": [
+    "CLEAR_THINKING_STRATEGY",
+    "CLEAR_TOOL_USES_STRATEGY",
+    "CONTEXT_EDITING_DEFAULT_KEEP_TOOL_USES",
+    "CONTEXT_EDITING_DEFAULT_TRIGGER_TOKENS",
+    "applyContextEditingToBody"
+   ]
+  },
+  "open-sse/config/codexQuotaScopes.ts": {
+   "imports": [],
+   "exports": [
+    "CODEX_RESERVE_DISPLAY_NAME",
+    "CODEX_RESERVE_QUOTA_SESSION",
+    "CODEX_RESERVE_QUOTA_WEEKLY",
+    "CODEX_SPARK_DISPLAY_NAME",
+    "CODEX_SPARK_METERED_FEATURE",
+    "CODEX_SPARK_MODEL_ID",
+    "CODEX_SPARK_QUOTA_SESSION",
+    "CODEX_SPARK_QUOTA_WEEKLY",
+    "getCodexModelScope",
+    "getCodexRateLimitKey",
+    "isCodexReserveLimitDescriptor",
+    "isCodexSparkLimitDescriptor",
+    "isCodexSparkQuotaKey",
+    "toCodexBaseQuotaWindowName"
+   ]
+  },
+  "open-sse/services/autoCombo/modePacks.ts": {
+   "imports": [],
+   "exports": [
+    "MODE_PACKS"
+   ]
+  },
+  "open-sse/config/providers/registry/chatgpt-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "chatgpt_webProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/liquid/index.ts": {
+   "imports": [],
+   "exports": [
+    "liquidProvider"
+   ]
+  },
+  "open-sse/services/combo/targetSorters.ts": {
+   "imports": [],
+   "exports": [
+    "orderTargetsByPowerOfTwoChoices",
+    "orderTargetsForWeightedFallback",
+    "sortTargetsByCost",
+    "sortTargetsByUsage"
+   ]
+  },
+  "open-sse/config/providers/registry/cloudflare-playground/index.ts": {
+   "imports": [],
+   "exports": [
+    "cloudflarePlaygroundProvider"
+   ]
+  },
+  "open-sse/config/azureAi.ts": {
+   "imports": [],
+   "exports": [
+    "AZURE_AI_DEFAULT_BASE_URL",
+    "buildAzureAiModelsUrl",
+    "normalizeAzureAiBaseUrl"
+   ]
+  },
+  "open-sse/services/autoCombo/candidateOverrides.ts": {
+   "imports": [],
+   "exports": [
+    "filterExcludedCandidates"
+   ]
+  },
+  "open-sse/config/claudeWebFingerprint.ts": {
+   "imports": [],
+   "exports": [
+    "CLAUDE_WEB_FINGERPRINT",
+    "CLAUDE_WEB_FINGERPRINT_VERSION"
+   ]
+  },
+  "open-sse/services/accountFallback/creditExhaustionSignals.ts": {
+   "imports": [],
+   "exports": [
+    "CREDITS_EXHAUSTED_SIGNALS"
+   ]
+  },
+  "open-sse/config/providers/registry/ollama-cloud/index.ts": {
+   "imports": [],
+   "exports": [
+    "ollama_cloudProvider"
+   ]
+  },
+  "open-sse/config/reasoningEfforts.ts": {
+   "imports": [],
+   "exports": [
+    "EXTENDED_REASONING_EFFORTS",
+    "STANDARD_REASONING_EFFORTS"
+   ]
+  },
+  "open-sse/services/autoCombo/scoring.ts": {
+   "imports": [],
+   "exports": [
+    "DEFAULT_WEIGHTS",
+    "calculateFactors",
+    "calculateTierScore",
+    "projectAccountTier",
+    "reliabilityFactor",
+    "validateWeights"
+   ]
+  },
+  "src/shared/constants/providers/apikey/enterprise-cloud.ts": {
+   "imports": [],
+   "exports": [
+    "APIKEY_PROVIDERS_ENTERPRISE"
+   ]
+  },
+  "open-sse/services/autoCombo/persistence.ts": {
+   "imports": [],
+   "exports": [
+    "loadAdaptationState",
+    "saveAdaptationState"
+   ]
+  },
+  "open-sse/config/providers/registry/udio/index.ts": {
+   "imports": [],
+   "exports": [
+    "udioProvider"
+   ]
+  },
+  "open-sse/config/providerPluginManifestUrl.ts": {
+   "imports": [],
+   "exports": [
+    "PROVIDER_PLUGIN_MANIFEST_HEADER",
+    "PROVIDER_PLUGIN_MANIFEST_PATH",
+    "getProviderPluginManifestHeader",
+    "resolveProviderPluginManifestUrl"
+   ]
+  },
+  "open-sse/services/combo/comboCooldownRetry.ts": {
+   "imports": [],
+   "exports": [
+    "COMBO_COOLDOWN_NON_RETRYABLE_REASONS",
+    "COMBO_COOLDOWN_RETRYABLE_REASONS",
+    "COMBO_COOLDOWN_WAIT_MARGIN_MS",
+    "isTransientComboCooldownReason",
+    "resolveCircuitOpenWaitDecision",
+    "resolveComboCooldownWaitDecision"
+   ]
+  },
+  "open-sse/config/providers/registry/workbuddy/index.ts": {
+   "imports": [],
+   "exports": [
+    "workbuddyProvider"
+   ]
+  },
+  "src/shared/constants/cliTools.ts": {
+   "imports": [],
+   "exports": [
+    "CLI_TOOLS"
+   ]
+  },
+  "open-sse/config/museCode.ts": {
+   "imports": [],
+   "exports": [
+    "MUSE_CODE_API_BASE_URL",
+    "MUSE_CODE_AUTH_HOST",
+    "MUSE_CODE_DEFAULT_POLL_INTERVAL_SEC",
+    "MUSE_CODE_DEVICE_CODE_URL",
+    "MUSE_CODE_DEVICE_GRANT",
+    "MUSE_CODE_IMAGES_EDITS_URL",
+    "MUSE_CODE_IMAGES_GENERATIONS_URL",
+    "MUSE_CODE_INFERENCE_USER_AGENT",
+    "MUSE_CODE_MAX_POLL_MS",
+    "MUSE_CODE_MINT_URL",
+    "MUSE_CODE_RESPONSES_URL",
+    "MUSE_CODE_TOKEN_URL",
+    "MUSE_CODE_USER_AGENT",
+    "museCodeHeaders"
+   ]
+  },
+  "open-sse/config/providers/registry/internlm/index.ts": {
+   "imports": [],
+   "exports": [
+    "internlmProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/freetheai/index.ts": {
+   "imports": [],
+   "exports": [
+    "freetheaiProvider"
+   ]
+  },
+  "open-sse/config/providerFieldStrips.ts": {
+   "imports": [],
+   "exports": [
+    "ADVISOR_UNDECRYPTABLE_MESSAGE",
+    "DEPRECATED_PARAM_RE",
+    "KNOWN_OFFENDING_FIELDS",
+    "REASONING_REQUEST_FIELDS",
+    "UNSUPPORTED_PARAM_RE",
+    "UNSUPPORTED_THINKING_RE",
+    "isUnsupportedThinkingError",
+    "stripGroqUnsupportedFields"
+   ]
+  },
+  "open-sse/config/audioRegistry.ts": {
+   "imports": [],
+   "exports": [
+    "AUDIO_SPEECH_PROVIDERS",
+    "AUDIO_TRANSCRIPTION_PROVIDERS",
+    "AUDIO_TRANSLATION_PROVIDERS",
+    "buildDynamicAudioProvider",
+    "getTranscriptionProvider",
+    "getTranslationProvider",
+    "isLoopbackNodeHost"
+   ]
+  },
+  "src/shared/constants/providers/apikey/frontier-labs.ts": {
+   "imports": [],
+   "exports": [
+    "APIKEY_PROVIDERS_FRONTIER"
+   ]
+  },
+  "open-sse/services/combo/strategyRegistry.ts": {
+   "imports": [],
+   "exports": [
+    "COMBO_STRATEGY_REGISTRY",
+    "DEFAULT_STRATEGY_TRAITS",
+    "REGISTERED_COMBO_STRATEGIES",
+    "getStrategyTraits"
+   ]
+  },
+  "open-sse/config/providers/registry/longcat/index.ts": {
+   "imports": [],
+   "exports": [
+    "longcatProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/sparkdesk/index.ts": {
+   "imports": [],
+   "exports": [
+    "sparkdeskProvider"
+   ]
+  },
+  "open-sse/services/autoCombo/modelFamily.ts": {
+   "imports": [],
+   "exports": [
+    "AUTO_FAMILY_IDS",
+    "FAMILY_PROVIDER_OVERRIDE",
+    "MODEL_FAMILIES",
+    "buildFamilyCandidateFilter",
+    "isValidModelFamily"
+   ]
+  },
+  "open-sse/config/rerankRegistry.ts": {
+   "imports": [],
+   "exports": [
+    "RERANK_PROVIDERS",
+    "deriveRerankProviderForChatProvider",
+    "getAllRerankModels",
+    "getRerankProvider"
+   ]
+  },
+  "open-sse/config/freeTierCatalog.ts": {
+   "imports": [],
+   "exports": [
+    "FREE_TIER_BUDGETS",
+    "FREE_TIER_TOS",
+    "computeFreeTierTotals"
+   ]
+  },
+  "open-sse/config/providers/registry/tokenrouter/index.ts": {
+   "imports": [],
+   "exports": [
+    "tokenrouterProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/mistral/index.ts": {
+   "imports": [],
+   "exports": [
+    "mistralProvider"
+   ]
+  },
+  "open-sse/config/antigravityUpstream.ts": {
+   "imports": [],
+   "exports": [
+    "ANTIGRAVITY_BOOTSTRAP_BASE_URLS",
+    "ANTIGRAVITY_DISCOVERY_BASE_URLS",
+    "ANTIGRAVITY_ONBOARD_PATH",
+    "ANTIGRAVITY_RUNTIME_BASE_URLS",
+    "getAntigravityFetchAvailableModelsUrls"
+   ]
+  },
+  "open-sse/services/combo/comboVisibility.ts": {
+   "imports": [],
+   "exports": [
+    "createComboModelVisibility",
+    "isComboModelVisible"
+   ]
+  },
+  "open-sse/config/providers/registry/stepfun/index.ts": {
+   "imports": [],
+   "exports": [
+    "stepfunProvider"
+   ]
+  },
+  "open-sse/config/defaultThinkingSignature.ts": {
+   "imports": [],
+   "exports": [
+    "DEFAULT_THINKING_CLAUDE_SIGNATURE",
+    "DEFAULT_THINKING_GEMINI_SIGNATURE",
+    "DEFAULT_THINKING_TEXT"
+   ]
+  },
+  "open-sse/config/providers/registry/stability-ai/imageModels.ts": {
+   "imports": [],
+   "exports": [
+    "STABILITY_AI_IMAGE_MODELS"
+   ]
+  },
+  "src/shared/constants/providers/noauth.ts": {
+   "imports": [],
+   "exports": [
+    "NOAUTH_PROVIDERS",
+    "NOAUTH_PROVIDER_PROXY_SUPPORTED"
+   ]
+  },
+  "open-sse/config/providers/registry/blackbox/index.ts": {
+   "imports": [],
+   "exports": [
+    "blackboxProvider"
+   ]
+  },
+  "open-sse/services/combo/comboErrorAggregation.ts": {
+   "imports": [],
+   "exports": [
+    "classifyComboOutcome",
+    "formatComboOutcomes",
+    "redactConnectionLabel",
+    "resolveComboTerminalCode",
+    "resolveComboTerminalStatus"
+   ]
+  },
+  "open-sse/config/datarobot.ts": {
+   "imports": [],
+   "exports": [
+    "DATAROBOT_DEFAULT_BASE_URL",
+    "buildDataRobotChatUrl",
+    "isDataRobotDeploymentUrl",
+    "normalizeDataRobotBaseUrl"
+   ]
+  },
+  "open-sse/config/watsonx.ts": {
+   "imports": [],
+   "exports": [
+    "WATSONX_DEFAULT_BASE_URL"
+   ]
+  },
+  "open-sse/config/providers/registry/sumopod/index.ts": {
+   "imports": [],
+   "exports": [
+    "sumopodProvider"
+   ]
+  },
+  "open-sse/services/combo/fingerprintExpansion.ts": {
+   "imports": [],
+   "exports": [
+    "buildFingerprintExecutionKey",
+    "splitFingerprintPin"
+   ]
+  },
+  "open-sse/config/providers/registry/poe/index.ts": {
+   "imports": [],
+   "exports": [
+    "POE_CHAT_COMPLETIONS_URL",
+    "POE_DEFAULT_BASE_URL",
+    "POE_MESSAGES_URL",
+    "POE_RESPONSES_URL",
+    "poeProvider"
+   ]
+  },
+  "open-sse/services/combo/rrDashboardEvents.ts": {
+   "imports": [],
+   "exports": [
+    "createRRDashboardEvents"
+   ]
+  },
+  "src/app/api/v1/models/catalogPricing.ts": {
+   "imports": [],
+   "exports": [
+    "attachCatalogPricing",
+    "createComboPricingTargetResolver",
+    "perMillionToPerTokenUsd"
+   ]
+  },
+  "open-sse/services/autoCombo/suffixComposition.ts": {
+   "imports": [],
+   "exports": [
+    "AUTO_CATEGORIES",
+    "AUTO_TIERS",
+    "buildAutoCandidateFilter",
+    "tierToWeightVariant"
+   ]
+  },
+  "open-sse/services/autoCombo/emulatedNoAuthAllowlist.ts": {
+   "imports": [],
+   "exports": [
+    "AUTO_COMBO_KEYLESS_TRANSPORT_GATE_FLAG",
+    "EMULATED_TOOL_CALLING_NOAUTH_PROVIDERS",
+    "getAutoRoutableEmulatedNoAuthProviders",
+    "getEmulatedToolCallingNoAuthProviders"
+   ]
+  },
+  "open-sse/config/providers/registry/cursor/grok47.ts": {
+   "imports": [],
+   "exports": [
+    "CURSOR_GROK_47_MODELS",
+    "GROK_47_CONTEXTS",
+    "GROK_47_EFFORTS",
+    "cursorGrok47Variant"
+   ]
+  },
+  "open-sse/config/semanticCacheConfig.ts": {
+   "imports": [],
+   "exports": [
+    "DEFAULT_SEMANTIC_CACHE_CONFIG",
+    "registerSemanticCacheConfigResolver",
+    "resolveSemanticCacheConfig"
+   ]
+  },
+  "open-sse/config/providers/registry/nube/index.ts": {
+   "imports": [],
+   "exports": [
+    "nubeProvider"
+   ]
+  },
+  "open-sse/config/claudeCodeCompatibleIdentity.ts": {
+   "imports": [],
+   "exports": [
+    "CLAUDE_CODE_COMPATIBLE_STAINLESS_PACKAGE_VERSION",
+    "CLAUDE_CODE_COMPATIBLE_STAINLESS_RUNTIME_VERSION",
+    "CLAUDE_CODE_COMPATIBLE_USER_AGENT",
+    "CLAUDE_CODE_COMPATIBLE_VERSION",
+    "getClaudeCodeCompatibleVersion",
+    "getClaudeCodeUserAgent"
+   ]
+  },
+  "open-sse/config/providers/registry/monsterapi/index.ts": {
+   "imports": [],
+   "exports": [
+    "monsterapiProvider"
+   ]
+  },
+  "open-sse/services/autoCombo/chaosEngine.ts": {
+   "imports": [],
+   "exports": [
+    "CHAOS_DEFAULTS",
+    "dispatchChaosFromCombo",
+    "handleChaosChat",
+    "serializeChaosPart"
+   ]
+  },
+  "src/shared/constants/cliIntegrationManifest.ts": {
+   "imports": [],
+   "exports": [
+    "CLI_INTEGRATION_MANIFEST",
+    "CLI_INTEGRATION_PLATFORMS",
+    "getCliIntegration",
+    "getCliProviderAlias",
+    "listCliIntegrationIds"
+   ]
+  },
+  "open-sse/config/providers/registry/dify/index.ts": {
+   "imports": [],
+   "exports": [
+    "difyProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/promptql/index.ts": {
+   "imports": [],
+   "exports": [
+    "promptqlProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/hyperagent/index.ts": {
+   "imports": [],
+   "exports": [
+    "hyperagentProvider"
+   ]
+  },
+  "open-sse/config/providerErrorRules.ts": {
+   "imports": [],
+   "exports": [
+    "CLOUDFLARE_AI_FULL_TEXT_ERROR_RULES_FLAG",
+    "OPENCODE_FULL_TEXT_ERROR_RULES_FLAG",
+    "OPENCODE_ZEN_EGRESS_IP_LOCK_FLAG",
+    "egressIpLockProvidersFromEnv",
+    "hasOperatorRuleForProvider",
+    "isEgressBucketedLockScope",
+    "providerRuleRegistry",
+    "resolveRuleMatchBody",
+    "setOperatorProviderErrorRules"
+   ]
+  },
+  "open-sse/config/providers/registry/iflytek/index.ts": {
+   "imports": [],
+   "exports": [
+    "iflytekProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/alibaba/index.ts": {
+   "imports": [],
+   "exports": [
+    "ALIBABA_MODEL_STUDIO_MODELS",
+    "alibabaProvider"
+   ]
+  },
+  "open-sse/services/accountFallback/mistralAmbiguousAuth.ts": {
+   "imports": [],
+   "exports": [
+    "MISTRAL_AMBIGUOUS_401_MAX_SOFT_STRIKES",
+    "MISTRAL_AMBIGUOUS_401_STRIKE_WINDOW_MS",
+    "isMistralAmbiguous401",
+    "resetMistralAmbiguous401Strikes"
+   ]
+  },
+  "open-sse/config/providers/registry/zed-hosted/index.ts": {
+   "imports": [],
+   "exports": [
+    "default",
+    "zed_hostedProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/kilocode/index.ts": {
+   "imports": [],
+   "exports": [
+    "kilocodeProvider"
+   ]
+  },
+  "src/shared/constants/providers/apikey/unifically.ts": {
+   "imports": [],
+   "exports": [
+    "unificallyGateway"
+   ]
+  },
+  "open-sse/config/freeModelCatalog.data.ts": {
+   "imports": [],
+   "exports": [
+    "FREE_CATALOG_CURATED_AT",
+    "FREE_MODEL_BUDGETS"
+   ]
+  },
+  "open-sse/config/providers/registry/sensenova/index.ts": {
+   "imports": [],
+   "exports": [
+    "sensenovaProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/kie/models.ts": {
+   "imports": [],
+   "exports": [
+    "KIE_IMAGE_MODELS"
+   ]
+  },
+  "open-sse/services/autoCombo/providerDiversity.ts": {
+   "imports": [],
+   "exports": [
+    "calculateDiversityScore",
+    "getDiversityReport",
+    "getProviderDiversityBoost",
+    "recordProviderUsage",
+    "resetDiversity"
+   ]
+  },
+  "open-sse/config/providers/registry/lmarena/directModels.ts": {
+   "imports": [],
+   "exports": [
+    "LMARENA_DIRECT_CHAT_ENTRIES",
+    "LMARENA_DIRECT_IMAGE_ENTRIES",
+    "LMARENA_DIRECT_IMAGE_MODELS",
+    "LMARENA_DIRECT_MODELS",
+    "LMARENA_DIRECT_MODEL_ENTRIES"
+   ]
+  },
+  "open-sse/services/accountFallback/sharedWalletCredits.ts": {
+   "imports": [],
+   "exports": [
+    "GROK_BUILD_USAGE_BALANCE_SIGNAL",
+    "isSharedWalletCredits402"
+   ]
+  },
+  "open-sse/config/providers/registry/plamo/index.ts": {
+   "imports": [],
+   "exports": [
+    "plamoProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/charm-hyper/index.ts": {
+   "imports": [],
+   "exports": [
+    "charmHyperProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/chatgpt-web-codex/index.ts": {
+   "imports": [],
+   "exports": [
+    "chatgpt_web_codexProvider"
+   ]
+  },
+  "src/app/api/v1/models/catalogDedupe.ts": {
+   "imports": [],
+   "exports": [
+    "dedupeExactCatalogIds"
+   ]
+  },
+  "open-sse/config/providers/registry/agnes/cn/index.ts": {
+   "imports": [],
+   "exports": [
+    "AGNES_CN_30_THINKING_EFFORTS",
+    "AGNES_CN_FLASH_THINKING_EFFORTS",
+    "agnes_cnProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/pioneer/index.ts": {
+   "imports": [],
+   "exports": [
+    "pioneerProvider"
+   ]
+  },
+  "open-sse/config/bedrock.ts": {
+   "imports": [],
+   "exports": [
+    "BEDROCK_DASHBOARD_DEFAULT_REGION",
+    "BEDROCK_DEFAULT_REGION",
+    "buildBedrockNativeModelsUrl",
+    "buildBedrockRuntimeBaseUrl",
+    "getBedrockKnownModelLimits",
+    "normalizeBedrockDiscoveredModels"
+   ]
+  },
+  "open-sse/services/combo/candidateCost.ts": {
+   "imports": [],
+   "exports": [
+    "OUTPUT_TOKEN_RATIO"
+   ]
+  },
+  "open-sse/config/providers/registry/hyperbolic/index.ts": {
+   "imports": [],
+   "exports": [
+    "hyperbolicProvider"
+   ]
+  },
+  "src/shared/constants/providers/cloud-agent.ts": {
+   "imports": [],
+   "exports": [
+    "CLOUD_AGENT_PROVIDERS"
+   ]
+  },
+  "open-sse/config/providers/registry/bai/index.ts": {
+   "imports": [],
+   "exports": [
+    "baiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/yi/index.ts": {
+   "imports": [],
+   "exports": [
+    "yiProvider"
+   ]
+  },
+  "src/app/api/v1/models/query/route.ts": {
+   "imports": [],
+   "exports": [
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "POST"
+   ]
+  },
+  "open-sse/services/autoCombo/speedRanking.ts": {
+   "imports": [],
+   "exports": [
+    "DEFAULT_SPEED_WEIGHTS"
+   ]
+  },
+  "open-sse/config/providers/registry/adapta-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "adapta_webProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/freeaiapikey/index.ts": {
+   "imports": [],
+   "exports": [
+    "freeaiapikeyProvider"
+   ]
+  },
+  "open-sse/services/combo/quotaShareInflight.ts": {
+   "imports": [],
+   "exports": [
+    "DEFAULT_LEASE_MS",
+    "_inflightSizeForTest",
+    "getInflight"
+   ]
+  },
+  "open-sse/config/providers/registry/freemodel-dev/index.ts": {
+   "imports": [],
+   "exports": [
+    "freemodel_devProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/typhoon/index.ts": {
+   "imports": [],
+   "exports": [
+    "typhoonProvider"
+   ]
+  },
+  "open-sse/services/combo/quotaSkipDiagnostics.ts": {
+   "imports": [],
+   "exports": [
+    "collectQuotaWindowExclusions"
+   ]
+  },
+  "open-sse/config/providers/registry/magnific/index.ts": {
+   "imports": [],
+   "exports": [
+    "MAGNIFIC_IMAGE_PROVIDER"
+   ]
+  },
+  "src/shared/constants/providers/apikey/gateways.ts": {
+   "imports": [],
+   "exports": [
+    "APIKEY_PROVIDERS_GATEWAYS"
+   ]
+  },
+  "open-sse/services/combo/context.ts": {
+   "imports": [],
+   "exports": [
+    "createComboContext"
+   ]
+  },
+  "open-sse/services/autoCombo/strictZeroCostFilter.ts": {
+   "imports": [],
+   "exports": [
+    "classifyConnectionState",
+    "countStrictExclusions",
+    "describeStrictExclusions",
+    "filterStrictZeroCostCandidatesWithDiagnosis"
+   ]
+  },
+  "open-sse/config/providers/registry/segmind/imageModels.ts": {
+   "imports": [],
+   "exports": [
+    "SEGMIND_IMAGE_MODELS",
+    "SEGMIND_IMAGE_PROVIDER"
+   ]
+  },
+  "src/shared/constants/providers/system.ts": {
+   "imports": [],
+   "exports": [
+    "SYSTEM_PROVIDERS"
+   ]
+  },
+  "open-sse/services/autoCombo/providerRegistryAccessor.ts": {
+   "imports": [],
+   "exports": [
+    "getProviderRegistry"
+   ]
+  },
+  "src/app/api/v1/models/catalogRequest.ts": {
+   "imports": [],
+   "exports": [
+    "isCcDiscoveryModelCatalogClient",
+    "isCodexModelCatalogClient"
+   ]
+  },
+  "open-sse/services/combo/decisionTrace.ts": {
+   "imports": [],
+   "exports": [
+    "AUTO_EVALUATION_STAGES",
+    "COMBO_SKIP_REASONS",
+    "createInvocationId",
+    "recordComboDecision",
+    "resetComboTraceStore",
+    "setAutoEvaluationWriteFailureForTests",
+    "startAutoEvaluationTrace"
+   ]
+  },
+  "src/shared/constants/providers/apikey/specialty-media.ts": {
+   "imports": [],
+   "exports": [
+    "APIKEY_PROVIDERS_SPECIALTY"
+   ]
+  },
+  "src/app/api/v1/models/[...model]/route.ts": {
+   "imports": [],
+   "exports": [
+    "GET"
+   ]
+  },
+  "open-sse/config/nimble.ts": {
+   "imports": [],
+   "exports": [
+    "NIMBLE_CLIENT_SOURCE",
+    "NIMBLE_CLIENT_SOURCE_HEADER"
+   ]
+  },
+  "open-sse/services/autoCombo/connectionBilling.ts": {
+   "imports": [],
+   "exports": [
+    "classifyConnectionBilling",
+    "isOverageSafe"
+   ]
+  },
+  "open-sse/config/providers/registry/g4f-groq/index.ts": {
+   "imports": [],
+   "exports": [
+    "g4f_groqProvider"
+   ]
+  },
+  "src/app/api/v1/models/catalogDiscovery.ts": {
+   "imports": [],
+   "exports": [
+    "catalogBadRequest",
+    "getFilteredCatalogResponse"
+   ]
+  },
+  "open-sse/services/autoCombo/modelExposureFilter.ts": {
+   "imports": [],
+   "exports": [
+    "filterModelExposureCandidates"
+   ]
+  },
+  "src/shared/constants/providers/apikey/index.ts": {
+   "imports": [],
+   "exports": [
+    "APIKEY_PROVIDERS"
+   ]
+  },
+  "open-sse/services/accountFallback/postOutputFailureStreak.ts": {
+   "imports": [],
+   "exports": [
+    "POST_OUTPUT_FAILURE_STREAK_LOCK",
+    "POST_OUTPUT_FAILURE_STREAK_WINDOW_MS",
+    "postOutputFailureReachesLockout"
+   ]
+  },
+  "open-sse/config/providers/registry/inner-ai/index.ts": {
+   "imports": [],
+   "exports": [
+    "inner_aiProvider"
+   ]
+  },
+  "open-sse/config/embeddingRegistry.ts": {
+   "imports": [],
+   "exports": [
+    "EMBEDDING_PROVIDERS",
+    "detectEmbeddingDimensionConflict",
+    "getEmbeddingModelDefaultParams",
+    "getEmbeddingModelModalities",
+    "getEmbeddingProvider",
+    "parseEmbeddingModel"
+   ]
+  },
+  "open-sse/config/providers/registry/volcengine/agent-plan/index.ts": {
+   "imports": [],
+   "exports": [
+    "VOLCENGINE_AGENT_PLAN_MODELS",
+    "volcengine_agent_planProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/kimi/web/index.ts": {
+   "imports": [],
+   "exports": [
+    "KIMI_WEB_STATIC_MODELS",
+    "kimi_webProvider"
+   ]
+  },
+  "open-sse/services/combo/responseValidation.ts": {
+   "imports": [],
+   "exports": [
+    "evaluateResponseValidation",
+    "resolveJsonPath"
+   ]
+  },
+  "open-sse/config/providers/registry/coze/index.ts": {
+   "imports": [],
+   "exports": [
+    "cozeProvider"
+   ]
+  },
+  "open-sse/config/maritalk.ts": {
+   "imports": [],
+   "exports": [
+    "MARITALK_DEFAULT_BASE_URL",
+    "normalizeMaritalkBaseUrl"
+   ]
+  },
+  "open-sse/config/providers/registry/auggie/index.ts": {
+   "imports": [],
+   "exports": [
+    "auggieProvider"
+   ]
+  },
+  "open-sse/services/combo/comboAbortReasons.ts": {
+   "imports": [],
+   "exports": [
+    "COMBO_HEDGE_CANCELLED_REASON",
+    "COMBO_PER_MODEL_TIMEOUT_REASON"
+   ]
+  },
+  "open-sse/config/providers/registry/doubao/index.ts": {
+   "imports": [],
+   "exports": [
+    "doubaoProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/qiniu/index.ts": {
+   "imports": [],
+   "exports": [
+    "qiniuProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/cline/index.ts": {
+   "imports": [],
+   "exports": [
+    "clineProvider"
+   ]
+  },
+  "open-sse/services/autoCombo/subscriptionLadder.ts": {
+   "imports": [],
+   "exports": [
+    "RUNG_ORDER",
+    "isRungBudgetExhausted",
+    "isStateStaleForReset",
+    "rungIndex"
+   ]
+  },
+  "open-sse/config/moderationRegistry.ts": {
+   "imports": [],
+   "exports": [
+    "MODERATION_PROVIDERS",
+    "getModerationProvider",
+    "parseModerationModel"
+   ]
+  },
+  "open-sse/config/providers/registry/qwen-cloud/index.ts": {
+   "imports": [],
+   "exports": [
+    "QWEN_CLOUD_TEXT_MODELS",
+    "qwen_cloudProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/conol-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "conol_webProvider"
+   ]
+  },
+  "open-sse/config/oci.ts": {
+   "imports": [],
+   "exports": [
+    "OCI_DEFAULT_BASE_URL",
+    "normalizeOciBaseUrl"
+   ]
+  },
+  "open-sse/config/providers/registry/kie/imageModels.ts": {
+   "imports": [],
+   "exports": [
+    "KIE_IMAGE_MODELS"
+   ]
+  },
+  "open-sse/config/providers/registry/novita/index.ts": {
+   "imports": [],
+   "exports": [
+    "novitaProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/kimi/web/runtime.ts": {
+   "imports": [],
+   "exports": [
+    "resolveKimiWebContextLength"
+   ]
+  },
+  "open-sse/config/providers/registry/kilo-gateway/index.ts": {
+   "imports": [],
+   "exports": [
+    "kilo_gatewayProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/copilot-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "copilot_webProvider"
+   ]
+  },
+  "src/app/api/v1/models/catalogModelPolicy.ts": {
+   "imports": [],
+   "exports": [
+    "isUnifiedChatSourceModelSelectable"
+   ]
+  },
+  "open-sse/config/ocrRegistry.ts": {
+   "imports": [],
+   "exports": [
+    "AZURE_DI_TRANSFORMATION",
+    "MISTRAL_PASSTHROUGH",
+    "OCR_PROVIDERS",
+    "VERTEX_DEEPSEEK_TRANSFORMATION",
+    "getOcrTransformation",
+    "parseOcrModel"
+   ]
+  },
+  "open-sse/config/providers/registry/ideogram/index.ts": {
+   "imports": [],
+   "exports": [
+    "ideogramProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/minimax/index.ts": {
+   "imports": [],
+   "exports": [
+    "minimaxProvider"
+   ]
+  },
+  "src/app/api/v1/models/catalogKeyFilter.ts": {
+   "imports": [],
+   "exports": [
+    "isCatalogModelAllowedForKey"
+   ]
+  },
+  "open-sse/services/autoCombo/noAuthReadiness.ts": {
+   "imports": [],
+   "exports": [
+    "__resetNoAuthReadinessForTests"
+   ]
+  },
+  "open-sse/config/providers/registry/volcengine/coding-plan/index.ts": {
+   "imports": [],
+   "exports": [
+    "VOLCENGINE_CODING_PLAN_MODELS",
+    "volcengine_coding_planProvider"
+   ]
+  },
+  "src/app/api/v1/models/catalogPaidFilter.ts": {
+   "imports": [],
+   "exports": [
+    "decideHidePaid"
+   ]
+  },
+  "open-sse/config/providers/registry/bedrock/index.ts": {
+   "imports": [],
+   "exports": [
+    "bedrockProvider"
+   ]
+  },
+  "open-sse/config/antigravitySharedModels.ts": {
+   "imports": [],
+   "exports": [
+    "ANTIGRAVITY_SHARED_MODELS",
+    "buildSurfaceCatalog"
+   ]
+  },
+  "open-sse/config/providers/registry/syntx/index.ts": {
+   "imports": [],
+   "exports": [
+    "syntxProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/uc/index.ts": {
+   "imports": [],
+   "exports": [
+    "ucProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/trae/index.ts": {
+   "imports": [],
+   "exports": [
+    "traeProvider"
+   ]
+  },
+  "src/shared/constants/providers/apikey/onomeo.ts": {
+   "imports": [],
+   "exports": [
+    "onomeoGateway"
+   ]
+  },
+  "open-sse/config/providers/registry/baidu/index.ts": {
+   "imports": [],
+   "exports": [
+    "baiduProvider"
+   ]
+  },
+  "src/app/api/v1/models/catalog.ts": {
+   "imports": [],
+   "exports": [
+    "getCustomVisionCapabilityFields"
+   ]
+  },
+  "open-sse/config/providers/registry/haiper/index.ts": {
+   "imports": [],
+   "exports": [
+    "haiperProvider"
+   ]
+  },
+  "src/app/api/v1/responses/input_tokens/route.ts": {
+   "imports": [],
+   "exports": [
+    "OPTIONS",
+    "POST"
+   ]
+  },
+  "open-sse/config/providers/registry/blackbox/web/index.ts": {
+   "imports": [],
+   "exports": [
+    "blackbox_webProvider"
+   ]
+  },
+  "open-sse/config/providers/alternateFormats.ts": {
+   "imports": [],
+   "exports": [
+    "resolveAlternateFormat"
+   ]
+  },
+  "open-sse/config/providers/registry/g4f-nvidia/index.ts": {
+   "imports": [],
+   "exports": [
+    "g4f_nvidiaProvider"
+   ]
+  },
+  "src/app/api/v1/route.ts": {
+   "imports": [],
+   "exports": [
+    "GET",
+    "OPTIONS"
+   ]
+  },
+  "open-sse/config/providers/registry/reka/index.ts": {
+   "imports": [],
+   "exports": [
+    "rekaProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/t3-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "t3_webProvider"
+   ]
+  },
+  "src/shared/constants/providers/local.ts": {
+   "imports": [],
+   "exports": [
+    "LOCAL_PROVIDERS"
+   ]
+  },
+  "open-sse/config/connectionBillingCatalog.ts": {
+   "imports": [],
+   "exports": [
+    "CONNECTION_BILLING_CATALOG"
+   ]
+  },
+  "open-sse/config/providers/registry/tencent-aistudio-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "tencent_aistudio_webProvider"
+   ]
+  },
+  "open-sse/config/dynamicImageModelSources.ts": {
+   "imports": [],
+   "exports": [
+    "getDynamicImageModels",
+    "resetDynamicImageModelSources"
+   ]
+  },
+  "src/app/api/v1/models/catalogProviderMaps.ts": {
+   "imports": [],
+   "exports": [
+    "FALLBACK_ALIAS_TO_PROVIDER",
+    "buildAliasMaps",
+    "getProviderPrefixes",
+    "prefixRoutesToCanonicalProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/qianfan/index.ts": {
+   "imports": [],
+   "exports": [
+    "qianfanProvider"
+   ]
+  },
+  "src/shared/constants/providers/apikey/inference-hosts.ts": {
+   "imports": [],
+   "exports": [
+    "APIKEY_PROVIDERS_INFERENCE"
+   ]
+  },
+  "open-sse/config/providers/registry/aimlapi/index.ts": {
+   "imports": [],
+   "exports": [
+    "aimlapiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/inception/index.ts": {
+   "imports": [],
+   "exports": [
+    "inceptionProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/doubao/web/index.ts": {
+   "imports": [],
+   "exports": [
+    "doubao_webProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/tinycms/index.ts": {
+   "imports": [],
+   "exports": [
+    "default",
+    "tinycmsProvider"
+   ]
+  },
+  "src/app/api/v1/models/catalogResponse.ts": {
+   "imports": [],
+   "exports": [
+    "finalizeCatalogResponse"
+   ]
+  },
+  "open-sse/config/providers/registry/zenmux/index.ts": {
+   "imports": [],
+   "exports": [
+    "zenmuxProvider"
+   ]
+  },
+  "src/shared/constants/providers/web-cookie.ts": {
+   "imports": [],
+   "exports": [
+    "WEB_COOKIE_PROVIDERS"
+   ]
+  },
+  "open-sse/services/accountFallback/lockoutEviction.ts": {
+   "imports": [],
+   "exports": [
+    "MODEL_LOCKOUT_EVICTION_CAP",
+    "evictLockoutOverflow"
+   ]
+  },
+  "open-sse/config/providers/registry/scaleway/index.ts": {
+   "imports": [],
+   "exports": [
+    "scalewayProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/nous-research/index.ts": {
+   "imports": [],
+   "exports": [
+    "nous_researchProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/kie/index.ts": {
+   "imports": [],
+   "exports": [
+    "kieProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/agnes/index.ts": {
+   "imports": [],
+   "exports": [
+    "AGNES_30_THINKING_EFFORTS",
+    "AGNES_FLASH_THINKING_EFFORTS",
+    "agnesProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/segmind/videoModels.ts": {
+   "imports": [],
+   "exports": [
+    "SEGMIND_VIDEO_MODELS"
+   ]
+  },
+  "open-sse/config/providers/registry/yuanbao-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "yuanbao_webProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/deepseek/web/index.ts": {
+   "imports": [],
+   "exports": [
+    "deepseek_webProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/deepai/index.ts": {
+   "imports": [],
+   "exports": [
+    "deepaiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/qwen-cloud-token-plan/index.ts": {
+   "imports": [],
+   "exports": [
+    "qwen_cloud_token_planProvider"
+   ]
+  },
+  "open-sse/services/combo/types.ts": {
+   "imports": [],
+   "exports": [
+    "RESET_WINDOW_NAMES",
+    "modelAvailabilitySkipReason"
+   ]
+  },
+  "open-sse/config/providers/registry/byteplus/index.ts": {
+   "imports": [],
+   "exports": [
+    "byteplusProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/crof/index.ts": {
+   "imports": [],
+   "exports": [
+    "crofProvider"
+   ]
+  },
+  "src/shared/constants/providers/audio.ts": {
+   "imports": [],
+   "exports": [
+    "AUDIO_ONLY_PROVIDERS"
+   ]
+  },
+  "src/app/api/v1/models/catalogVision.ts": {
+   "imports": [],
+   "exports": [
+    "getVisionCapabilityFields",
+    "isVisionModelId"
+   ]
+  },
+  "open-sse/config/vertexModels.ts": {
+   "imports": [],
+   "exports": [
+    "VERTEX_XAI_MODELS",
+    "getVertexModelTargetFormat",
+    "isVertexExpressModel",
+    "normalizeVertexModelId"
+   ]
+  },
+  "open-sse/config/upstreamStatusRestatement.ts": {
+   "imports": [],
+   "exports": [
+    "applyStatusRestatement",
+    "statusRestatementRegistry"
+   ]
+  },
+  "open-sse/config/providers/registry/uncloseai/index.ts": {
+   "imports": [],
+   "exports": [
+    "uncloseaiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/cerebras/index.ts": {
+   "imports": [],
+   "exports": [
+    "cerebrasProvider"
+   ]
+  },
+  "open-sse/services/autoCombo/modelLockoutFilter.ts": {
+   "imports": [],
+   "exports": [
+    "filterLockoutCandidates",
+    "warnPoolDrop"
+   ]
+  },
+  "open-sse/config/providers/registry/nlpcloud/index.ts": {
+   "imports": [],
+   "exports": [
+    "nlpcloudProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/dahl/index.ts": {
+   "imports": [],
+   "exports": [
+    "dahlProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/cloudflare-ai/index.ts": {
+   "imports": [],
+   "exports": [
+    "cloudflare_aiProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/baichuan/index.ts": {
+   "imports": [],
+   "exports": [
+    "baichuanProvider"
+   ]
+  },
+  "open-sse/services/autoCombo/snapshotBreaker.ts": {
+   "imports": [],
+   "exports": [
+    "readBreakerStates"
+   ]
+  },
+  "src/app/api/v1/models/catalogSyncedCoverage.ts": {
+   "imports": [],
+   "exports": [
+    "shouldSuppressStaticModelBySyncedCoverage",
+    "shouldSuppressStaticModelForExclusiveListing"
+   ]
+  },
+  "src/shared/constants/providers/upstream-proxy.ts": {
+   "imports": [],
+   "exports": [
+    "UPSTREAM_PROXY_PROVIDERS"
+   ]
+  },
+  "open-sse/config/providers/registry/chutes/index.ts": {
+   "imports": [],
+   "exports": [
+    "chutesProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/leonardo/index.ts": {
+   "imports": [],
+   "exports": [
+    "leonardoProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/freebuff/index.ts": {
+   "imports": [],
+   "exports": [
+    "freebuffProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/modal/index.ts": {
+   "imports": [],
+   "exports": [
+    "modalProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/clova-studio/index.ts": {
+   "imports": [],
+   "exports": [
+    "clova_studioProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/dit/index.ts": {
+   "imports": [],
+   "exports": [
+    "ditProvider"
+   ]
+  },
+  "src/app/api/v1/models/catalogOrder.ts": {
+   "imports": [],
+   "exports": [
+    "sortCatalogModelsProviderGrouped"
+   ]
+  },
+  "open-sse/config/providers/registry/llm7/index.ts": {
+   "imports": [],
+   "exports": [
+    "llm7Provider"
+   ]
+  },
+  "open-sse/config/providers/registry/zai-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "zai_webProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/openrouter/index.ts": {
+   "imports": [],
+   "exports": [
+    "openrouterProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/synthetic/index.ts": {
+   "imports": [],
+   "exports": [
+    "syntheticProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/maxai/index.ts": {
+   "imports": [],
+   "exports": [
+    "maxaiProvider"
+   ]
+  },
+  "open-sse/services/combo/recordLkgpPin.ts": {
+   "imports": [],
+   "exports": [
+    "recordLkgpPin"
+   ]
+  },
+  "open-sse/services/autoCombo/paidModelFilter.ts": {
+   "imports": [],
+   "exports": [
+    "filterPaidOnlyCandidates"
+   ]
+  },
+  "open-sse/config/providers/registry/minimax/cn/index.ts": {
+   "imports": [],
+   "exports": [
+    "minimax_cnProvider"
+   ]
+  },
+  "open-sse/config/ollamaModels.ts": {
+   "imports": [],
+   "exports": [
+    "ollamaModels"
+   ]
+  },
+  "src/shared/constants/providers/apikey/beatapi.ts": {
+   "imports": [],
+   "exports": [
+    "APIKEY_PROVIDERS_BEATAPI"
+   ]
+  },
+  "open-sse/config/providers/registry/ant-ling/index.ts": {
+   "imports": [],
+   "exports": [
+    "ant_lingProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/huggingface/index.ts": {
+   "imports": [],
+   "exports": [
+    "huggingfaceProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/pollinations/index.ts": {
+   "imports": [],
+   "exports": [
+    "pollinationsProvider"
+   ]
+  },
+  "open-sse/services/combo/chaosHeaderBarrier.ts": {
+   "imports": [],
+   "exports": [
+    "createChaosHeaderBarrier"
+   ]
+  },
+  "open-sse/config/providers/registry/perplexity/agent/index.ts": {
+   "imports": [],
+   "exports": [
+    "perplexityAgentProvider"
+   ]
+  },
+  "open-sse/services/combo/quotaShareConcurrency.ts": {
+   "imports": [],
+   "exports": [
+    "quotaShareConcurrencyKey"
+   ]
+  },
+  "open-sse/config/providers/registry/uc-direct/index.ts": {
+   "imports": [],
+   "exports": [
+    "ucDirectProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/orcarouter/index.ts": {
+   "imports": [],
+   "exports": [
+    "orcarouterProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/command-code/index.ts": {
+   "imports": [],
+   "exports": [
+    "command_codeProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/api-airforce/index.ts": {
+   "imports": [],
+   "exports": [
+    "api_airforceProvider"
+   ]
+  },
+  "open-sse/services/combo/staleLkgpClear.ts": {
+   "imports": [],
+   "exports": [
+    "clearStaleLKGP"
+   ]
+  },
+  "open-sse/config/opencodeZenGoSharedModels.ts": {
+   "imports": [],
+   "exports": [
+    "OPENCODE_ZEN_GO_SHARED_MODELS"
+   ]
+  },
+  "open-sse/config/providers/registry/nvidia/index.ts": {
+   "imports": [],
+   "exports": [
+    "nvidiaProvider"
+   ]
+  },
+  "open-sse/config/codexInstructions.ts": {
+   "imports": [],
+   "exports": [
+    "CODEX_CHAT_DEFAULT_INSTRUCTIONS",
+    "CODEX_DEFAULT_INSTRUCTIONS"
+   ]
+  },
+  "open-sse/config/providers/registry/writer/index.ts": {
+   "imports": [],
+   "exports": [
+    "writerProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/zenmux-free/index.ts": {
+   "imports": [],
+   "exports": [
+    "default",
+    "zenmux_freeProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/perplexity/index.ts": {
+   "imports": [],
+   "exports": [
+    "perplexityProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/claude/web/index.ts": {
+   "imports": [],
+   "exports": [
+    "claude_webProvider"
+   ]
+  },
+  "src/shared/constants/providers/oauth.ts": {
+   "imports": [],
+   "exports": [
+    "OAUTH_PROVIDERS"
+   ]
+  },
+  "open-sse/config/providers/registry/bigmodel/index.ts": {
+   "imports": [],
+   "exports": [
+    "bigmodelProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/veoaifree-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "veoaifree_webProvider"
+   ]
+  },
+  "open-sse/services/autoCombo/autoPrefix.ts": {
+   "imports": [],
+   "exports": [
+    "VALID_VARIANTS",
+    "parseAutoPrefix"
+   ]
+  },
+  "open-sse/config/providers/registry/dgrid/index.ts": {
+   "imports": [],
+   "exports": [
+    "dgridProvider"
+   ]
+  },
+  "src/shared/constants/providers/search.ts": {
+   "imports": [],
+   "exports": [
+    "SEARCH_PROVIDERS"
+   ]
+  },
+  "open-sse/config/providers/registry/cheaperinference/index.ts": {
+   "imports": [],
+   "exports": [
+    "CHEAPERINFERENCE_MODELS",
+    "cheaperinferenceProvider"
+   ]
+  },
+  "open-sse/services/combo/comboData.ts": {
+   "imports": [],
+   "exports": [
+    "dedupeTargetsByExecutionKey",
+    "isRecord"
+   ]
+  },
+  "open-sse/services/combo/skippedConnectionCooldown.ts": {
+   "imports": [],
+   "exports": [
+    "resolveSkippedConnectionCooldownTerminal"
+   ]
+  },
+  "open-sse/config/providers/registry/devin/catalog.ts": {
+   "imports": [],
+   "exports": [
+    "DEVIN_MODEL_CATALOG"
+   ]
+  },
+  "open-sse/config/providers/registry/x5lab/index.ts": {
+   "imports": [],
+   "exports": [
+    "x5labProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/bluesminds/index.ts": {
+   "imports": [],
+   "exports": [
+    "bluesmindsProvider"
+   ]
+  },
+  "src/app/api/v1/models/catalogOpenrouter.ts": {
+   "imports": [],
+   "exports": [
+    "isOpenRouterFreeModel",
+    "normalizeOpenRouterModalities"
+   ]
+  },
+  "open-sse/config/providers/registry/copilot-m365-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "copilot_m365_webProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/cohere/index.ts": {
+   "imports": [],
+   "exports": [
+    "cohereProvider"
+   ]
+  },
+  "open-sse/config/codexTurnState.ts": {
+   "imports": [],
+   "exports": [
+    "__resetCodexTurnStateOriginsForTesting"
+   ]
+  },
+  "src/app/api/v1/messages/count_tokens/route.ts": {
+   "imports": [],
+   "exports": [
+    "POST"
+   ]
+  },
+  "open-sse/config/providers/registry/chatplayground/index.ts": {
+   "imports": [],
+   "exports": [
+    "chatplaygroundProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/naga-ac/index.ts": {
+   "imports": [],
+   "exports": [
+    "naga_acProvider"
+   ]
+  },
+  "open-sse/services/accountFallback/cooldownCap.ts": {
+   "imports": [],
+   "exports": [
+    "capScaledCooldownMs"
+   ]
+  },
+  "open-sse/config/providers/registry/chenzk/index.ts": {
+   "imports": [],
+   "exports": [
+    "chenzkProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/openadapter/index.ts": {
+   "imports": [],
+   "exports": [
+    "openadapterProvider"
+   ]
+  },
+  "open-sse/services/combo/contextRequirements.ts": {
+   "imports": [],
+   "exports": [
+    "applyContextRequirements"
+   ]
+  },
+  "src/app/api/v1/responses/[...path]/route.ts": {
+   "imports": [],
+   "exports": [
+    "POST"
+   ]
+  },
+  "open-sse/services/combo/pinRecovery.ts": {
+   "imports": [],
+   "exports": [
+    "buildAllTargetsCoolingDownResponse"
+   ]
+  },
+  "open-sse/config/providers/registry/perplexity/web/index.ts": {
+   "imports": [],
+   "exports": [
+    "perplexity_webProvider"
+   ]
+  },
+  "src/app/api/v1/responses/route.ts": {
+   "imports": [],
+   "exports": [
+    "OPTIONS"
+   ]
+  },
+  "open-sse/services/combo/headroomRanking.ts": {
+   "imports": [],
+   "exports": [
+    "computeHeadroom"
+   ]
+  },
+  "src/app/api/v1/messages/route.ts": {
+   "imports": [],
+   "exports": [
+    "POST"
+   ]
+  },
+  "open-sse/config/providers/registry/twinmind/index.ts": {
+   "imports": [],
+   "exports": [
+    "twinmindProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/notrack-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "notrack_webProvider"
+   ]
+  },
+  "open-sse/config/context1m.ts": {
+   "imports": [],
+   "exports": [
+    "CONTEXT_1M_SUPPORTED_MODELS"
+   ]
+  },
+  "src/app/api/v1/models/route.ts": {
+   "imports": [],
+   "exports": [
+    "GET"
+   ]
+  },
+  "open-sse/services/autoCombo/freeAccessQuota.ts": {
+   "imports": [],
+   "exports": [
+    "__testing"
+   ]
+  },
+  "open-sse/config/providers/registry/zenmux/imageModels.ts": {
+   "imports": [],
+   "exports": [
+    "ZENMUX_IMAGE_PROVIDER"
+   ]
+  },
+  "src/app/api/v1/models/modelById.ts": {
+   "imports": [],
+   "exports": [
+    "handleGetModelById"
+   ]
+  },
+  "open-sse/config/providers/registry/factory/index.ts": {
+   "imports": [],
+   "exports": [
+    "factoryProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/g4f-ollama/index.ts": {
+   "imports": [],
+   "exports": [
+    "g4f_ollamaProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/bazaarlink/index.ts": {
+   "imports": [],
+   "exports": [
+    "bazaarlinkProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/cheaperinference/imageModels.ts": {
+   "imports": [],
+   "exports": [
+    "CHEAPERINFERENCE_IMAGE_PROVIDER"
+   ]
+  },
+  "open-sse/config/providers/registry/grok-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "grok_webProvider"
+   ]
+  },
+  "open-sse/services/combo/contextOverrideGate.ts": {
+   "imports": [],
+   "exports": [
+    "evaluateContextLimit"
+   ]
+  },
+  "open-sse/config/providers/registry/modelscope/index.ts": {
+   "imports": [],
+   "exports": [
+    "modelscopeProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/notion-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "notion_webProvider"
+   ]
+  },
+  "src/app/api/v1/chat/completions/route.ts": {
+   "imports": [],
+   "exports": [
+    "OPTIONS"
+   ]
+  },
+  "open-sse/services/accountFallback/nonRetryableUpstream.ts": {
+   "imports": [],
+   "exports": [
+    "isNonRetryableCloudflareError"
+   ]
+  },
+  "open-sse/config/providers/registry/huggingchat/index.ts": {
+   "imports": [],
+   "exports": [
+    "huggingchatProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/token-kiosk/index.ts": {
+   "imports": [],
+   "exports": [
+    "token_kioskProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/oneminai/index.ts": {
+   "imports": [],
+   "exports": [
+    "oneminaiProvider"
+   ]
+  },
+  "src/app/api/v1/models/syncedCapabilities.ts": {
+   "imports": [],
+   "exports": [
+    "mergeSyncedCapabilities"
+   ]
+  },
+  "open-sse/config/providers/registry/sarvam/index.ts": {
+   "imports": [],
+   "exports": [
+    "sarvamProvider"
+   ]
+  },
+  "src/app/api/v1/models/catalogNodeModality.ts": {
+   "imports": [],
+   "exports": [
+    "overlayEndpoints"
+   ]
+  },
+  "open-sse/config/providers/registry/gemini/web/index.ts": {
+   "imports": [],
+   "exports": [
+    "gemini_webProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/muse-spark-web/index.ts": {
+   "imports": [],
+   "exports": [
+    "muse_spark_webProvider"
+   ]
+  },
+  "open-sse/config/providers/registry/groq/index.ts": {
+   "imports": [],
+   "exports": [
+    "groqProvider"
+   ]
+  },
+  "open-sse/config/registryUtils.ts": {
+   "imports": [],
+   "exports": [
+    "buildAuthHeaders"
+   ]
+  },
+  "open-sse/config/providers/registry/tencent/index.ts": {
+   "imports": [],
+   "exports": [
+    "tencentProvider"
+   ]
+  }
+ }
+}

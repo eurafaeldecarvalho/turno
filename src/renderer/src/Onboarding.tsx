@@ -8,6 +8,7 @@ import { Switch } from './panels/RoutineEditor'
 import { useStore } from './store'
 import { openHistory, openRoutine, openTerminal } from './layout'
 import { IconCheck, IconClose, IconFolder } from './icons'
+import { AWAKE_MODES } from './awake'
 import { toast } from './Toast'
 import { unseenNotes, type ReleaseNotes } from './whatsNew'
 
@@ -51,7 +52,7 @@ const STEPS = [
   { id: 'look', title: 'Look and terminal', subtitle: 'Pick the theme and size you want to stare at for hours, and how the terminal behaves.' },
   { id: 'routines', title: 'Routines', subtitle: 'A routine is a folder with a ROUTINE.md: a prompt plus a schedule. Choose where they live.' },
   { id: 'background', title: 'Run in the background', subtitle: 'Scheduled routines only run while Turno is open and the PC is awake.' },
-  { id: 'notifications', title: 'Notifications', subtitle: 'Turno tells you when a routine finishes, fails or needs your answer.' },
+  { id: 'notifications', title: 'Notifications', subtitle: 'Turno tells you when a routine fails or needs your answer, and when one finishes if you ask it to.' },
 ] as const
 type StepId = (typeof STEPS)[number]['id'] | 'done'
 
@@ -312,11 +313,7 @@ function RoutinesStep({ s, first, setFirst }: { s: Settings; first: boolean; set
 }
 
 // ---------- 4. segundo plano ----------
-const AWAKE: Array<{ v: AwakeMode; t: string; d: string }> = [
-  { v: 'auto', t: 'While an agent works', d: 'Keeps the PC awake only while a routine or agent is running. Recommended.' },
-  { v: 'on', t: 'Always', d: 'Never lets the PC sleep while Turno is open.' },
-  { v: 'off', t: 'Never', d: 'Follows the normal Windows power plan; routines may be missed while the PC sleeps.' },
-]
+const AWAKE = AWAKE_MODES
 function BackgroundStep({ s }: { s: Settings }) {
   return (
     <>
@@ -325,10 +322,28 @@ function BackgroundStep({ s }: { s: Settings }) {
         <Switch checked={s.openAtLogin} onChange={(v) => void updateSettings({ openAtLogin: v })} />
       </label>
       <div className="field" role="radiogroup" aria-labelledby="onb-awake">
-        <span id="onb-awake">Keep the PC awake</span>
+        <span id="onb-awake">Keep the computer awake</span>
         <div className="onb-choices">
           {AWAKE.map((m) => (
-            <button key={m.v} role="radio" aria-checked={s.keepAwake === m.v} className={`onb-choice ${s.keepAwake === m.v ? 'on' : ''}`} onClick={() => void updateSettings({ keepAwake: m.v })}>
+            <button
+              key={m.v}
+              role="radio"
+              aria-checked={s.keepAwake === m.v}
+              // grupo de radio: uma parada de Tab (a marcada) e setas trocam a opcao
+              tabIndex={s.keepAwake === m.v ? 0 : -1}
+              className={`onb-choice ${s.keepAwake === m.v ? 'on' : ''}`}
+              onClick={() => void updateSettings({ keepAwake: m.v })}
+              onKeyDown={(e) => {
+                const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
+                if (!d) return
+                e.preventDefault()
+                const i = AWAKE.findIndex((x) => x.v === m.v)
+                const next = AWAKE[(i + d + AWAKE.length) % AWAKE.length]
+                void updateSettings({ keepAwake: next.v })
+                const btns = e.currentTarget.parentElement?.querySelectorAll<HTMLElement>('[role="radio"]')
+                btns?.[(i + d + AWAKE.length) % AWAKE.length]?.focus()
+              }}
+            >
               <strong>{m.t}</strong>
               <small className="muted">{m.d}</small>
             </button>
@@ -359,7 +374,7 @@ function NotificationsStep({ s }: { s: Settings }) {
   }
   return (
     <>
-      <p className="small">Windows notifications are on: you get one when a routine finishes, fails or asks for permission.</p>
+      <p className="small">Windows notifications are on: you get one when a routine fails or asks for permission. Each routine's Notify setting can also tell you when it finishes.</p>
       <label className="field">
         <span>Also on your phone (optional, with the free ntfy app)</span>
         <div className="row">
@@ -380,6 +395,8 @@ function DoneStep({ onAction }: { onAction: () => void }) {
   return (
     <>
       <dl className="onb-keys">
+        <dt>Ctrl+Shift+P</dt><dd>Command palette: every action and setting</dd>
+        <dt>Ctrl+Shift+N</dt><dd>New agent on the best account</dd>
         <dt>Ctrl+Shift+T</dt><dd>New terminal</dd>
         <dt>Ctrl+Shift+H</dt><dd>Runs: every routine run and its conversation</dd>
         <dt>Ctrl+,</dt><dd>Settings (this tour is there too)</dd>

@@ -89,13 +89,14 @@ export const quoteArg = (s: string): string => {
 // "14:05" hoje; "Sun 14:05" em outro dia (limite semanal fica a dias) — ingles e 24h, como o resto do app
 export function whenText(iso: string): string {
   const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return 'later' // data estragada no arquivo: nunca derruba a tela
   const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
   return d.toDateString() === new Date().toDateString() ? time : `${d.toLocaleDateString('en-US', { weekday: 'short' })} ${time}`
 }
 
 // Hora em que uma conta no limite volta a ser usada: o Turno espera 1 min de folga depois do reset informado
 // (arredonda para o minuto SEGUINTE: na hora mostrada a conta ja esta livre)
-export const backText = (iso: string): string => whenText(new Date(Math.ceil((Date.parse(iso) + 60_000) / 60_000) * 60_000).toISOString())
+export const backText = (iso: string): string => (Number.isNaN(Date.parse(iso)) ? 'later' : whenText(new Date(Math.ceil((Date.parse(iso) + 60_000) / 60_000) * 60_000).toISOString()))
 
 // Por que nenhuma conta serve agora — UM texto so para o botao Agent, a aba de Chat e o main (antes cada um dizia
 // uma coisa). accounts: as contas do agente em questao (ou todas). '' = ha conta utilizavel.
@@ -106,13 +107,13 @@ export function unavailableText(
   what = 'account',
 ): string {
   const on = accounts.filter((a) => a.enabled)
-  if (!accounts.length) return `No ${what} found. Install the agent CLI or add an account in Settings › Agents.`
-  if (!on.length) return `Every ${what} is turned off. Turn one on in Settings › Agents.`
+  if (!accounts.length) return `No ${what} found. Install the agent CLI or add an account in Settings › Agents & accounts.`
+  if (!on.length) return `Every ${what} is turned off. Turn one on in Settings › Agents & accounts.`
   const signed = on.filter((a) => !signedOut.includes(a.id))
   if (!signed.length) {
     // a unica logada esta desligada: o caminho e ligar, nao entrar de novo
     const offSigned = accounts.find((a) => !a.enabled && !signedOut.includes(a.id))
-    return offSigned ? `${offSigned.label} is turned off, and the other accounts are not signed in. Turn it on in Settings › Agents.` : `No ${what} is signed in yet. Use Sign in in Settings › Agents.`
+    return offSigned ? `${offSigned.label} is turned off, and the other accounts are not signed in. Turn it on in Settings › Agents & accounts.` : `No ${what} is signed in yet. Use Sign in in Settings › Agents & accounts.`
   }
   const st = (id: string): string => usage[id]?.state ?? 'unknown'
   if (signed.some((a) => !['exhausted', 'blocked'].includes(st(a.id)))) return ''
@@ -121,7 +122,7 @@ export function unavailableText(
   return [
     anyLimit ? `No ${what} is available right now${back ? `; the first one at its limit is back at ${backText(back)}` : ''}.` : '',
     ...signed.filter((a) => st(a.id) === 'blocked').map((a) => blockedText(a.label, usage[a.id]?.reason)),
-    signed.length < on.length ? 'Accounts that are not signed in are skipped (Sign in in Settings › Agents).' : '',
+    signed.length < on.length ? 'Accounts that are not signed in are skipped (Sign in in Settings › Agents & accounts).' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -130,7 +131,7 @@ export function unavailableText(
 // Texto para conta bloqueada: login vencido pede novo login; problema de conta (plano, organizacao) so explica
 export const blockedText = (label: string, reason?: string): string =>
   !reason || /^login expired/.test(reason)
-    ? `${label} needs a new sign-in: use Sign in in Settings › Agents, then Check sign-in.`
+    ? `${label} needs a new sign-in: use Sign in in Settings › Agents & accounts, then Check sign-in.`
     : `${label}: ${reason}.`
 
 export const SESSION_ID = /^[A-Za-z0-9_-]{1,128}$/
@@ -162,14 +163,61 @@ const NOT_WALL = /context window|max(imum)? tokens|context length|concurrent sub
 // Linha que e conteudo (diff, grep, codigo, citacao), nao mensagem do CLI: nunca e a parede.
 const CONTENT_LINE = /^\s*(\+|@@|>|\/\/|#\s|\d+\s*[:|]|\S+\.(ts|tsx|js|jsx|py|go|rs|java|kt|cs|rb|php|md|json|ya?ml|txt|log)[:(])|\b(expect|isWallText|assert\w*|console\.\w+|print)\(|=>/
 
-export function isWallText(line: string): boolean {
+// Cabeca da mensagem (sem URL, icones, prefixos) ou undefined se a linha e conteudo e nao mensagem do CLI
+function messageHead(line: string): string | undefined {
   // URLs saem antes do teste: a mensagem de limite do Codex traz links de upgrade/uso na mesma linha
   const t = line.replace(/https?:\/\/\S+/g, '').trim()
-  if (!t || t.length > 400 || NOT_WALL.test(t) || CONTENT_LINE.test(t)) return false
+  if (!t || t.length > 400 || NOT_WALL.test(t) || CONTENT_LINE.test(t)) return undefined
   // a frase tem de vir logo no comeco da mensagem (depois de icones/"Error:"), como o CLI imprime
-  const head = t.replace(/^[^A-Za-z[{]+/, '')
-  return WALL.some((r) => {
-    const m = r.exec(head)
-    return !!m && m.index <= 60
-  })
+  return t.replace(/^[^A-Za-z[{]+/, '')
+}
+const early = (r: RegExp, head: string): boolean => {
+  const m = r.exec(head)
+  return !!m && m.index <= 60
+}
+
+export function isWallText(line: string): boolean {
+  const head = messageHead(line)
+  return !!head && WALL.some((r) => early(r, head))
+}
+
+// O que a parede diz (regras de erro inspiradas no OmniRoute, MIT): limite que volta sozinho no reset,
+// credito pago que acabou, ou conta suspensa/desativada (nao adianta esperar nem trocar para a mesma conta).
+export type WallKind = 'limit' | 'credits' | 'banned'
+// so a redacao das mensagens dos CLIs ("your account…", "credits"): "insufficient balance" de um teste ou
+// "402 Payment Required" de um log nao contam
+const CREDITS = /\b(out of credits|insufficient credits|no credits (left|remaining)|credit balance (is )?too low|purchase more credits|add (more )?credits to continue)\b/i
+const BANNED = /\byour (account|organization|org) (has been |was |is )?(suspended|disabled|deactivated|banned|terminated)\b/i
+export function wallKind(line: string): WallKind | undefined {
+  const head = messageHead(line)
+  if (!head) return undefined
+  if (early(BANNED, head)) return 'banned'
+  if (early(CREDITS, head)) return 'credits'
+  return WALL.some((r) => early(r, head)) ? 'limit' : undefined
+}
+
+// Horario de volta escrito na mensagem: "try again in 1h 20m", "resets in 45 minutes", "try again at 3:05 PM",
+// "reset at 14:00". Sem horario reconhecivel = undefined (o chamador usa um padrao).
+export function parseReset(text: string, now = Date.now()): string | undefined {
+  const dur = /(?:try again|resets?|available( again)?|retry|wait)\s+(?:in|after|for)\s+((?:\d+\s*(?:days?|d|hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)\b[\s,]*(?:and\s+)?)+)/i.exec(text)
+  if (dur) {
+    let ms = 0
+    for (const [, n, u] of dur[2].matchAll(/(\d+)\s*(days?|d|hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)\b/gi)) {
+      const k = u.toLowerCase()[0]
+      ms += Number(n) * (k === 'd' ? 86_400_000 : k === 'h' ? 3_600_000 : k === 'm' ? 60_000 : 1000)
+    }
+    if (ms > 0 && ms < 31 * 86_400_000) return new Date(now + ms).toISOString()
+  }
+  const at = /(?:try again|resets?|available( again)?|retry|until)\b[^\n]*?\b(?:at|after)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i.exec(text)
+  if (at && (at[3] || at[4])) {
+    let h = Number(at[2]) % 24
+    const m = Number(at[3] ?? 0)
+    if (at[4]) h = (h % 12) + (at[4].toLowerCase() === 'pm' ? 12 : 0)
+    if (h > 23 || m > 59) return undefined
+    const d = new Date(now)
+    d.setHours(h, m, 0, 0)
+    if (d.getTime() <= now) d.setDate(d.getDate() + 1) // horario ja passou hoje: e amanha
+    return d.toISOString()
+  }
+  return undefined
 }

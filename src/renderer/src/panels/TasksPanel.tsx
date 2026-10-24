@@ -52,7 +52,7 @@ export function TasksPanel() {
             </button>
           ))}
         </div>
-        <input className="grow" type="search" placeholder="Filter by key, title or project" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Filter tasks" />
+        <input className="grow" type="search" placeholder="Filter tasks" title="Filter by key, title or project" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Filter tasks" />
         <button className="btn ghost" onClick={() => void (!loading && load())} aria-busy={loading || undefined} title="Refresh">
           {loading ? <span className="spinner sm" /> : <IconRefresh size={14} />} Refresh
         </button>
@@ -124,7 +124,8 @@ function StartForm({ task, defaultFolder, agents, onDone }: { task: Task; defaul
   )
 }
 
-function JiraForm({ connected, initial, onDone }: { connected: boolean; initial?: { baseUrl: string; email: string }; onDone: () => void }) {
+// embedded = dentro de Settings › Integrations: sem foco automatico, sem Cancel e sem Esc proprio
+export function JiraForm({ connected, initial, onDone, embedded }: { connected: boolean; initial?: { baseUrl: string; email: string }; onDone: () => void; embedded?: boolean }) {
   const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? '')
   const [email, setEmail] = useState(initial?.email ?? '')
   const [token, setToken] = useState('')
@@ -142,17 +143,17 @@ function JiraForm({ connected, initial, onDone }: { connected: boolean; initial?
     }
   }
   return (
-    <div className="jira-form card" onKeyDown={(e) => e.key === 'Escape' && (e.stopPropagation(), onDone())}>
+    <div className={embedded ? 'jira-form' : 'jira-form card'} onKeyDown={(e) => !embedded && e.key === 'Escape' && (e.stopPropagation(), onDone())}>
       <p className="muted small">Jira Cloud with your e-mail and an API token (id.atlassian.com › Security › API tokens). The token is kept encrypted by Windows.</p>
       <div className="grid3">
-        <label className="field"><span>Site</span><input autoFocus value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://your-company.atlassian.net" /></label>
+        <label className="field"><span>Site</span><input autoFocus={!embedded} value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://your-company.atlassian.net" /></label>
         <label className="field"><span>E-mail</span><input value={email} onChange={(e) => setEmail(e.target.value)} /></label>
         <label className="field"><span>API token{connected ? ' (leave empty to keep)' : ''}</span><input type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} /></label>
       </div>
       <div className="row">
         <button className="btn primary" disabled={busy || !baseUrl || !email || (!connected && !token)} onClick={() => void save()}>{busy ? <span className="spinner sm" /> : null} Connect</button>
         {connected && <button className="btn ghost danger" onClick={() => void window.turno.tasks.disconnectJira().then(onDone)}>Disconnect</button>}
-        <button className="btn ghost" onClick={onDone}>Cancel</button>
+        {!embedded && <button className="btn ghost" onClick={onDone}>Cancel</button>}
       </div>
     </div>
   )

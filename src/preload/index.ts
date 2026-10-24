@@ -92,6 +92,7 @@ const api: TurnoApi = {
     add: (agent, label) => ipcRenderer.invoke('agents:add', agent, label),
     login: (id) => ipcRenderer.invoke('agents:login', id),
     refreshLogin: (id) => ipcRenderer.invoke('agents:refreshLogin', id),
+    clearLimit: (id) => ipcRenderer.invoke('agents:clearLimit', id),
     update: (id, patch) => ipcRenderer.invoke('agents:update', id, patch),
     reorder: (ids) => ipcRenderer.invoke('agents:reorder', ids),
     remove: (id) => ipcRenderer.invoke('agents:remove', id),

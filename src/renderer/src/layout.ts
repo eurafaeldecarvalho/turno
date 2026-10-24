@@ -182,7 +182,8 @@ export function focusTab(id: string): void {
   if (wasMax && !p.api.isMaximized()) api!.exitMaximizedGroup()
   p.api.setActive()
   // com maximizado, o painel so aceita foco depois de reorganizar: entrega o teclado a ele
-  if (wasMax) setTimeout(() => window.dispatchEvent(new CustomEvent('turno:focus-panel', { detail: id })), 120)
+  // o teclado vai junto para a aba (terminal, rotina, chat); com maximizado, so depois de reorganizar
+  setTimeout(() => window.dispatchEvent(new CustomEvent('turno:focus-panel', { detail: id })), wasMax ? 120 : 30)
 }
 
 export function closeTab(id: string): void {
@@ -200,7 +201,7 @@ export function panelForItem(itemId: string) {
 }
 
 // Aba de agente (botao Agent): a conta sai do ranking; o main troca de conta na mesma aba quando a cota acaba.
-export function openAgent(o: { agent?: string; accountId?: string; model?: string; prompt?: string; cwd?: string; folderId?: string; itemId?: string; resumeSessionId?: string; chrome?: boolean; dir?: Dir; title?: string; fixedId?: string } = {}): void {
+export function openAgent(o: { agent?: string; accountId?: string; model?: string; prompt?: string; cwd?: string; folderId?: string; itemId?: string; resumeSessionId?: string; chrome?: boolean; dir?: Dir; title?: string; fixedId?: string; refId?: string } = {}): void {
   openTerminal(
     o.dir,
     {
@@ -209,7 +210,7 @@ export function openAgent(o: { agent?: string; accountId?: string; model?: strin
       agent: { key: uid('agent'), agent: o.agent, accountId: o.accountId, prompt: o.prompt, folderId: o.folderId, resumeSessionId: o.resumeSessionId, model: o.model, chrome: o.chrome ?? (!o.agent || o.agent === 'claude') },
     },
     o.title,
-    undefined,
+    o.refId,
     o.fixedId,
   )
 }
@@ -217,13 +218,15 @@ export function openAgent(o: { agent?: string; accountId?: string; model?: strin
 export const openTasks = (): void => openOnce('tasks', 'tasks', 'Tasks', {})
 
 // Chat estruturado do botao Agent (Claude headless no ranking de contas). Cada chat e uma aba propria.
-export function openAgentChat(cwd?: string): void {
+// refId: aba de referencia (o "+" de um painel abre o chat naquele grupo)
+export function openAgentChat(cwd?: string, refId?: string): void {
   if (!api) return
   // numeradas como os terminais: duas abas "chat" iguais confundiam
   const taken = new Set(api.panels.map((p) => (p.title ?? '').toLowerCase()))
   let n = 1
   while (taken.has(`chat ${n}`)) n++
-  api.addPanel({ id: uid('chat'), component: 'chat', tabComponent: 'tab', title: `chat ${n}`, params: { kind: 'chat', cwd } })
+  const ref = refId ? api.getPanel(refId) : undefined
+  api.addPanel({ id: uid('chat'), component: 'chat', tabComponent: 'tab', title: `chat ${n}`, params: { kind: 'chat', cwd }, ...(ref ? { position: { referencePanel: ref } } : {}) })
 }
 
 export function openTerminal(dir?: Dir, params: TerminalParams = {}, title?: string, refId?: string, fixedId?: string): void {
@@ -250,12 +253,15 @@ export function openTerminal(dir?: Dir, params: TerminalParams = {}, title?: str
 function openOnce(id: string, component: string, title: string, params: Record<string, unknown>, dir?: Dir): void {
   if (!api) return
   const existing = api.getPanel(id)
+  // o teclado vai para a aba aberta (atalho, paleta, sidebar), como em focusTab
+  const focus = (): void => void setTimeout(() => window.dispatchEvent(new CustomEvent('turno:focus-panel', { detail: id })), 30)
   if (existing) {
     existing.api.updateParameters(params)
     existing.api.setActive()
-    return
+    return focus()
   }
   api.addPanel({ id, component, tabComponent: 'tab', title, params: { ...params, kind: component }, ...place(dir) })
+  focus()
 }
 
 // Clique na rotina abre a sessao (execucao atual/ultima); "configurar" abre o editor como modal.

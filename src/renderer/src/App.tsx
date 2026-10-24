@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as RPointerEvent, type ReactElement } from 'react'
 import { createPortal } from 'react-dom'
 import { TasksPanel } from './panels/TasksPanel'
+import { NewItems } from './NewItems'
+import { ErrorBoundary, guarded } from './ErrorBoundary'
+import { CommandPaletteHost, openPalette } from './CommandPalette'
+import { SHORTCUTS } from './shortcuts'
 import { AgentChatPanel } from './panels/AgentChatPanel'
 import { useAgentSessions, STATUS_TEXT } from './agentStore'
 import { toast } from './Toast'
@@ -28,7 +32,7 @@ import { OnboardingHost, maybeShowIntro, openOnboarding, openWhatsNew } from './
 import { RoutineEditorModalHost } from './RoutineEditorModal'
 import { PanelModalHost } from './PanelModal'
 import { ToastHost } from './Toast'
-import { dockApi, syncRoutineTitles, openAdhoc, openFanout, openHistory, openRoutine, openRun, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi, openAgent } from './layout'
+import { dockApi, syncRoutineTitles, openAdhoc, openFanout, openHistory, openRoutine, openRun, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi, openAgent, openTasks } from './layout'
 import { getStore, initStore, useStore } from './store'
 import { plural } from './fmt'
 import { addTerminalItem, openItem, patchItem, setDragging } from './sidebarStore'
@@ -52,17 +56,18 @@ import {
   IconCheck,
 } from './icons'
 
+// cada aba com o proprio limite de erro: um erro numa aba nao derruba as outras nem os terminais
 const components = {
-  terminal: TerminalPanel,
-  routine: RoutineEditor,
-  run: RunViewer,
-  session: RoutineSession,
-  history: HistoryPanel,
-  adhoc: AdhocPanel,
-  fanout: FanoutPanel,
-  chat: AgentChatPanel,
-  tasks: TasksPanel,
-  settings: SettingsPanel, // Settings abre em modal; registrado so p/ restaurar layouts salvos antigos com aba 'settings'
+  terminal: guarded(TerminalPanel, 'terminal'),
+  routine: guarded(RoutineEditor, 'routine'),
+  run: guarded(RunViewer, 'run'),
+  session: guarded(RoutineSession, 'session'),
+  history: guarded(HistoryPanel, 'runs'),
+  adhoc: guarded(AdhocPanel, 'ad hoc'),
+  fanout: guarded(FanoutPanel, 'fan-out'),
+  chat: guarded(AgentChatPanel, 'chat'),
+  tasks: guarded(TasksPanel, 'tasks'),
+  settings: guarded(SettingsPanel, 'settings'), // Settings abre em modal; registrado so p/ restaurar layouts salvos antigos com aba 'settings'
 }
 
 const KIND_ICON: Record<string, (p: { size?: number }) => ReactElement> = {
@@ -202,10 +207,6 @@ function GroupActions({ group, containerApi }: IDockviewHeaderActionsProps) {
   useEffect(() => containerApi.onDidMaximizedGroupChange(() => setMax(containerApi.hasMaximizedGroup())).dispose, [containerApi])
   const ref = group.activePanel?.id
 
-  const openNew = (params: import('./layout').TerminalParams) => {
-    setMenu(false)
-    openTerminal(undefined, params, undefined, ref)
-  }
 
   // menu no body (fora do painel, que corta o que passa da borda): alinhado a direita do "+", sem sair da janela
   const dropPos = (): React.CSSProperties => {
@@ -216,7 +217,7 @@ function GroupActions({ group, containerApi }: IDockviewHeaderActionsProps) {
   return (
     <div className="group-actions">
       <div className="new-term-wrap">
-        <button ref={plusRef} title="New terminal" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((v) => !v)}>
+        <button ref={plusRef} title="New: terminal, agent, chat…" aria-label="New" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((v) => !v)}>
           <IconPlus size={14} />
         </button>
         {menu &&
@@ -234,15 +235,7 @@ function GroupActions({ group, containerApi }: IDockviewHeaderActionsProps) {
                 menuKeyNav(e, e.currentTarget)
               }}
             >
-              <button role="menuitem" onClick={() => openNew({})}>
-                <IconTerminal size={13} /> Terminal
-              </button>
-              <button role="menuitem" onClick={() => (setMenu(false), openAgent({ dir: undefined }))}>
-                <IconChat size={13} /> Agent (best account)
-              </button>
-              <button role="menuitem" onClick={() => openNew({ profile: 'qwen-local', initialCommand: 'claude --chrome' })}>
-                <IconChat size={13} /> Qwen
-              </button>
+              <NewItems onPick={(run) => (setMenu(false), run())} refId={ref} />
             </div>
           </>,
           document.body,
@@ -270,38 +263,59 @@ function Welcome(_: IWatermarkPanelProps) {
     <div className="welcome">
       <img src="./icon.png" alt="" width={56} height={56} />
       <h1>Turno</h1>
-      <p className="muted">Agent routines on your PC, with Claude or local Qwen.</p>
+      <p className="muted">Agents, terminals and routines on your PC, with Claude, local models or any provider.</p>
       <div className="welcome-actions">
-        <button className="btn primary" onClick={() => openRoutine(null, 'New routine')}>
-          <IconRoutine /> New routine
+        <button className="btn primary" onClick={() => openAgent()}>
+          <IconChat /> New agent
         </button>
         <button className="btn" onClick={() => openTerminal()}>
           <IconTerminal /> Terminal
         </button>
-        <button className="btn" onClick={() => openAgent()}>
-          <IconChat /> Agent
+        <button className="btn" onClick={() => openRoutine(null, 'New routine')}>
+          <IconRoutine /> Routine
         </button>
         <button className="btn" onClick={() => openHistory()}>
           <IconHistory /> Runs
         </button>
       </div>
+      {/* mesma lista de Settings › Shortcuts e da paleta */}
       <dl className="shortcuts">
-        <dt>Alt+Shift+=</dt><dd>split right</dd>
-        <dt>Alt+Shift+-</dt><dd>split down</dd>
-        <dt>Ctrl+Shift+T</dt><dd>new terminal</dd>
-        <dt>Ctrl+Shift+M</dt><dd>maximize</dd>
-        <dt>Ctrl+Shift+W</dt><dd>close panel</dd>
-        <dt>Ctrl+,</dt><dd>settings</dd>
-        <dt>Ctrl+Shift+H</dt><dd>runs</dd>
-        <dt>Shift+Enter</dt><dd>new line in terminal claude</dd>
-        <dt>drag tab</dt><dd>drop on another panel to split</dd>
+        {SHORTCUTS.filter((x) => ['Ctrl+Shift+P', 'Ctrl+Shift+N', 'Ctrl+Shift+T', 'Ctrl+Shift+R', 'Ctrl+Shift+J', 'F2', 'Alt+Shift+= / Alt+Shift+-', 'Ctrl+Shift+M', 'Ctrl+Shift+W', 'Ctrl+,', 'Shift+Enter'].includes(x.keys)).map((x) => (
+          <div key={x.keys} className="shortcut-pair">
+            <dt>{x.keys}</dt>
+            <dd>{x.label}</dd>
+          </div>
+        ))}
+        <div className="shortcut-pair">
+          <dt>Drag a tab</dt>
+          <dd>Drop it on another pane to split</dd>
+        </div>
       </dl>
       {routines.length > 0 && <p className="muted small">{plural(routines.length, 'routine')} loaded in the sidebar.</p>}
     </div>
   )
 }
 
+// Abas que nao sao terminal (rotina, chat, Tasks...): "ir para a aba" leva o teclado ao primeiro controle dela
+function useFocusNonTerminalPanels(): void {
+  useEffect(() => {
+    const f = (e: Event): void => {
+      const id = (e as CustomEvent<string>).detail
+      const p = dockApi()?.getPanel(id)
+      if (!p || (paramsOf(p) as { kind?: string }).kind === 'terminal') return
+      requestAnimationFrame(() => {
+        const root = document.querySelector('.dv-groupview.dv-active-group .dv-content-container')
+        const el = root?.querySelector<HTMLElement>('[autofocus], textarea, input:not([type="hidden"]), [tabindex="-1"], button')
+        el?.focus({ preventScroll: true })
+      })
+    }
+    window.addEventListener('turno:focus-panel', f)
+    return () => window.removeEventListener('turno:focus-panel', f)
+  }, [])
+}
+
 export function App() {
+  useFocusNonTerminalPanels()
   // Pedido de foco no painel ativo (ex. o modal fechou e quem abriu nao existe mais)
   useEffect(() => {
     const f = (): void => {
@@ -396,6 +410,12 @@ export function App() {
         fn()
       }
       if (isModalOpen() && (!(ev.ctrlKey && !ev.shiftKey && k === ',') || document.querySelector('.confirm-modal'))) return // modal aberto: o workspace atras nao recebe atalhos
+      // paleta: Ctrl+Shift+P em qualquer lugar; Ctrl+K so fora do terminal (no shell e apagar ate o fim da linha)
+      if (ev.ctrlKey && ev.shiftKey && k === 'p') return hit(() => openPalette())
+      if (ev.ctrlKey && !ev.shiftKey && !ev.altKey && k === 'k' && !(ev.target as HTMLElement | null)?.closest?.('.xterm')) return hit(() => openPalette())
+      if (ev.ctrlKey && ev.shiftKey && k === 'n') return hit(() => openAgent())
+      if (ev.ctrlKey && ev.shiftKey && k === 'r') return hit(() => openAdhoc())
+      if (ev.ctrlKey && ev.shiftKey && k === 'j') return hit(() => openTasks())
       if (ev.altKey && ev.shiftKey && (k === '+' || k === '=')) hit(() => openTerminal('right'))
       else if (ev.altKey && ev.shiftKey && (k === '_' || k === '-')) hit(() => openTerminal('below'))
       else if (ev.ctrlKey && ev.shiftKey && k === 't') hit(() => openTerminal())
@@ -432,7 +452,21 @@ export function App() {
       }
     }
     window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
+    // paleta e menu de ajuda tambem mostram/escondem a sidebar
+    const onToggle = (): void => {
+      side.toggle()
+      // como no Ctrl+B: o foco que estava na sidebar escondida vai para o painel ativo
+      requestAnimationFrame(() => {
+        const a = dockApi()?.activePanel
+        if (a && (!document.activeElement || document.activeElement === document.body || !document.activeElement.isConnected))
+          window.dispatchEvent(new CustomEvent('turno:focus-panel', { detail: a.id }))
+      })
+    }
+    window.addEventListener('turno:toggle-sidebar', onToggle)
+    return () => {
+      window.removeEventListener('keydown', onKey, true)
+      window.removeEventListener('turno:toggle-sidebar', onToggle)
+    }
   }, [side.toggle, side.hidden])
 
   // Janela estreita: a sidebar cede espaco ao dock (clamp), sem passar da largura escolhida.
@@ -466,11 +500,13 @@ export function App() {
         />
       </main>
       <StatusBar />
-      <ConfirmHost />
-      <SettingsModalHost />
-      <OnboardingHost />
-      <RoutineEditorModalHost />
-      <PanelModalHost />
+      {/* cada janela com o proprio limite de erro: a janela fecha com um aviso, o app e os terminais seguem */}
+      <ErrorBoundary scope="dialog" label="The confirmation"><ConfirmHost /></ErrorBoundary>
+      <ErrorBoundary scope="dialog" label="Settings"><SettingsModalHost /></ErrorBoundary>
+      <ErrorBoundary scope="dialog" label="The command palette"><CommandPaletteHost /></ErrorBoundary>
+      <ErrorBoundary scope="dialog" label="The setup tour"><OnboardingHost /></ErrorBoundary>
+      <ErrorBoundary scope="dialog" label="The routine editor"><RoutineEditorModalHost /></ErrorBoundary>
+      <ErrorBoundary scope="dialog" label="This window"><PanelModalHost /></ErrorBoundary>
       <ToastHost />
     </div>
   )
@@ -561,7 +597,7 @@ async function runSmoke(): Promise<void> {
     const [last] = await window.turno.run.list(undefined, 1)
     if (last) openRun(last.id, 'Run')
   }
-  if (window.turno.smoke.view?.startsWith('settings')) openSettingsModal()
+  if (window.turno.smoke.view?.startsWith('settings')) openSettingsModal(window.turno.smoke.view === 'settings-picker' ? 'appearance' : window.turno.smoke.view.slice('settings-'.length))
   if (window.turno.smoke.view === 'settings-picker') {
     // Abre o seletor de tema e passa o mouse no 4o tema: o app inteiro deve pre-visualizar.
     await new Promise((r) => setTimeout(r, 600))

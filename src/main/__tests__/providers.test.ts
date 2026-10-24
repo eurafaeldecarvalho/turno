@@ -16,6 +16,18 @@ describe('resolveProviderEnv', () => {
     expect(resolveProviderEnv({ id: 'c', name: 'Claude', kind: 'claude' })).toEqual({})
   })
 
+  it('API da propria Anthropic recebe a chave em ANTHROPIC_API_KEY (x-api-key), nao como Bearer', () => {
+    const env = resolveProviderEnv({ ...endpoint, baseUrl: 'https://api.anthropic.com' }, 'sk-ant-api03-x')
+    expect(env.ANTHROPIC_API_KEY).toBe('sk-ant-api03-x')
+    expect(env.ANTHROPIC_AUTH_TOKEN).toBe('')
+  })
+
+  it('via tradutor: o agente recebe o endereco local, nunca a chave do provedor', () => {
+    const env = resolveProviderEnv({ ...endpoint, via: 'translate' }, 'sk-provider')
+    expect(env.ANTHROPIC_BASE_URL).not.toContain('host:1234')
+    expect(JSON.stringify(env)).not.toContain('sk-provider')
+  })
+
   it('endpoint mapeia baseUrl/model/token para as env ANTHROPIC_*', () => {
     const env = resolveProviderEnv(endpoint, 'tok')
     expect(env.ANTHROPIC_BASE_URL).toBe('http://host:1234')

@@ -16,6 +16,9 @@ export interface Connection {
   extraEnv?: Record<string, string>
   bootCommand?: string // ex. "ollama serve": sobe o servidor local antes de usar
   healthUrl?: string // ex. "http://localhost:11434/api/version": checa se esta de pe
+  // 'translate' = provedor no formato OpenAI: o Claude Code fala com o tradutor local do Turno, que repassa ao baseUrl
+  via?: 'direct' | 'translate'
+  catalogId?: string // provedor do catalogo de onde a conexao veio
 }
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 // Modos do `claude --permission-mode`. bypassPermissions = --dangerously-skip-permissions.
@@ -336,12 +339,15 @@ export interface AccountUsage {
   until?: string // volta a ter cota (ISO)
   observedAt?: string
 }
+// Como escolher a conta: ordem da lista; mais folga primeiro; ou a que reseta antes (gasta o que se perderia)
+export type RankStrategy = 'rank' | 'headroom' | 'reset-soonest'
 export interface AgentsState {
   accounts: AgentAccount[]
   usage: Record<string, AccountUsage>
-  thresholds: { fiveHour: number; weekly: number }
+  thresholds: { fiveHour: number; weekly: number; strategy?: RankStrategy }
   installed: string[] // ids de agentes encontrados no PATH
   signedOut: string[] // contas isoladas sem login encontrado (fora do ranking)
+  best?: string // conta que o botao Agent abriria agora (mesma regra e estrategia do main)
 }
 // Uma conversa de agente aberta num terminal (sobrevive a trocas de conta na mesma aba)
 export type AgentTabStatus = 'starting' | 'working' | 'needs-input' | 'needs-permission' | 'idle' | 'error' | 'swapping' | 'parked'
@@ -449,7 +455,8 @@ export interface TurnoApi {
     update(id: string, patch: { label?: string; enabled?: boolean }): Promise<void>
     reorder(ids: string[]): Promise<void>
     remove(id: string): Promise<void>
-    setThresholds(t: { fiveHour?: number; weekly?: number }): Promise<void>
+    setThresholds(t: { fiveHour?: number; weekly?: number; strategy?: RankStrategy }): Promise<void>
+    clearLimit(id: string): Promise<void>
     swap(key: string, accountId?: string): Promise<void>
     close(key: string): Promise<void>
     onSwap(cb: (l: AgentLaunch) => void): () => void
