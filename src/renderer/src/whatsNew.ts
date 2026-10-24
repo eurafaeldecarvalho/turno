@@ -7,6 +7,13 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.1',
+    items: [
+      { title: 'Install agents from Add account', text: 'Agents & accounts lists every multi-account agent, even ones you have not installed. Pick one and Turno runs its official CLI install in a terminal (Codex, Gemini, Copilot, OpenCode…); Kiro opens its install page.' },
+      { title: 'Runs badge clears when seen', text: 'The failures badge in the sidebar goes away after you open Runs, and comes back only for new failures.' },
+    ],
+  },
+  {
     version: '0.9.0',
     items: [
       { title: 'One New menu, clearer sidebar', text: 'The "New agent" button opens everything you can create: agent, chat, terminal, routine, ad hoc run, fan-out, folder. The + of every pane has the same items (opening next to that pane). Your folders live in one Folders group.' },

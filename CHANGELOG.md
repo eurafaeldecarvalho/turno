@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.1 (2026-10-24)
+
+### Agents & accounts
+- "Add account" now lists every multi-account agent, not only the installed ones. Pick one that isn't installed and Turno shows a notice and an **Install** button that runs the official CLI install in a terminal (Claude Code, Codex, Gemini, Copilot, OpenCode); Kiro opens its install page.
+
+### Runs
+- The failures badge in the sidebar clears once you open Runs, and comes back only for runs that fail afterwards.
+
 ## 0.9.0 (2026-10-23)
 
 ### Navigation

@@ -29,7 +29,7 @@ export function AgentsSection() {
   const [adding, setAdding] = useState('')
   useEffect(() => void window.turno.agents.detect(), [])
   const accounts = st.accounts
-  const multi = AGENTS.filter((a) => a.homeVar && st.installed.includes(a.id))
+  const multi = AGENTS.filter((a) => a.homeVar) // todos que suportam varias contas; os nao instalados ganham o botao Install
 
   // login padrao so ganha Sign in/Check sign-in quando o problema e login vencido (conta suspensa nao se resolve entrando)
   const loginExpired = (u?: AccountUsage): boolean => u?.state === 'blocked' && /^login expired/.test(u.reason ?? '')
@@ -104,6 +104,20 @@ export function AgentsSection() {
     if (!ok) return
     await window.turno.agents.remove(id).catch((e) => toast(errText(e), 'err'))
     document.getElementById('acct-add')?.focus() // a linha removida tinha o foco: nao deixa cair no body
+  }
+  // Agente escolhido no "Add account": se nao estiver no PATH, o botao vira "Install" (roda o CLI oficial num terminal)
+  const selDef = adding ? agentDef(adding) : undefined
+  const selInstalled = !adding || st.installed.includes(adding)
+  const install = (): void => {
+    if (!selDef) return
+    if (selDef.install) {
+      closeSettingsModal()
+      openTerminal(undefined, { initialCommand: selDef.install }, `install · ${selDef.name}`)
+      toast(`Installing ${selDef.name} in a terminal. When it finishes, reopen Agents & accounts and add the account.`, 'info', { sticky: true })
+      void window.turno.agents.detect()
+    } else if (selDef.url) {
+      void window.turno.ui.openExternal(selDef.url)
+    }
   }
 
   return (
@@ -209,10 +223,22 @@ export function AgentsSection() {
       <div className="row">
         <select id="acct-add" aria-label="Agent for the new account" value={adding} onChange={(e) => setAdding(e.target.value)}>
           <option value="">Add another account of…</option>
-          {multi.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          {multi.map((a) => <option key={a.id} value={a.id}>{a.name}{st.installed.includes(a.id) ? '' : ' (not installed)'}</option>)}
         </select>
-        <button className="btn" disabled={!adding} onClick={() => void add()}>Add account</button>
+        {selInstalled ? (
+          <button className="btn" disabled={!adding} onClick={() => void add()}>Add account</button>
+        ) : selDef?.install || selDef?.url ? (
+          <button className="btn" onClick={install}>Install {selDef?.name}</button>
+        ) : null}
       </div>
+      {adding && !selInstalled && (
+        <small className="tone-warn">
+          {selDef?.name} isn't installed on this PC.{' '}
+          {selDef?.install
+            ? `"Install ${selDef.name}" runs ${selDef.install} in a terminal; reopen this page when it finishes to add the account.`
+            : 'Install its CLI from its site, then it shows up here.'}
+        </small>
+      )}
       <small className="muted">
         Only agents that keep their sign-in in a folder can have more than one account here ({AGENTS.filter((a) => a.homeVar).map((a) => a.name).join(', ')}). Rotating several accounts of the same provider may go against that provider's terms.
       </small>

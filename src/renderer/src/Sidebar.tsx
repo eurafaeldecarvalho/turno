@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom'
 import { menuKeyNav } from './modalStack'
 import { useStore, isActive } from './store'
 import { plural, scheduleSummary, statusTone, when, STATUS_LABEL } from './fmt'
-import { openTasks, openHistory, openRoutine, openRoutineEditorModal, openTerminal, useOpenTabs, focusTab, closeTab, renameTab } from './layout'
+import { openTasks, openHistory, openRoutine, openRoutineEditorModal, openTerminal, useOpenTabs, useRunsSeenAt, focusTab, closeTab, renameTab } from './layout'
 import { openSettingsModal } from './SettingsModal'
 import { openOnboarding, openWhatsNew } from './Onboarding'
 import { IconHelp, IconCheck, IconChat, IconChevron, IconClock, IconClose, IconFanout, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconRoutine, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
@@ -406,7 +406,12 @@ export function Sidebar() {
   const runs = useStore((s) => s.runs)
   const connections = useStore((s) => s.settings?.connections ?? NO_CONNECTIONS)
   const running = runs.filter(isActive)
-  const problems = runs.filter((r) => Date.now() - Date.parse(r.ended_at ?? r.started_at ?? '0') < 86_400_000 && !['ok', 'running', 'queued', 'skipped'].includes(r.status))
+  const seenAt = useRunsSeenAt()
+  // falhas das ultimas 24h que aconteceram DEPOIS da ultima vez que a pessoa abriu Runs (abrir Runs zera o badge)
+  const problems = runs.filter((r) => {
+    const t = Date.parse(r.ended_at ?? r.started_at ?? '0')
+    return t > seenAt && Date.now() - t < 86_400_000 && !['ok', 'running', 'queued', 'skipped'].includes(r.status)
+  })
   const openTabs = useOpenTabs()
   // agente + modelo + esforco da aba (rotina, run, terminal com agente); terminal comum nao tem linha
   const routineLine = (id: string | null | undefined): string | undefined => {

@@ -278,7 +278,33 @@ export const openRun = (runId: string, title: string): void => {
 export function rememberHistoryRoutine(routine: string): void {
   if (_panelModal?.kind === 'history') _panelModal = { ..._panelModal, routine: routine || undefined }
 }
+// "Runs vistos": o badge de falhas na sidebar some quando o usuario abre Runs; volta so para falhas novas.
+const RUNS_SEEN_KEY = 'turno.runsSeenAt'
+let _runsSeenAt = (() => {
+  try {
+    return Number(localStorage.getItem(RUNS_SEEN_KEY)) || 0
+  } catch {
+    return 0
+  }
+})()
+const _runsSeenSubs = new Set<() => void>()
+export function markRunsSeen(): void {
+  _runsSeenAt = Date.now()
+  try {
+    localStorage.setItem(RUNS_SEEN_KEY, String(_runsSeenAt))
+  } catch {
+    /* armazenamento indisponivel: segue so em memoria nesta sessao */
+  }
+  _runsSeenSubs.forEach((cb) => cb())
+}
+export function useRunsSeenAt(): number {
+  return useSyncExternalStore(
+    (cb) => (_runsSeenSubs.add(cb), () => _runsSeenSubs.delete(cb)),
+    () => _runsSeenAt,
+  )
+}
 export const openHistory = (routine?: string, keepFilter = false): void => {
+  markRunsSeen() // abriu Runs = viu as falhas: zera o badge (so falhas novas reaparecem)
   _panelModal = { kind: 'history', routine, keepFilter }
   _emitPanel()
 }

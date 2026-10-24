@@ -21,17 +21,18 @@ export interface AgentDef {
   login?: string // comando de login oficial (rodado num terminal visivel, com a pasta da conta)
   usage: 'claude' | 'wall' // como o Turno sabe do limite: hooks/statusline (Claude) ou texto de erro na tela
   url?: string // onde instalar
+  install?: string // comando de instalacao do CLI (rodado num terminal visivel); sem ele, o botao abre `url`
 }
 
 export const AGENTS: AgentDef[] = [
-  { id: 'claude', name: 'Claude Code', cmd: 'claude', resume: (id) => `claude --resume ${id}`, prompt: 'argv', homeVar: 'CLAUDE_CONFIG_DIR', homeDefault: '.claude', login: 'claude auth login', usage: 'claude', url: 'https://docs.claude.com/en/docs/claude-code/setup' },
-  { id: 'codex', name: 'Codex', cmd: 'codex', resume: (id) => `codex resume ${id}`, prompt: 'argv', homeVar: 'CODEX_HOME', homeDefault: '.codex', login: 'codex login', usage: 'wall', url: 'https://github.com/openai/codex' },
-  { id: 'gemini', name: 'Gemini', cmd: 'gemini', resume: (id) => `gemini --resume ${id}`, prompt: 'flag', promptFlag: '-i', homeVar: 'GEMINI_CLI_HOME', usage: 'wall', url: 'https://github.com/google-gemini/gemini-cli' },
+  { id: 'claude', name: 'Claude Code', cmd: 'claude', resume: (id) => `claude --resume ${id}`, prompt: 'argv', homeVar: 'CLAUDE_CONFIG_DIR', homeDefault: '.claude', login: 'claude auth login', usage: 'claude', url: 'https://docs.claude.com/en/docs/claude-code/setup', install: 'npm install -g @anthropic-ai/claude-code' },
+  { id: 'codex', name: 'Codex', cmd: 'codex', resume: (id) => `codex resume ${id}`, prompt: 'argv', homeVar: 'CODEX_HOME', homeDefault: '.codex', login: 'codex login', usage: 'wall', url: 'https://github.com/openai/codex', install: 'npm install -g @openai/codex' },
+  { id: 'gemini', name: 'Gemini', cmd: 'gemini', resume: (id) => `gemini --resume ${id}`, prompt: 'flag', promptFlag: '-i', homeVar: 'GEMINI_CLI_HOME', usage: 'wall', url: 'https://github.com/google-gemini/gemini-cli', install: 'npm install -g @google/gemini-cli' },
   { id: 'antigravity', name: 'Antigravity', cmd: 'agy', resume: (id) => `agy --conversation ${id}`, prompt: 'type', usage: 'wall', url: 'https://antigravity.google' },
-  { id: 'copilot', name: 'GitHub Copilot', cmd: 'copilot', resume: (id) => `copilot --resume=${id}`, prompt: 'flag', promptFlag: '-i', homeVar: 'COPILOT_HOME', homeDefault: '.copilot', usage: 'wall', url: 'https://github.com/github/copilot-cli' },
+  { id: 'copilot', name: 'GitHub Copilot', cmd: 'copilot', resume: (id) => `copilot --resume=${id}`, prompt: 'flag', promptFlag: '-i', homeVar: 'COPILOT_HOME', homeDefault: '.copilot', usage: 'wall', url: 'https://github.com/github/copilot-cli', install: 'npm install -g @github/copilot' },
   { id: 'kiro', name: 'Kiro', cmd: 'kiro-cli', launch: 'kiro-cli chat --tui', resume: (id) => `kiro-cli chat --tui --resume-id ${id}`, prompt: 'type', homeVar: 'KIRO_HOME', homeDefault: '.kiro', login: 'kiro-cli login', usage: 'wall', url: 'https://kiro.dev/cli' },
   { id: 'cursor', name: 'Cursor', cmd: 'cursor-agent', resume: (id) => `cursor-agent --resume ${id}`, prompt: 'argv', login: 'cursor-agent login', usage: 'wall', url: 'https://cursor.com/cli' },
-  { id: 'opencode', name: 'OpenCode', cmd: 'opencode', resume: (id) => `opencode --session ${id}`, prompt: 'flag', promptFlag: '--prompt', homeVar: 'XDG_DATA_HOME', login: 'opencode auth login', usage: 'wall', url: 'https://opencode.ai' },
+  { id: 'opencode', name: 'OpenCode', cmd: 'opencode', resume: (id) => `opencode --session ${id}`, prompt: 'flag', promptFlag: '--prompt', homeVar: 'XDG_DATA_HOME', login: 'opencode auth login', usage: 'wall', url: 'https://opencode.ai', install: 'npm install -g opencode-ai' },
   { id: 'opencode2', name: 'OpenCode 2', cmd: 'opencode2', launch: 'opencode2 --standalone', resume: (id) => `opencode2 --session ${id}`, prompt: 'flag', promptFlag: '--prompt', usage: 'wall' },
   { id: 'qwen-code', name: 'Qwen Code', cmd: 'qwen', resume: (id) => `qwen --resume ${id}`, prompt: 'flag', promptFlag: '-i', usage: 'wall', url: 'https://github.com/QwenLM/qwen-code' },
   { id: 'grok', name: 'Grok', cmd: 'grok', resume: (id) => `grok --resume ${id}`, prompt: 'argv', homeVar: 'GROK_HOME', homeDefault: '.grok', usage: 'wall' },
