@@ -7,6 +7,13 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.6',
+    items: [
+      { title: 'Steadier account switching', text: 'A late usage report from an account the app already switched away from no longer brings it back too early — a limited account stays out of rotation until it truly resets.' },
+      { title: 'Clearer skips for pinned routines', text: 'A routine set to one specific Claude account now says so and skips if that account is missing or not signed in, instead of failing mid-run.' },
+    ],
+  },
+  {
     version: '0.9.5',
     items: [
       { title: 'Theme names', text: 'Two color themes were renamed to "Carbon Dark" and "Carbon Light". Your current theme is unchanged.' },

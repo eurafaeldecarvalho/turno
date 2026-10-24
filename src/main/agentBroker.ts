@@ -294,11 +294,12 @@ function windowOf(v: unknown): UsageWindow | undefined {
 
 function onStatusline(key: string, accountId: string, p: Record<string, unknown>): string {
   const rl = p.rate_limits as Record<string, unknown> | undefined
-  if (!rl || !getAccount(accountId)) return ''
-  const u = recordUsage(accountId, { fiveHour: windowOf(rl.five_hour), weekly: windowOf(rl.seven_day) })
   const s = sessions.get(key)
-  // statusline atrasado da conta anterior (logo apos uma troca) nao decide nada pela conta nova
-  if (s && s.accountId === accountId && u.state === 'warning' && !s.pendingSwap) {
+  // so a aba viva dona desta conta mexe no estado dela (igual ao onHook): um statusline forjado ou atrasado
+  // (key inexistente, ou de uma conta ja trocada) ressuscitaria uma conta recem-esgotada, zerando o 'until'
+  if (!rl || !getAccount(accountId) || !s || s.accountId !== accountId) return ''
+  const u = recordUsage(accountId, { fiveHour: windowOf(rl.five_hour), weekly: windowOf(rl.seven_day) })
+  if (u.state === 'warning' && !s.pendingSwap) {
     s.pendingSwap = 'warning'
     // so troca ja se estiver parado entre turnos; pedindo permissao/entrada o turno ainda esta vivo: espera o Stop
     if (s.status === 'idle') void swap(key, 'warning')

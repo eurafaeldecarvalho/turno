@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.6 (2026-10-24)
+
+### Accounts
+- A late or out-of-turn usage report can no longer bring an account back into rotation after the app has already moved past it: a just-limited account stays out until it really resets, and only the live tab that owns an account updates that account's usage.
+- Routines pinned to one specific Claude account are pre-checked — if that account was removed or is not signed in, the run skips with a clear reason instead of failing partway.
+
 ## 0.9.5 (2026-10-24)
 
 ### Housekeeping

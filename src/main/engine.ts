@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 import { listMcp, precheckMcp } from './mcphub'
 import { notify } from './notify'
-import { effectiveUsage, pickAccount } from './accounts'
+import { effectiveUsage, getAccount, pickAccount, signedIn } from './accounts'
 import { Cron } from 'croner'
 import { watch, type FSWatcher } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
@@ -260,7 +260,12 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
     return void skip(r, trigger, scheduledAt, 'choosing an account and MCP servers do not work with a sandbox; turn them off in the routine', runId)
   if (conn.kind === 'claude' && r.config.account_pool) {
     if (!pickAccount({ agent: 'claude', allowWarning: true })) return void skip(r, trigger, scheduledAt, 'no Claude account is available (every one is off, not signed in or at its usage limit)', runId)
-  } else if (conn.kind === 'claude' && !r.config.account && !(await claudeStatus()))
+  } else if (conn.kind === 'claude' && r.config.account) {
+    // rotina fixada numa conta especifica: checa essa conta (nao o login padrao), senao falha so na hora de rodar
+    const acc = getAccount(r.config.account)
+    if (!acc) return void skip(r, trigger, scheduledAt, `the account this routine is pinned to no longer exists; pick one in the routine's Configure`, runId)
+    if (!signedIn(acc)) return void skip(r, trigger, scheduledAt, `the account "${acc.label}" this routine uses is not signed in (add it in Settings › Agents & accounts)`, runId)
+  } else if (conn.kind === 'claude' && !(await claudeStatus()))
     return void skip(r, trigger, scheduledAt, 'Claude Code is not logged in (run "claude" and use /login)', runId)
   if (claudeExtras && r.config.mcp?.length) {
     const why = await precheckMcp(r.config.mcp)
