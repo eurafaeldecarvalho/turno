@@ -4,7 +4,7 @@ import { getSettings } from './settings'
 const recent = new Map<string, number>()
 const COOLDOWN_MS = 5000
 
-// Como no Orca: nao avisa se voce ja esta olhando para o app, e nao repete o mesmo aviso em 5 s.
+// Nao avisa se voce ja esta olhando para o app, e nao repete o mesmo aviso em 5 s.
 export async function notify(title: string, body: string, onClick?: () => void, opts: { force?: boolean } = {}): Promise<void> {
   if (!opts.force) {
     if (BrowserWindow.getFocusedWindow()) return

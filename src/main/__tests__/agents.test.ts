@@ -53,7 +53,7 @@ describe('texto de "nenhuma conta disponivel" (o mesmo no botao, no Chat e no ma
   })
 })
 
-describe('tipo de parede e horario de volta (regras do OmniRoute)', () => {
+describe('tipo de parede e horario de volta', () => {
   it('separa limite, credito e conta suspensa', () => {
     expect(wallKind("You've hit your usage limit. Try again at 3:05 PM.")).toBe('limit')
     expect(wallKind('Error: insufficient credits for this request')).toBe('credits')

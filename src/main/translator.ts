@@ -11,7 +11,7 @@ const slowOk = new Agent({ headersTimeout: 30 * 60_000, bodyTimeout: 30 * 60_000
 // O Claude Code so fala o formato da Anthropic; a maioria dos provedores do catalogo (Groq, OpenRouter, Mistral,
 // LM Studio, vLLM...) fala o da OpenAI. A conexao com via='translate' aponta o CLI para http://127.0.0.1:<porta>/c/<id>
 // e este servidor repassa ao provedor real, com a chave do cofre (a chave nunca vai para o processo do agente).
-// Ideia e mapeamento de campos inspirados no tradutor do OmniRoute (MIT, (c) 2026 diegosouzapw); codigo proprio.
+// Ideia e mapeamento de campos de um tradutor de terceiros sob licenca MIT (ver CREDITS.md); codigo proprio.
 
 type Json = Record<string, any>
 

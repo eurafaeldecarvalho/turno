@@ -606,7 +606,7 @@ export function SettingsPanel() {
     about: () => (
       <section className="card" id="settings-about">
         <h3 className="keep">Turno {version}</h3>
-        <p className="muted small">Agents, terminals and routines on your PC. MIT license. The agent catalog comes from Orca and the provider catalog from OmniRoute (both MIT).</p>
+        <p className="muted small">Agents, terminals and routines on your PC. MIT license. Built on open-source work — see CREDITS.md.</p>
         <div className="row wrap">
           <button className="btn" onClick={() => void openWhatsNew(true)}>What's new</button>
           <button className="btn ghost" onClick={() => openOnboarding()}>Show the setup tour</button>

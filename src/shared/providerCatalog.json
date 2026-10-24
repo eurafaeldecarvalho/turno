@@ -1,5 +1,5 @@
 {
- "source": "Derived from OmniRoute v3.8.53 (MIT, (c) 2026 diegosouzapw), github.com/diegosouzapw/OmniRoute",
+ "source": "Built-in provider catalog. Third-party attributions in CREDITS.md.",
  "providers": [
   {
    "id": "docker-model-runner",
@@ -174,7 +174,7 @@
    "free": true,
    "freeNote": "Free tier ~10M tokens/month (claimed) across Qwen3, Llama 4, DeepSeek R1 and more.",
    "docsUrl": "https://ainative.studio",
-   "authNotes": "Create a free API key at ainative.studio (no card), then paste it here as a Bearer token. | OpenAI-compatible endpoint at https://api.ainative.studio/api/v1 with a public /models catalog (84 models). OmniRoute lists models via passthrough.",
+   "authNotes": "Create a free API key at ainative.studio (no card), then paste it here as a Bearer token. | OpenAI-compatible endpoint at https://api.ainative.studio/api/v1 with a public /models catalog (84 models). Turno lists models via passthrough.",
    "needsKey": true
   },
   {
@@ -211,7 +211,7 @@
    "free": true,
    "freeNote": "500,000 free tokens per day per account (resets 02:00 UTC+8, no rollover)",
    "docsUrl": "https://developer.ant-ling.com/en/docs/",
-   "authNotes": "Register and create an API key at the Ant Ling API console (https://chat.ant-ling.com/open), then paste it here. OmniRoute routes chat traffic to https://api.ant-ling.com/v1/chat/completions; the provider is OpenAI-compatible and also exposes an Anthropic-compatible surface.",
+   "authNotes": "Register and create an API key at the Ant Ling API console (https://chat.ant-ling.com/open), then paste it here. Turno routes chat traffic to https://api.ant-ling.com/v1/chat/completions; the provider is OpenAI-compatible and also exposes an Anthropic-compatible surface.",
    "needsKey": true
   },
   {
@@ -1096,7 +1096,7 @@
    "free": true,
    "freeNote": "Free tier: 50 RPM, 500,000 TPM — no credit card",
    "docsUrl": "https://portal.nousresearch.com/help",
-   "authNotes": "Use your Nous Portal API key. OmniRoute targets the official OpenAI-compatible inference endpoint at https://inference-api.nousresearch.com/v1. | Nous exposes an OpenAI-compatible /v1 surface with a large remote /models catalog. The /chat/completions endpoint requires a valid API key for programmati",
+   "authNotes": "Use your Nous Portal API key. Turno targets the official OpenAI-compatible inference endpoint at https://inference-api.nousresearch.com/v1. | Nous exposes an OpenAI-compatible /v1 surface with a large remote /models catalog. The /chat/completions endpoint requires a valid API key for programmati",
    "needsKey": true
   },
   {
@@ -1285,7 +1285,7 @@
    "free": true,
    "freeNote": "Free keyless tier: openai, openai-fast, openai-large, qwen-coder, mistral, deepseek, grok, gemini-flash-lite-3.1, perplexity-fast, perplexity-reasoning. Premium",
    "docsUrl": "https://pollinations.ai",
-   "authNotes": "Anonymous/keyless access to the documented free models is best-effort. Local v3.8.50 verification (2026-07-31) returned 401 via OmniRoute and Cloudflare 1010 on direct upstream probes from the same network. Premium models still require a Pollinations API key from enter.pollinations.ai.",
+   "authNotes": "Anonymous/keyless access to the documented free models is best-effort. Local v3.8.50 verification (2026-07-31) returned 401 via Turno and Cloudflare 1010 on direct upstream probes from the same network. Premium models still require a Pollinations API key from enter.pollinations.ai.",
    "needsKey": true
   },
   {
@@ -1319,7 +1319,7 @@
    "free": true,
    "freeNote": "$10/month recurring free API credits",
    "docsUrl": "https://docs.reka.ai/chat/overview",
-   "authNotes": "Use your Reka API key. OmniRoute supports the OpenAI-compatible base URL https://api.reka.ai/v1 and sends both Authorization and X-Api-Key headers for compatibility. | Reka Chat is OpenAI-compatible on /v1. OmniRoute probes /v1/models and routes chat traffic to /v1/chat/completions.",
+   "authNotes": "Use your Reka API key. Turno supports the OpenAI-compatible base URL https://api.reka.ai/v1 and sends both Authorization and X-Api-Key headers for compatibility. | Reka Chat is OpenAI-compatible on /v1. Turno probes /v1/models and routes chat traffic to /v1/chat/completions.",
    "needsKey": true
   },
   {
@@ -1380,7 +1380,7 @@
    "free": true,
    "freeNote": "₹1,000 in free signup credits — never expire",
    "docsUrl": "https://docs.sarvam.ai",
-   "authNotes": "Sarvam AI is OpenAI-compatible on /v1. OmniRoute probes /v1/models and routes chat traffic to /v1/chat/completions. Models are tuned for Indic languages.",
+   "authNotes": "Sarvam AI is OpenAI-compatible on /v1. Turno probes /v1/models and routes chat traffic to /v1/chat/completions. Models are tuned for Indic languages.",
    "needsKey": true
   },
   {
@@ -1428,7 +1428,7 @@
    "baseUrl": "https://seekai.cc/v1",
    "modelsUrl": "https://seekai.cc/v1/models",
    "free": true,
-   "freeNote": "Signup credit toward available models; amount and eligibility are set by SeekAi, not OmniRoute.",
+   "freeNote": "Signup credit toward available models; amount and eligibility are set by SeekAi, not Turno.",
    "docsUrl": "https://seekai.cc",
    "authNotes": "Create an API key at https://seekai.cc, then paste it here as a Bearer token. | Create an API key at https://seekai.cc, then paste it here as a Bearer token. OpenAI-compatible base URL: https://seekai.cc/v1.",
    "needsKey": true
@@ -1566,7 +1566,7 @@
    "free": true,
    "freeNote": "Free tier includes the MiniMax 3 model. Get your API key at https://tokenrouter.com.",
    "docsUrl": "https://tokenrouter.com",
-   "authNotes": "Use your TokenRouter API key in Authorization: Bearer <key>. Fully OpenAI-compatible. API base URL: https://api.tokenrouter.com/v1. | TokenRouter exposes an OpenAI-compatible chat completions endpoint at https://api.tokenrouter.com/v1/chat/completions, plus a working /v1/models catalog. OmniRoute us",
+   "authNotes": "Use your TokenRouter API key in Authorization: Bearer <key>. Fully OpenAI-compatible. API base URL: https://api.tokenrouter.com/v1. | TokenRouter exposes an OpenAI-compatible chat completions endpoint at https://api.tokenrouter.com/v1/chat/completions, plus a working /v1/models catalog. Turno us",
    "needsKey": true
   },
   {
@@ -1827,7 +1827,7 @@
     "glm-5-turbo"
    ],
    "docsUrl": "https://open.bigmodel.cn",
-   "authNotes": "Create an API key at https://bigmodel.cn/usercenter/proj-mgmt/apikeys. OmniRoute uses BigModel.cn's OpenAI-compatible chat API.",
+   "authNotes": "Create an API key at https://bigmodel.cn/usercenter/proj-mgmt/apikeys. Turno uses BigModel.cn's OpenAI-compatible chat API.",
    "needsKey": true
   },
   {
@@ -2015,7 +2015,7 @@
    "modelsUrl": "https://g4f.space/api/gemini/v1/models",
    "freeNote": "Anonymous access to Gemini requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
    "docsUrl": "https://g4f.space",
-   "authNotes": "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html). | Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+   "authNotes": "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html). | Remote third-party gateway: prompts and request metadata leave Turno and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
    "needsKey": true
   },
   {
@@ -2031,7 +2031,7 @@
    "modelsUrl": "https://g4f.space/api/groq/v1/models",
    "freeNote": "Anonymous access to Groq requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
    "docsUrl": "https://g4f.space",
-   "authNotes": "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html). | Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+   "authNotes": "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html). | Remote third-party gateway: prompts and request metadata leave Turno and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
    "needsKey": true
   },
   {
@@ -2048,7 +2048,7 @@
    "modelsUrl": "https://g4f.space/api/nvidia/v1/models",
    "freeNote": "Anonymous access to NVIDIA NIM requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
    "docsUrl": "https://g4f.space",
-   "authNotes": "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html). | Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+   "authNotes": "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html). | Remote third-party gateway: prompts and request metadata leave Turno and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
    "needsKey": true
   },
   {
@@ -2063,7 +2063,7 @@
    "modelsUrl": "https://g4f.space/api/ollama/v1/models",
    "freeNote": "Anonymous access to hosted Ollama requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
    "docsUrl": "https://g4f.space",
-   "authNotes": "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html). | Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+   "authNotes": "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html). | Remote third-party gateway: prompts and request metadata leave Turno and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
    "needsKey": true
   },
   {
@@ -2079,7 +2079,7 @@
    "modelsUrl": "https://g4f.space/api/pollinations/v1/models",
    "freeNote": "Anonymous access to Pollinations requires proof-of-work cake credits from g4f.dev/chat; alternatively, use a g4f.dev member API key. Limits vary.",
    "docsUrl": "https://g4f.space",
-   "authNotes": "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html). | Remote third-party gateway: prompts and request metadata leave OmniRoute and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
+   "authNotes": "Bake anonymous cake credits at g4f.dev/chat, or use a g4f.dev member key (create one at g4f.dev/members.html). | Remote third-party gateway: prompts and request metadata leave Turno and are handled by g4f.space. Its Terms and Privacy links were unavailable when last verified on 2026-08-27.",
    "needsKey": true
   },
   {
@@ -2208,7 +2208,7 @@
    "kind": "api-key",
    "style": "openai",
    "baseUrl": "https://api.moonshot.ai/v1",
-   "docsUrl": "https://platform.kimi.ai?aff=omniroute",
+   "docsUrl": "https://platform.kimi.ai",
    "needsKey": true
   },
   {
@@ -2217,7 +2217,7 @@
    "kind": "api-key",
    "style": "openai",
    "baseUrl": "https://api.moonshot.ai/v1",
-   "docsUrl": "https://platform.kimi.ai?aff=omniroute",
+   "docsUrl": "https://platform.kimi.ai",
    "needsKey": true
   },
   {
@@ -2519,7 +2519,7 @@
    "baseUrl": "https://ai.sumopod.com/v1",
    "modelsUrl": "https://ai.sumopod.com/v1/models",
    "docsUrl": "https://ai.sumopod.com",
-   "authNotes": "Use your SumoPod API key (sk-...) in Authorization: Bearer <key>. Fully OpenAI-compatible. API base URL: https://ai.sumopod.com/v1. | SumoPod exposes an OpenAI-compatible chat completions endpoint at https://ai.sumopod.com/v1/chat/completions, plus a live /v1/models catalog. OmniRoute uses the OpenA",
+   "authNotes": "Use your SumoPod API key (sk-...) in Authorization: Bearer <key>. Fully OpenAI-compatible. API base URL: https://ai.sumopod.com/v1. | SumoPod exposes an OpenAI-compatible chat completions endpoint at https://ai.sumopod.com/v1/chat/completions, plus a live /v1/models catalog. Turno uses the OpenA",
    "needsKey": true
   },
   {
@@ -2616,7 +2616,7 @@
     "claude-opus-4.5"
    ],
    "docsUrl": "https://uncensored.com",
-   "authNotes": "Use your uncensored.com Developer API key (uai_sk_live_...). OmniRoute sends it as the X-api-key header to the OpenAI-compatible https://api.uncensored.com/api/v1 endpoint. The key never expires. This is the metered/credits surface; the un-metered subscription chat is the separate 'uc' provider. | U",
+   "authNotes": "Use your uncensored.com Developer API key (uai_sk_live_...). Turno sends it as the X-api-key header to the OpenAI-compatible https://api.uncensored.com/api/v1 endpoint. The key never expires. This is the metered/credits surface; the un-metered subscription chat is the separate 'uc' provider. | U",
    "needsKey": true
   },
   {
@@ -2743,7 +2743,7 @@
    "baseUrl": "https://api.x5lab.dev/v1",
    "modelsUrl": "https://api.x5lab.dev/v1/models",
    "docsUrl": "https://x5lab.dev",
-   "authNotes": "Use your X5Lab API key (x5-...) in Authorization: Bearer <key>. Fully OpenAI-compatible. API base URL: https://api.x5lab.dev/v1. | X5Lab exposes an OpenAI-compatible chat completions endpoint at https://api.x5lab.dev/v1/chat/completions, plus a live /v1/models catalog. OmniRoute uses the OpenAI prot",
+   "authNotes": "Use your X5Lab API key (x5-...) in Authorization: Bearer <key>. Fully OpenAI-compatible. API base URL: https://api.x5lab.dev/v1. | X5Lab exposes an OpenAI-compatible chat completions endpoint at https://api.x5lab.dev/v1/chat/completions, plus a live /v1/models catalog. Turno uses the OpenAI prot",
    "needsKey": true
   },
   {

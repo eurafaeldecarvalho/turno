@@ -7,6 +7,12 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.5',
+    items: [
+      { title: 'Theme names', text: 'Two color themes were renamed to "Carbon Dark" and "Carbon Light". Your current theme is unchanged.' },
+    ],
+  },
+  {
     version: '0.9.4',
     items: [
       { title: 'Sharper app icon', text: 'The taskbar and app icon are crisp at every size now, with a proper multi-size Windows icon.' },
@@ -38,7 +44,7 @@ export const WHATS_NEW: ReleaseNotes[] = [
       { title: 'One New menu, clearer sidebar', text: 'The "New agent" button opens everything you can create: agent, chat, terminal, routine, ad hoc run, fan-out, folder. The + of every pane has the same items (opening next to that pane). Your folders live in one Folders group.' },
       { title: 'Settings in categories, with search', text: 'General, Appearance, Terminal, Notifications, Shortcuts, Agents & accounts, Connections, MCP servers, Integrations, Routines. Press Ctrl+F inside Settings to search.' },
       { title: 'Command palette', text: 'Ctrl+Shift+P (or Ctrl+K outside a terminal) finds any action, tab, routine or setting.' },
-      { title: '196 model providers', text: 'Settings › Connections › Add from catalog: Groq, OpenRouter, Mistral, DeepSeek, LM Studio, vLLM and more (catalog from OmniRoute). OpenAI-format providers work with Claude Code through a built-in translator.' },
+      { title: '196 model providers', text: 'Settings › Connections › Add from catalog: Groq, OpenRouter, Mistral, DeepSeek, LM Studio, vLLM and more. OpenAI-format providers work with Claude Code through a built-in translator.' },
       { title: 'Smarter account switching', text: 'Pick which account goes first (list order, most quota left, resets soonest), and use an account again right away with "Use it now".' },
     ],
   },

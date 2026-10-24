@@ -56,7 +56,7 @@ type Block =
   | { t: 'tools'; items: Tool[] }
   | { t: 'perm'; ev: RunEvent; reply?: RunEvent }
 
-// Chamadas de ferramenta seguidas viram um grupo com frase-resumo (padrao do Orca).
+// Chamadas de ferramenta seguidas viram um grupo com frase-resumo.
 function toBlocks(evs: RunEvent[]): Block[] {
   const out: Block[] = []
   const byRef = new Map<string, Tool>()

@@ -131,7 +131,7 @@ textarea { resize: vertical; }
 .panel-empty { display: grid; place-items: center; height: 100%; color: var(--faint); padding: 24px; text-align: center; }
 .pad { padding: 10px; }
 
-/* ---------- dockview (tema Orca-like) ---------- */
+/* ---------- dockview (tema escuro) ---------- */
 .dockview-theme-abyss {
   --dv-background-color: var(--bg);
   --dv-group-view-background-color: var(--bg);

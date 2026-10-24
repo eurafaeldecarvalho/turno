@@ -49,7 +49,6 @@ Turno does not implement an agent. It schedules and supervises the CLIs you alre
 - [Import from Claude Code Desktop](#import-from-claude-code-desktop)
 - [How it works](#how-it-works)
 - [Build from source](#build-from-source)
-- [Alternatives: how it compares](#alternatives-how-it-compares)
 - [FAQ](#faq)
 - [Support the project](#support-the-project)
 
@@ -133,7 +132,7 @@ Prompt. Be explicit: nobody is watching to answer questions.
   - *Agent*: awake only while an agent is working (the default);
   - *Off*: normal Windows power plan.
 
-  It uses Electron's `powerSaveBlocker` and is re-applied after resume, like [Orca](https://github.com/stablyai/orca).
+  It uses Electron's `powerSaveBlocker` and is re-applied after resume.
 - **Notifications:** Windows toasts, plus optional push to your phone through [ntfy](https://ntfy.sh). They are suppressed while the window is focused and rate-limited per message.
 
 ## Workspace: terminals, folders, themes
@@ -147,7 +146,7 @@ Prompt. Be explicit: nobody is watching to answer questions.
   - **Agent chat** (Claude Code, Claude Code on local Qwen, Codex, Gemini CLI, Qwen Code, OpenCode or a custom command): clicking it opens that exact session in a terminal tab. For Claude Code you pick from your recent sessions (CLI and Desktop app), or Turno creates a fixed `--session-id` for a new one.
   - **Link** (claude.ai, ChatGPT, anything with a URL): opens in the browser or the registered app.
 - **Settings:**
-  - 26 themes: Orca, Turno, Dracula, Nord, Tokyo Night, One Dark/Light, GitHub Dark/Light, Gruvbox, Solarized, Monokai Pro, Ayu, Catppuccin (Mocha/Latte/Frappé/Macchiato), Night Owl, Rosé Pine, Everforest, Kanagawa;
+  - 26 themes: Carbon, Turno, Dracula, Nord, Tokyo Night, One Dark/Light, GitHub Dark/Light, Gruvbox, Solarized, Monokai Pro, Ayu, Catppuccin (Mocha/Latte/Frappé/Macchiato), Night Owl, Rosé Pine, Everforest, Kanagawa;
   - UI font and size, picked from the fonts installed on the system;
   - terminal font, size, line height, weight, cursor, scrollback, padding, ligatures, window opacity and default shell (PowerShell 7 / CMD / Git Bash / WSL on Windows; bash / zsh / fish on Linux and macOS are detected);
   - start with Windows and the ntfy topic.
@@ -164,7 +163,7 @@ Prompt. Be explicit: nobody is watching to answer questions.
 
 ## Agents, accounts, tasks and MCP
 
-- **Agent button:** opens the best-ranked account that still has quota. Turno knows 44 agent CLIs (catalog ported from [Orca](https://github.com/stablyai/orca), MIT) and adds a default account for each one it finds on your PATH.
+- **Agent button:** opens the best-ranked account that still has quota. Turno knows 44 agent CLIs and adds a default account for each one it finds on your PATH.
 - **Several accounts per agent** (Claude Code, Codex, Gemini, Copilot, Kiro, OpenCode, Grok): each one keeps its sign-in in its own folder. Claude accounts share your history with `~/.claude`, so a conversation can resume on any of them. Accounts that are not signed in are skipped.
 - **Ranking and automatic switch** (Settings › Agents and accounts): above the thresholds (5-hour 90%, weekly 95%), the tab moves to the next account at the end of the turn. The same agent resumes the same conversation; another agent gets a handoff note. At the hard limit it switches immediately, and with no account left the tab waits for the reset. Usage comes from Claude Code's own status line; other agents are switched when their limit message appears.
 - **Chat tab:** a structured Claude chat that continues on the next account when one hits its limit.
@@ -218,21 +217,6 @@ pnpm smoke        # build, open a sample layout, save smoke/screenshot.png and e
 **Smoke flags** (they can be combined): `--smoke-run=<routine>`, `--smoke-followup="<text>"`, `--smoke-approve`, `--smoke-theme=<id>`, `--smoke-edit=<routine>`, `--smoke-drag`, `--smoke-open=<item id>`, `--smoke-wait=<sec>`.
 
 **Testing without touching your real setup:** set `TURNO_ROUTINES_DIR` and `TURNO_USER_DATA` to point at test folders.
-
-## Alternatives: how it compares
-
-| | Turno | Claude Code Desktop routines | [Orca](https://github.com/stablyai/orca) | Cron + `claude -p` script |
-|---|---|---|---|---|
-| Runs with your Claude subscription | ✅ (official CLI) | ✅ | ✅ | ✅ |
-| Local models (Ollama) per routine | ✅ | ❌ | indirect | manual |
-| Runs with the window closed | ✅ tray | app must stay open | app must stay open | ✅ |
-| Live chat with a running routine | ✅ | ✅ | ✅ | ❌ |
-| Approval cards for tool calls | ✅ | ✅ | ✅ | ❌ |
-| Locks between routines, catch-up, skip reasons | ✅ | partial | partial | ❌ |
-| Split terminals | ✅ | ❌ | ✅ | ❌ |
-| Routines as plain files | ✅ `ROUTINE.md` | `SKILL.md` + app state | app state | ✅ |
-
-Orca is a full agent IDE (worktrees, diffs, a browser). Turno is narrower: it is built for agents that run unattended on a schedule.
 
 ## FAQ
 

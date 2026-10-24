@@ -199,7 +199,7 @@ function Tab({ api, params }: IDockviewPanelHeaderProps<{ kind?: string; itemId?
   )
 }
 
-// Botoes no cabecalho de cada grupo, como no Orca: dividir a direita, abaixo e maximizar.
+// Botoes no cabecalho de cada grupo: dividir a direita, abaixo e maximizar.
 function GroupActions({ group, containerApi }: IDockviewHeaderActionsProps) {
   const [max, setMax] = useState(containerApi.hasMaximizedGroup())
   const [menu, setMenu] = useState(false)

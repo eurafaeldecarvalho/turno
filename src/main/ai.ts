@@ -18,7 +18,7 @@ export function suggestCommand(connId: string, ctx: NlContext): Promise<Suggesti
   }
   const model = effectiveModel(conn, undefined)
   // Chamada interna do Turno: sem os MCPs e hooks do usuario (custo e seguranca); se uma politica da empresa
-  // recusar o --strict-mcp-config, tenta de novo sem ele (padrao do Orca).
+  // recusar o --strict-mcp-config, tenta de novo sem ele.
   const base = ['-p', ...(model ? ['--model', model] : []), '--permission-mode', 'dontAsk', '--permission-prompts', 'none', '--settings', '{"disableAllHooks":true}']
   const env = childEnv({ ...resolveProviderEnv(conn, connectionToken(conn)) })
   const run = (extra: string[]): Promise<{ err: Error | null; out: string }> =>

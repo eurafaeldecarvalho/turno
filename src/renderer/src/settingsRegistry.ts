@@ -55,7 +55,7 @@ export const ITEMS: SettingItem[] = [
   { label: 'Which account goes first', page: 'agents', card: 'Agents and accounts', anchor: 'settings-agents', keywords: 'ranking strategy headroom reset order' },
   { label: 'Add or remove an account', page: 'agents', card: 'Agents and accounts', anchor: 'settings-agents', keywords: 'sign in login claude codex gemini copilot kiro' },
   { label: 'Claude connection', page: 'connections', card: 'Connections', keywords: 'login subscription cli' },
-  { label: 'Add a provider from the catalog', page: 'connections', card: 'Connections', keywords: 'openrouter groq mistral ollama lm studio vllm deepseek api key endpoint model omniroute free local' },
+  { label: 'Add a provider from the catalog', page: 'connections', card: 'Connections', keywords: 'openrouter groq mistral ollama lm studio vllm deepseek api key endpoint model free local' },
   { label: 'MCP servers', page: 'mcp', anchor: 'settings-mcp', keywords: 'tools sentry atlassian bitbucket github playwright secrets' },
   { label: 'Jira', page: 'integrations', card: 'Jira Cloud', anchor: 'settings-jira', keywords: 'atlassian tasks token issues' },
   { label: 'GitHub issues', page: 'integrations', card: 'GitHub', anchor: 'settings-github', keywords: 'gh tasks issues' },

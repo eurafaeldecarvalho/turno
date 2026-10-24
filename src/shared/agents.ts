@@ -1,6 +1,5 @@
 // Catalogo de agentes CLI que o Turno sabe abrir, retomar e (quando possivel) isolar por conta.
-// Comandos, aliases e argumentos de resume vem do catalogo do Orca (MIT, Copyright (c) 2026 Lovecast Inc.,
-// src/shared/tui-agent-config.ts, agent-resume-argv.ts, tui-agent-display-names.ts), adaptados ao Turno.
+// Comandos, aliases e argumentos de resume adaptados de um catalogo de terceiros sob licenca MIT (ver CREDITS.md).
 
 export type PromptStyle =
   | 'argv' // `<cmd> "<prompt>"`
@@ -182,7 +181,7 @@ export function isWallText(line: string): boolean {
   return !!head && WALL.some((r) => early(r, head))
 }
 
-// O que a parede diz (regras de erro inspiradas no OmniRoute, MIT): limite que volta sozinho no reset,
+// O que a parede diz: limite que volta sozinho no reset,
 // credito pago que acabou, ou conta suspensa/desativada (nao adianta esperar nem trocar para a mesma conta).
 export type WallKind = 'limit' | 'credits' | 'banned'
 // so a redacao das mensagens dos CLIs ("your account…", "credits"): "insufficient balance" de um teste ou

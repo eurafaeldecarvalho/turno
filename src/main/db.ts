@@ -149,7 +149,7 @@ export function threadOf(runId: string): RunRecord[] {
   return out
 }
 
-// Mantem as ultimas `keep` execucoes terminadas de cada rotina (o Orca guarda 100). Devolve os ids apagados.
+// Mantem as ultimas `keep` execucoes terminadas de cada rotina. Devolve os ids apagados.
 export function pruneRuns(routine: string, keep = 200): string[] {
   const old = db
     .prepare(

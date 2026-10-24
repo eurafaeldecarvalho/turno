@@ -360,7 +360,7 @@ export function pickAccount(opts: { exclude?: string[]; agent?: string; excludeA
   return ranked.find((a) => st(a) === 'ok' || st(a) === 'unknown') ?? (opts.allowWarning ? ranked.find((a) => st(a) === 'warning') : undefined)
 }
 
-// Ordem das contas conforme a estrategia (ideias do OmniRoute, MIT): empate sempre cai na ordem da lista.
+// Ordem das contas conforme a estrategia: empate sempre cai na ordem da lista.
 // headroom = a que tem mais cota sobrando (maior uso entre 5h e 7d menor primeiro); reset-soonest = a que reseta
 // antes (a cota dela se perde de qualquer jeito); conta sem dado de uso vai depois das que tem dado.
 function byStrategy(strategy: RankStrategy): (a: AgentAccount, b: AgentAccount) => number {
@@ -413,7 +413,7 @@ export function whenText(iso: string): string {
 const claudeDefaultHome = (): string => process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude')
 // .claude.json fica no home do usuario quando CLAUDE_CONFIG_DIR nao esta definido
 const claudeDefaultJson = (): string => (process.env.CLAUDE_CONFIG_DIR ? join(process.env.CLAUDE_CONFIG_DIR, '.claude.json') : join(homedir(), '.claude.json'))
-// Historico compartilhado entre contas (modelo do Orca): `--resume <id>` acha a conversa em qualquer conta.
+// Historico compartilhado entre contas: `--resume <id>` acha a conversa em qualquer conta.
 // `sessions` NAO: e o registro de processos vivos, preso a cada pasta.
 const SHARED_DIRS = ['projects', 'todos', 'file-history', 'shell-snapshots', 'session-env', 'plans', 'tasks', 'transcripts', 'paste-cache', 'commands', 'agents', 'skills', 'plugins', 'output-styles']
 

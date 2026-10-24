@@ -49,7 +49,7 @@ function canonical(p: string | undefined): string | undefined {
 export function buildArgs(req: RunRequest, model?: string): string[] {
   // stream-json na entrada: o processo aceita novas mensagens do usuario enquanto roda.
   const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--replay-user-messages']
-  // Sem isso os blocos de pensamento chegam vazios neste modo (achado no codigo do Orca).
+  // Sem isso os blocos de pensamento chegam vazios neste modo.
   args.push('--thinking-display', 'summarized')
   if (req.resume) args.push('--resume', req.resume)
   if (model) args.push('--model', model)
@@ -532,7 +532,7 @@ export function startRun(o: StartOptions): string {
   return runId
 }
 
-// Primeiro pede interrupcao limpa (control_request interrupt, como o Orca); se nao sair em 8s,
+// Primeiro pede interrupcao limpa (control_request interrupt); se nao sair em 8s,
 // killTree derruba a arvore inteira (netos: MCPs, node): Windows via taskkill /T, POSIX via kill do grupo (-pid).
 export function stopRun(runId: string, reason: RunStatus = 'stopped'): Promise<void> {
   const a = active.get(runId)

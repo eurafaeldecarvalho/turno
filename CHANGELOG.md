@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.5 (2026-10-24)
+
+### Housekeeping
+- Documentation and in-app text cleanup. Two color themes were renamed to "Carbon Dark" and "Carbon Light" (your current theme is preserved). Third-party attributions are consolidated in CREDITS.md.
+
 ## 0.9.4 (2026-10-24)
 
 ### Cross-platform
@@ -34,7 +39,7 @@
 - Command palette: Ctrl+Shift+P anywhere, Ctrl+K outside a terminal. New shortcuts: Ctrl+Shift+N (new agent), Ctrl+Shift+R (ad hoc run), Ctrl+Shift+J (Tasks).
 - A render error shows a recovery panel instead of a blank window.
 
-### Providers (from OmniRoute, MIT)
+### Providers
 - Settings › Connections › Add from catalog: 196 API-key, free and local providers, with search and filters.
 - Built-in local translator so Claude Code can use OpenAI-format providers: tools, images and streaming are translated; the provider key stays in Turno (the agent only gets a local address). Retries with max_completion_tokens when a provider rejects max_tokens; long local generations allowed (30 min).
 - Anthropic's own API key is sent the way the API expects (x-api-key).
@@ -46,7 +51,7 @@
 ## 0.8.0 (2026-10-22)
 
 ### Agents and accounts
-- The sidebar "Claude" button is now "Agent": opens the best-ranked account that still has quota. Catalog of 44 agent CLIs (ported from Orca, MIT).
+- The sidebar "Claude" button is now "Agent": opens the best-ranked account that still has quota. Catalog of 44 agent CLIs.
 - Several accounts per agent (Claude Code, Codex, Gemini, Copilot, Kiro, OpenCode, Grok), each in its own config folder; Claude accounts share history with ~/.claude.
 - Ranking and thresholds (5-hour 90%, weekly 95%) in Settings › Agents and accounts. Usage shows in the status bar.
 - Automatic switch: near the limit the tab moves to the next account at the end of the turn (same agent resumes the same conversation; another agent gets a handoff note). At the hard limit it switches immediately. With no account left, the session waits for the reset.

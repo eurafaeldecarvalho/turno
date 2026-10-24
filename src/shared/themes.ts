@@ -124,7 +124,7 @@ const mk = (id: string, name: string, dark: boolean, bg: string, fg: string, cur
 const RAW_THEMES: Theme[] = [
   {
     id: 'orca-dark',
-    name: 'Orca Dark',
+    name: 'Carbon Dark',
     dark: true,
     ui: {
       bg: '#0a0a0a', surface: '#171717', surface2: '#1f1f1f', surface3: '#262626', border: '#262626', borderStrong: '#333333',
@@ -137,7 +137,7 @@ const RAW_THEMES: Theme[] = [
   },
   {
     id: 'orca-light',
-    name: 'Orca Light',
+    name: 'Carbon Light',
     dark: false,
     ui: {
       bg: '#ffffff', surface: '#fafafa', surface2: '#f5f5f5', surface3: '#ebebeb', border: '#e5e5e5', borderStrong: '#d4d4d4',

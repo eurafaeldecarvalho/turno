@@ -3,6 +3,6 @@ out
 smoke
 dist
 *.local.json
-# Saida bruta do REA (grande, regeravel): versiona so os *.summary.json e providers.json
+# Blobs grandes de analise/evidencia (regeraveis): versiona so os resumos
 *.evidence.json
 *.evidence.json.gz

@@ -36,7 +36,7 @@ const FILTERS: Array<{ v: Filter; t: string }> = [
 
 const fmtTokens = (n: number): string => (n >= 1e6 ? `${Math.round(n / 1e6)}M` : `${Math.round(n / 1e3)}k`)
 
-// Catalogo de provedores (derivado do OmniRoute, MIT): escolher um preenche o formulario de conexao.
+// Catalogo de provedores: escolher um preenche o formulario de conexao.
 export function CatalogPicker({ onPick, onClose }: { onPick: (e: CatalogEntry) => void; onClose: () => void }) {
   const [q, setQ] = useState('')
   const [f, setF] = useState<Filter>('all')
@@ -129,7 +129,7 @@ export function CatalogPicker({ onPick, onClose }: { onPick: (e: CatalogEntry) =
         ))}
         {!list.length && <li className="muted small catalog-empty">No provider matches.</li>}
       </ul>
-      <p className="muted small">Catalog derived from OmniRoute (MIT). Turno only adds providers you sign up for with an API key, free official endpoints and local servers.</p>
+      <p className="muted small">Turno only adds providers you sign up for with an API key, free official endpoints and local servers.</p>
     </div>
   )
 }

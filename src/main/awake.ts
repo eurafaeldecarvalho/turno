@@ -1,11 +1,11 @@
 import { powerMonitor, powerSaveBlocker } from 'electron'
 import type { AwakeMode, AwakeStatus } from '../shared/types'
 
-// "Manter o computador acordado", no modelo do Orca:
+// "Manter o computador acordado":
 //   on    = sempre acordado
 //   auto  = acordado so enquanto ha agente trabalhando (rotina, execucao avulsa)
 //   off   = segue a energia normal do Windows
-// Usa prevent-display-sleep como o Orca (impede suspensao do sistema e da tela).
+// Usa prevent-display-sleep (impede suspensao do sistema e da tela).
 let mode: AwakeMode = 'auto'
 let working = 0
 let blockerId: number | undefined

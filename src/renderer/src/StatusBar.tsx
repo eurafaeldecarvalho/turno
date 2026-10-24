@@ -110,7 +110,7 @@ function AccountUsageSegment() {
 
 const MODES = AWAKE_MODES
 
-// Segmento "manter acordado" da barra de status (igual ao CaffeinateStatusSegment do Orca).
+// Segmento "manter acordado" da barra de status.
 function AwakeSegment() {
   const [s, setS] = useState<AwakeStatus>()
   const [open, setOpen] = useState(false)
