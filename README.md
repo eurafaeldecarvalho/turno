@@ -8,7 +8,7 @@
 [![typescript](https://img.shields.io/badge/TypeScript-5.9-3178C6)](https://www.typescriptlang.org)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-![Turno: a routine running as a live chat, with split terminals](docs/screenshots/session.png)
+![Turno scheduling a Claude Code agent run, shown as a live chat with split terminals](screenshots/session.png)
 
 ```yaml
 # ~/rotinas/daily-standup/ROUTINE.md
@@ -113,7 +113,7 @@ Prompt. Be explicit: nobody is watching to answer questions.
 
 ## The live chat
 
-![Routine editor](docs/screenshots/editor.png)
+![Turno routine editor: schedule, model, permissions and prompt for an AI coding agent](screenshots/editor.png)
 
 - **Thinking** blocks are collapsed as *Thought for 12s*. Turno passes `--thinking-display summarized`, because without it thinking arrives empty in this mode.
 - **Consecutive tool calls** are grouped into one sentence. Each call expands to its input and output, and failed calls are shown in red.
@@ -138,7 +138,7 @@ Prompt. Be explicit: nobody is watching to answer questions.
 
 ## Workspace: terminals, folders, themes
 
-![Themes and settings](docs/screenshots/themes.png)
+![Turno themes and terminal settings](screenshots/themes.png)
 
 - **Terminals:** xterm.js 6 with WebGL, search (Ctrl+F), clickable links, Unicode 11 and bracketed paste. Ctrl+Shift+C/V copy and paste, right click copies or pastes, and Shift+Enter inserts a newline in the Claude Code prompt.
 - **Splits:** drag a tab onto another pane and pick a cell on the drop compass, use the split buttons in each pane header, or press Alt+Shift+= / Alt+Shift+-. The layout is saved between launches.
@@ -232,7 +232,7 @@ pnpm smoke        # build, open a sample layout, save smoke/screenshot.png and e
 | Split terminals | ✅ | ❌ | ✅ | ❌ |
 | Routines as plain files | ✅ `ROUTINE.md` | `SKILL.md` + app state | app state | ✅ |
 
-Orca is a full agent IDE (worktrees, diffs, a browser). Turno is narrower: it is built for agents that run unattended on a schedule. [`docs/`](docs) has the research behind the design, including a reverse-engineering study of Orca done with [REA](https://github.com/morluto/rea).
+Orca is a full agent IDE (worktrees, diffs, a browser). Turno is narrower: it is built for agents that run unattended on a schedule.
 
 ## FAQ
 
