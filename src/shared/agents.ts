@@ -35,7 +35,7 @@ export const AGENTS: AgentDef[] = [
   { id: 'opencode', name: 'OpenCode', cmd: 'opencode', resume: (id) => `opencode --session ${id}`, prompt: 'flag', promptFlag: '--prompt', homeVar: 'XDG_DATA_HOME', login: 'opencode auth login', usage: 'wall', url: 'https://opencode.ai', install: 'npm install -g opencode-ai' },
   { id: 'opencode2', name: 'OpenCode 2', cmd: 'opencode2', launch: 'opencode2 --standalone', resume: (id) => `opencode2 --session ${id}`, prompt: 'flag', promptFlag: '--prompt', usage: 'wall' },
   { id: 'qwen-code', name: 'Qwen Code', cmd: 'qwen', resume: (id) => `qwen --resume ${id}`, prompt: 'flag', promptFlag: '-i', usage: 'wall', url: 'https://github.com/QwenLM/qwen-code' },
-  { id: 'grok', name: 'Grok', cmd: 'grok', resume: (id) => `grok --resume ${id}`, prompt: 'argv', homeVar: 'GROK_HOME', homeDefault: '.grok', usage: 'wall' },
+  { id: 'grok', name: 'Grok', cmd: 'grok', resume: (id) => `grok --resume ${id}`, prompt: 'argv', homeVar: 'GROK_HOME', homeDefault: '.grok', usage: 'wall', url: 'https://x.ai/cli' },
   { id: 'amp', name: 'Amp', cmd: 'amp', prompt: 'type', login: 'amp login', usage: 'wall', url: 'https://ampcode.com' },
   { id: 'droid', name: 'Droid', cmd: 'droid', resume: (id) => `droid --resume ${id}`, prompt: 'argv', usage: 'wall', url: 'https://factory.ai' },
   { id: 'devin', name: 'Devin', cmd: 'devin', resume: (id) => `devin --resume ${id}`, prompt: 'argv', usage: 'wall' },

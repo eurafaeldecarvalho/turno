@@ -7,6 +7,12 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.3',
+    items: [
+      { title: 'Detects newly installed agents', text: 'Install an agent CLI while Turno is open and it shows up when you open the Add account dropdown — no restart needed. Grok now has an install link too.' },
+    ],
+  },
+  {
     version: '0.9.2',
     items: [
       { title: 'Choose which account a routine uses', text: 'Each routine can run on the account ranking, your default sign-in, or one specific Claude account — picked right in the routine Connection card.' },

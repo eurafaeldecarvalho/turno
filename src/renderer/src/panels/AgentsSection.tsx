@@ -221,7 +221,7 @@ export function AgentsSection() {
         {!accounts.length && <li className="muted small">No agent CLI found on this PC yet. Install one (Claude Code, Codex, Gemini, Copilot, Kiro…) and it shows up here.</li>}
       </ol>
       <div className="row">
-        <select id="acct-add" aria-label="Agent for the new account" value={adding} onChange={(e) => setAdding(e.target.value)}>
+        <select id="acct-add" aria-label="Agent for the new account" value={adding} onMouseDown={() => void window.turno.agents.detect()} onChange={(e) => setAdding(e.target.value)}>
           <option value="">Add another account of…</option>
           {multi.map((a) => <option key={a.id} value={a.id}>{a.name}{st.installed.includes(a.id) ? '' : ' (not installed)'}</option>)}
         </select>

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.3 (2026-10-24)
+
+### Agents & accounts
+- Detects agent CLIs installed after Turno was already open: detection reads the current system PATH (not the one captured at launch), and the "Add account" dropdown re-checks when you open it — no restart needed.
+- Grok shows an Install link in "Add account", like the other agents.
+
 ## 0.9.2 (2026-10-24)
 
 ### Routines

@@ -130,10 +130,32 @@ function scheduleExpiry(): void {
 }
 
 // ---------- deteccao (um `where` so para o catalogo inteiro) ----------
-export function detectInstalled(): Promise<string[]> {
+// PATH ATUAL do sistema (do registro, no Windows), nao o que foi capturado quando o Turno abriu: assim um
+// CLI instalado DEPOIS de abrir o Turno aparece ao reverificar, sem precisar reiniciar o app.
+function currentPath(): Promise<string> {
+  const base = process.env.Path ?? process.env.PATH ?? ''
+  if (process.platform !== 'win32') return Promise.resolve(base)
+  const expand = (s: string): string => s.replace(/%([^%]+)%/g, (m, n) => process.env[n] ?? process.env[String(n).toUpperCase()] ?? m)
+  const read = (key: string): Promise<string> =>
+    new Promise((res) =>
+      execFile('reg', ['query', key, '/v', 'Path'], { windowsHide: true, timeout: 8000 }, (_e, out) => {
+        const m = /\bPath\b\s+REG(?:_EXPAND)?_SZ\s+(.+)/i.exec(String(out ?? ''))
+        res(m ? expand(m[1].trim()) : '')
+      }),
+    )
+  return Promise.all([read('HKCU\\Environment'), read('HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment')]).then(([u, machine]) =>
+    [base, machine, u].filter(Boolean).join(';'),
+  )
+}
+
+export async function detectInstalled(): Promise<string[]> {
   const names = AGENTS.flatMap((a) => [a.cmd, ...(a.aliases ?? [])])
+  const path = await currentPath()
+  const env = childEnv()
+  for (const k of Object.keys(env)) if (k.toLowerCase() === 'path') delete env[k]
+  env[process.platform === 'win32' ? 'Path' : 'PATH'] = path
   return new Promise((res) =>
-    execFile(process.platform === 'win32' ? 'where' : 'which', names, { env: childEnv(), timeout: 15000, windowsHide: true }, (_err, out) => {
+    execFile(process.platform === 'win32' ? 'where' : 'which', names, { env, timeout: 15000, windowsHide: true }, (_err, out) => {
       const found = new Set(String(out ?? '').split(/\r?\n/).filter(Boolean).map((p) => basename(p.trim()).replace(/\.(exe|cmd|bat|ps1)$/i, '').toLowerCase()))
       installed = new Set(AGENTS.filter((a) => [a.cmd, ...(a.aliases ?? [])].some((c) => found.has(c.toLowerCase()))).map((a) => a.id))
       ensureDefaults()
