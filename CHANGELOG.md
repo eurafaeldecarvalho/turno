@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.4 (2026-10-24)
+
+### Cross-platform
+- The app/taskbar icon is now crisp at every size — the icon generator was aliasing a 256px image; it now renders anti-aliased and ships a multi-size Windows `.ico`.
+- Linux: terminal session detection (which Claude Code session runs in each terminal) and per-terminal memory now work — both were Windows-only and silently did nothing on Linux. `SystemRoot` is no longer added to child processes off Windows.
+
 ## 0.9.3 (2026-10-24)
 
 ### Agents & accounts

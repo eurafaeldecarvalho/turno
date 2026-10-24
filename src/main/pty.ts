@@ -87,30 +87,32 @@ export function registerPty(getWc: () => WebContents | undefined): void {
   ipcMain.handle('pty:memory', () => {
     const items = Array.from(ptys.entries()).map(([id, p]) => ({ ptyId: id, pid: p.pid }))
     if (!items.length) return Promise.resolve([])
-    const pidList = items.map((x) => x.pid).join(',')
+    const win = process.platform === 'win32'
+    const pids = items.map((x) => x.pid)
+    // Windows: Get-Process (WorkingSet64). POSIX: `ps -o pid=,rss=` (rss ja em KB).
+    const cmd = win ? 'powershell' : 'ps'
+    const args = win
+      ? ['-NoProfile', '-NonInteractive', '-Command', `Try{Get-Process -Id @(${pids.join(',')}) -EA SilentlyContinue|Select Id,@{N='K';E={[int]($_.WorkingSet64/1KB)}}|ConvertTo-Json -Compress}Catch{'[]'}`]
+      : ['-o', 'pid=,rss=', '-p', pids.join(',')]
     return new Promise((resolve) => {
-      execFile(
-        'powershell',
-        [
-          '-NoProfile',
-          '-NonInteractive',
-          '-Command',
-          `Try{Get-Process -Id @(${pidList}) -EA SilentlyContinue|Select Id,@{N='K';E={[int]($_.WorkingSet64/1KB)}}|ConvertTo-Json -Compress}Catch{'[]'}`,
-        ],
-        { timeout: 3000 },
-        (_err, stdout) => {
-          try {
+      execFile(cmd, args, { timeout: 3000, windowsHide: true }, (_err, stdout) => {
+        const memMap = new Map<number, number>()
+        try {
+          if (win) {
             const raw = (stdout ?? '').trim()
-            const arr: Array<{ Id: number; K: number }> = JSON.parse(
-              raw.startsWith('[') ? raw : raw ? `[${raw}]` : '[]',
-            )
-            const memMap = new Map(arr.map((x) => [x.Id, x.K]))
-            resolve(items.map(({ ptyId, pid }) => ({ ptyId, pid, memKb: memMap.get(pid) ?? 0 })))
-          } catch {
-            resolve(items.map(({ ptyId, pid }) => ({ ptyId, pid, memKb: 0 })))
+            const arr: Array<{ Id: number; K: number }> = JSON.parse(raw.startsWith('[') ? raw : raw ? `[${raw}]` : '[]')
+            for (const x of arr) memMap.set(x.Id, x.K)
+          } else {
+            for (const l of (stdout ?? '').split(/\r?\n/)) {
+              const [pid, rss] = l.trim().split(/\s+/).map(Number)
+              if (pid) memMap.set(pid, rss || 0)
+            }
           }
-        },
-      )
+        } catch {
+          /* parse falhou: cai no memKb 0 abaixo */
+        }
+        resolve(items.map(({ ptyId, pid }) => ({ ptyId, pid, memKb: memMap.get(pid) ?? 0 })))
+      })
     })
   })
 }

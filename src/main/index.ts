@@ -76,7 +76,7 @@ function createWindow(): void {
     show: false,
     backgroundColor: themeById(getSettings().theme).ui.bg,
     title: 'Turno',
-    icon: resource('icon.png'),
+    icon: resource(process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: themeById(getSettings().theme).ui.bg, symbolColor: themeById(getSettings().theme).ui.muted, height: 36 },

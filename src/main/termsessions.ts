@@ -17,21 +17,22 @@ let timer: ReturnType<typeof setTimeout> | undefined
 let interval: ReturnType<typeof setInterval> | undefined
 let emit: (ptyId: number, s: TermSession | null) => void = () => {}
 
+// Tabela pid -> ppid, por plataforma. Windows: powershell/CIM. POSIX: `ps -eo pid=,ppid=`.
 function processTable(): Promise<Map<number, number>> {
+  const win = process.platform === 'win32'
+  const cmd = win ? 'powershell.exe' : 'ps'
+  const args = win
+    ? ['-NoProfile', '-Command', 'Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId | ForEach-Object { "$($_.ProcessId),$($_.ParentProcessId)" }']
+    : ['-eo', 'pid=,ppid=']
   return new Promise((resolve) => {
-    execFile(
-      'powershell.exe',
-      ['-NoProfile', '-Command', 'Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId | ForEach-Object { "$($_.ProcessId),$($_.ParentProcessId)" }'],
-      { windowsHide: true, timeout: 20000, maxBuffer: 8 * 1024 * 1024 },
-      (err, out) => {
-        const m = new Map<number, number>()
-        if (!err) for (const l of out.split(/\r?\n/)) {
-          const [a, b] = l.split(',').map(Number)
-          if (a) m.set(a, b)
-        }
-        resolve(m)
-      },
-    )
+    execFile(cmd, args, { windowsHide: true, timeout: 20000, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
+      const m = new Map<number, number>()
+      if (!err) for (const l of (out ?? '').split(/\r?\n/)) {
+        const [a, b] = l.trim().split(win ? ',' : /\s+/).map(Number)
+        if (a) m.set(a, b)
+      }
+      resolve(m)
+    })
   })
 }
 

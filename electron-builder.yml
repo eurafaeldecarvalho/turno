@@ -10,12 +10,12 @@ files:
 extraResources:
   - from: resources
     to: resources
-    filter: ['*.png']
+    filter: ['*.png', '*.ico']
 asarUnpack:
   - node_modules/node-pty/**
 npmRebuild: false
 win:
-  icon: resources/icon.png
+  icon: resources/icon.ico
   target:
     - target: nsis
       arch: [x64]
