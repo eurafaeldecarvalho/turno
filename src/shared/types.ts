@@ -62,6 +62,7 @@ export interface RoutineConfig {
   strict_mcp?: boolean // so os do hub: ignora os MCPs do usuario e o .mcp.json do repo
   context_card?: string // cartao de contexto (5-15 linhas) para o agente
   account_pool?: boolean // usa o ranking de contas Claude e continua noutra conta no limite
+  account?: string // conta Claude fixa desta rotina (id); ignorado quando account_pool e true
 }
 
 export interface Routine {

@@ -7,6 +7,7 @@ import type { IDockviewPanelProps } from 'dockview-react'
 import type { McpServerDef } from '../../../shared/types'
 import { WEEKDAYS, type Effort, type PermissionMode, type RoutineConfig, type Weekday } from '../../../shared/types'
 import { useStore, reloadRuns } from '../store'
+import { useAgents } from '../agentStore'
 import { useSettings } from '../appearance'
 import { askConfirm } from '../ConfirmDialog'
 import { ModelSelect } from '../ModelSelect'
@@ -75,6 +76,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   const promptRef = useRef<HTMLTextAreaElement>(null)
   const [running, setRunning] = useState(false)
   const conns = useSettings()?.connections ?? []
+  const claudeAccounts = useAgents().accounts.filter((a) => a.agent === 'claude')
 
   // Carrega do disco; recarrega se o arquivo mudar e nao houver edicao pendente.
   useEffect(() => {
@@ -357,9 +359,9 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
   const conn = conns.find((c) => c.id === cfg.profile)
   const isClaude = conn ? conn.kind === 'claude' : true
   // conexao nao-Claude ignora estes campos, mas valor invalido neles ainda trava a rotina: mostra o card para corrigir
-  const claudeOnlyErr = ['account_pool', 'mcp', 'strict_mcp', 'context_card'].some((k) => fileErr(k))
+  const claudeOnlyErr = ['mcp', 'strict_mcp', 'context_card'].some((k) => fileErr(k))
   // valores guardados nesses campos tambem mantem o card visivel (para ver e limpar), mesmo sem erro
-  const claudeOnlySet = !!(cfg?.account_pool || cfg?.mcp?.length || cfg?.strict_mcp || cfg?.context_card)
+  const claudeOnlySet = !!(cfg?.mcp?.length || cfg?.strict_mcp || cfg?.context_card)
   const showClaudeCard = isClaude || claudeOnlyErr || claudeOnlySet || cardSticky.current
   if (!isClaude && showClaudeCard) cardSticky.current = true
   const hasPolicy = (k: 'session_limit' | 'weekly_limit'): boolean => (cfg.abort ?? []).some((p) => p.kind === k)
@@ -523,6 +525,26 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
           </div>
           {!conn && <small className="tone-warn">The connection this routine used was removed (saved in ROUTINE.md as "{cfg.profile}"), so scheduled runs are skipped. Pick another one above.</small>}
           <div className="stack">
+            {isClaude && (
+              <label className="field">
+                <span>Account</span>
+                <select
+                  value={cfg.account_pool ? '__pool' : (cfg.account ?? '')}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    up(v === '__pool' ? { account_pool: true, account: undefined } : { account_pool: undefined, account: v || undefined })
+                  }}
+                >
+                  <option value="__pool">Best available — account ranking (continues on the next account at the limit)</option>
+                  <option value="">Default sign-in (the one you already have on this PC)</option>
+                  {claudeAccounts.filter((a) => a.home).map((a) => (
+                    <option key={a.id} value={a.id}>{a.label}</option>
+                  ))}
+                  {cfg.account && !claudeAccounts.some((a) => a.id === cfg.account) && <option value={cfg.account}>{cfg.account} (not found)</option>}
+                </select>
+                {fileErr('account_pool') && <small className="tone-warn">Invalid in ROUTINE.md (use true or false); kept off.</small>}
+              </label>
+            )}
             <label className="field">
               <span>Model</span>
               {isClaude ? (
@@ -591,9 +613,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
             Automatic locks: <code>chrome</code> when using Chrome, <code>gpu</code> for Qwen. Two routines with the same lock never run at the same time.
           </small>
         </section>
-        </div>
 
-        <div className="settings-col">
         <section className="card">
           <h3>When it runs</h3>
           <div className="field">
@@ -672,23 +692,18 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
           </details>
         </section>
 
+        </div>
+
+        <div className="settings-col">
         {showClaudeCard && (
           <section className="card">
-            <h3>Accounts, MCP and context</h3>
+            <h3>MCP and context</h3>
             {!isClaude && (
               <small className="tone-warn">
                 {claudeOnlyErr
                   ? "This connection doesn't use these settings, but ROUTINE.md has invalid values here: fix or clear them so the routine can run."
                   : "This connection doesn't use these settings: they are ignored. Clear them if you don't need them."}
               </small>
-            )}
-            <label className="field toggle-field">
-              <span>Use the account ranking: run on the best Claude account and continue on the next one at the limit</span>
-              <Switch checked={!!cfg.account_pool} onChange={(v) => up({ account_pool: v || undefined })} />
-            </label>
-            {fileErr('account_pool') && <small className="tone-warn">Invalid in ROUTINE.md (use true or false); kept off.</small>}
-            {cfg.sandbox !== 'none' && (cfg.account_pool || mcpServers.some((m) => cfg.mcp?.includes(m.id))) && (
-              <small className="tone-warn">This routine uses a sandbox ({cfg.sandbox}): the account ranking and MCP servers don't work there, so scheduled runs will be skipped. Turn the sandbox off in Limits & safety, or turn these off.</small>
             )}
             <fieldset className="field" id="routine-mcp" tabIndex={-1}>
               <legend>MCP servers for this routine</legend>
@@ -885,7 +900,7 @@ export function RoutineEditor({ params, api }: IDockviewPanelProps<{ routineId: 
                 <option value="wsl">wsl</option>
               </select>
               <small className="muted">docker/wsl need a sandbox image with the <code>claude</code> CLI installed.</small>
-              {isClaude && cfg.sandbox !== 'none' && (cfg.account_pool || mcpServers.some((m) => cfg.mcp?.includes(m.id))) && (
+              {isClaude && cfg.sandbox !== 'none' && (cfg.account_pool || cfg.account || mcpServers.some((m) => cfg.mcp?.includes(m.id))) && (
                 <small className="tone-warn">The account ranking and MCP servers don't work inside a sandbox: scheduled runs will be skipped until you turn one of them off.</small>
               )}
             </label>

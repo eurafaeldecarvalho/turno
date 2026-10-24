@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.2 (2026-10-24)
+
+### Routines
+- Pick the Claude account per routine: the account ranking (best available, switches at the limit), the default sign-in, or one specific account. The account choice now lives in the routine's Connection card — Connection and Accounts are no longer two separate cards — and the editor layout is tidier, without the empty gap.
+
 ## 0.9.1 (2026-10-24)
 
 ### Agents & accounts

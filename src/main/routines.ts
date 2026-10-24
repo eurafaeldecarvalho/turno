@@ -86,6 +86,7 @@ const schema = z.object({
   // conta depois do trim (bloco YAML `|` acrescenta uma quebra de linha no fim), igual a UI e ao cardText
   context_card: z.string().refine((s) => s.trim().length <= 2000, 'at most 2000 characters').optional(),
   account_pool: z.boolean().optional(),
+  account: z.string().optional(),
 })
 
 export function defaultConfig(): RoutineConfig {
@@ -193,6 +194,7 @@ export function serialize(config: RoutineConfig, prompt: string): string {
   if (!config.strict_mcp) delete clean.strict_mcp
   if (!config.context_card?.trim()) delete clean.context_card
   if (!config.account_pool) delete clean.account_pool
+  if (!config.account) delete clean.account
   clean.schedule = config.schedule.cron
     ? { days: config.schedule.days, times: config.schedule.times, cron: config.schedule.cron }
     : { days: config.schedule.days, times: config.schedule.times }

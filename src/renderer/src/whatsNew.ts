@@ -7,6 +7,12 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.2',
+    items: [
+      { title: 'Choose which account a routine uses', text: 'Each routine can run on the account ranking, your default sign-in, or one specific Claude account — picked right in the routine Connection card.' },
+    ],
+  },
+  {
     version: '0.9.1',
     items: [
       { title: 'Install agents from Add account', text: 'Agents & accounts lists every multi-account agent, even ones you have not installed. Pick one and Turno runs its official CLI install in a terminal (Codex, Gemini, Copilot, OpenCode…); Kiro opens its install page.' },

@@ -256,11 +256,11 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
   // sandbox (wsl/docker) nao enxerga a pasta da conta nem o --mcp-config do host: pula com o motivo em vez de falhar
   // contas, MCP e cartao so valem para conexao Claude (o editor nem mostra o card nas outras): nas outras, ignorados
   const claudeExtras = conn.kind === 'claude'
-  if (claudeExtras && (r.config.sandbox ?? 'none') !== 'none' && (r.config.account_pool || listMcp().some((m) => r.config.mcp?.includes(m.id))))
-    return void skip(r, trigger, scheduledAt, 'account ranking and MCP servers do not work with a sandbox; turn one of them off in the routine', runId)
+  if (claudeExtras && (r.config.sandbox ?? 'none') !== 'none' && (r.config.account_pool || r.config.account || listMcp().some((m) => r.config.mcp?.includes(m.id))))
+    return void skip(r, trigger, scheduledAt, 'choosing an account and MCP servers do not work with a sandbox; turn them off in the routine', runId)
   if (conn.kind === 'claude' && r.config.account_pool) {
     if (!pickAccount({ agent: 'claude', allowWarning: true })) return void skip(r, trigger, scheduledAt, 'no Claude account is available (every one is off, not signed in or at its usage limit)', runId)
-  } else if (conn.kind === 'claude' && !(await claudeStatus()))
+  } else if (conn.kind === 'claude' && !r.config.account && !(await claudeStatus()))
     return void skip(r, trigger, scheduledAt, 'Claude Code is not logged in (run "claude" and use /login)', runId)
   if (claudeExtras && r.config.mcp?.length) {
     const why = await precheckMcp(r.config.mcp)
@@ -305,6 +305,7 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
         allowedTools: r.config.allowed_tools,
         chrome: r.config.chrome,
         pool: claudeExtras ? r.config.account_pool : undefined,
+        accountId: claudeExtras && !r.config.account_pool ? r.config.account : undefined,
         mcp: claudeExtras ? r.config.mcp : undefined,
         strictMcp: claudeExtras ? r.config.strict_mcp : undefined,
         contextCard: claudeExtras ? r.config.context_card : undefined,
