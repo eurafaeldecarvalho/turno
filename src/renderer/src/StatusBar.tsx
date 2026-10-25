@@ -5,7 +5,7 @@ import { useStore, isActive } from './store'
 import { updateSettings } from './appearance'
 import { openHistory, useActiveAgentKey } from './layout'
 import { IconCoffee } from './icons'
-import { useAgents, useAgentSessions, usageText, usageTone } from './agentStore'
+import { useAgents, useAgentSessions, usageTone, usageWithReset } from './agentStore'
 import { openSettingsModal } from './SettingsModal'
 import { AWAKE_MODES } from './awake'
 import { switchAccount } from './accountSwitch'
@@ -52,6 +52,12 @@ function ActiveAccountSegment() {
   const acc = st.accounts.find((a) => a.id === (sess?.accountId ?? st.best))
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  // contagem ate o reset anda sozinha
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000)
+    return () => clearInterval(t)
+  }, [])
   useEffect(() => {
     if (!open) return
     const close = (e: MouseEvent): void => void (!ref.current?.contains(e.target as Node) && setOpen(false))
@@ -76,12 +82,12 @@ function ActiveAccountSegment() {
         className="sb-item"
         aria-haspopup="menu"
         aria-expanded={open}
-        title={sess ? `This agent tab runs on ${acc.label}. Click to switch account.` : `The next agent opens on ${acc.label}. Click to switch or manage accounts.`}
+        title={`${sess ? `This agent tab runs on ${acc.label}.` : `The next agent opens on ${acc.label}.`}\nUsage of the 5-hour and 7-day windows, with the time left until each one resets.\nClick to switch account.`}
         onClick={() => setOpen(!open)}
       >
         <span className={`dot dot-${usageTone(u)}`} />
         <span>{acc.label}</span>
-        {usageText(u) && <span className="sb-dim">· {usageText(u)}</span>}
+        {usageWithReset(u, now) && <span className="sb-dim">· {usageWithReset(u, now)}</span>}
       </button>
       {open && (
         <div className="sb-pop sb-pop-left" role="menu">
@@ -100,7 +106,7 @@ function ActiveAccountSegment() {
               <span className={`dot dot-${usageTone(st.usage[a.id])}`} />
               <span className="sb-opt">
                 <span>{a.label}</span>
-                <small>{usageText(st.usage[a.id]) || 'no usage data yet'}</small>
+                <small>{usageWithReset(st.usage[a.id], now) || 'no usage data yet'}</small>
               </span>
             </button>
           ))}

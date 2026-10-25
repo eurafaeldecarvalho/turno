@@ -37,7 +37,29 @@ export function usageText(u?: AccountUsage): string {
   return [u.fiveHour && `5h ${u.fiveHour.pct}%`, u.weekly && `7d ${u.weekly.pct}%`].filter(Boolean).join(' · ')
 }
 
-export const usageTone = (u?: AccountUsage): 'ok' | 'warn' | 'err' | 'idle' =>
+// Tempo ate um horario: "2h 13m", "3d 4h 10m", "45m"
+export function timeLeft(iso: string, now = Date.now()): string {
+  const min = Math.ceil((Date.parse(iso) - now) / 60_000)
+  if (!Number.isFinite(min) || min <= 0) return 'now'
+  const d = Math.floor(min / 1440)
+  const h = Math.floor((min % 1440) / 60)
+  const m = min % 60
+  return d ? `${d}d ${h}h ${m}m` : h ? `${h}h ${m}m` : `${m}m`
+}
+
+// Uso com o tempo ate o reset de cada janela: "5h 40% (2h 13m) · 7d 12% (3d 4h 10m)".
+// Janela que ja resetou: o dado guardado esta velho, mostra "reset".
+export function usageWithReset(u?: AccountUsage, now = Date.now()): string {
+  if (!u || u.state === 'blocked' || u.state === 'exhausted') return usageText(u)
+  const part = (label: string, w?: AccountUsage['fiveHour']): string => {
+    if (!w) return ''
+    if (w.resetsAt && Date.parse(w.resetsAt) <= now) return `${label} reset`
+    return `${label} ${w.pct}%${w.resetsAt ? ` (${timeLeft(w.resetsAt, now)})` : ''}`
+  }
+  return [part('5h', u.fiveHour), part('7d', u.weekly)].filter(Boolean).join(' · ')
+}
+
+export const usageTone =(u?: AccountUsage): 'ok' | 'warn' | 'err' | 'idle' =>
   !u || u.state === 'unknown' ? 'idle' : u.state === 'ok' ? 'ok' : u.state === 'warning' ? 'warn' : 'err'
 
 export const STATUS_TEXT: Record<AgentSessionInfo['status'], string> = {

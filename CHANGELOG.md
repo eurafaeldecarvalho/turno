@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.8 (2026-10-25)
+
+### Status bar
+- The active account shows the time left until each usage window resets, next to its percentage: `5h 40% (2h 13m) · 7d 12% (3d 4h 10m)`. The countdown updates on its own, and the account switch menu shows the same for every account.
+
 ## 0.9.7 (2026-10-25)
 
 ### Accounts

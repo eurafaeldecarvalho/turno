@@ -7,6 +7,12 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.8',
+    items: [
+      { title: 'Time until reset', text: 'The status bar shows how long until the 5-hour and 7-day limits of the active account reset, next to the usage percentage.' },
+    ],
+  },
+  {
     version: '0.9.7',
     items: [
       { title: 'See and switch the active account', text: 'The status bar shows the account your agent tab is on, with its usage. Click it — or use "Switch account to …" in the command palette — to move the conversation to another account.' },
