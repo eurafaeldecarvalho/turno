@@ -6,13 +6,14 @@ interface Ask {
   title: string
   message: string
   confirmLabel: string
+  danger?: boolean // false = acao comum (botao normal); padrao e exclusao (vermelho)
   resolve: (ok: boolean) => void
 }
 let current: Ask | undefined
 const subs = new Set<() => void>()
 const emit = (): void => subs.forEach((f) => f())
 
-export function askConfirm(o: { title: string; message: string; confirmLabel?: string }): Promise<boolean> {
+export function askConfirm(o: { title: string; message: string; confirmLabel?: string; danger?: boolean }): Promise<boolean> {
   current?.resolve(false)
   return new Promise((resolve) => {
     current = { confirmLabel: 'Delete', ...o, resolve }
@@ -51,7 +52,7 @@ export function ConfirmHost() {
         </div>
         <footer className="modal-foot">
           <button ref={btn} className="btn ghost" onClick={() => answer(false)}>Cancel</button>
-          <button className="btn danger" onClick={() => answer(true)}>{ask.confirmLabel}</button>
+          <button className={`btn ${ask.danger === false ? 'primary' : 'danger'}`} onClick={() => answer(true)}>{ask.confirmLabel}</button>
         </footer>
       </div>
     </div>

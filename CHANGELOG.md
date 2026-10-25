@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.7 (2026-10-25)
+
+### Accounts
+- The status bar shows the active account — the one the focused agent tab runs on (or the one the next agent would use) — with the usage of that account only. Click it to switch the tab to another account.
+- New "Switch account to …" commands in the command palette (Ctrl+Shift+P, type "switch"): the focused agent tab moves to the chosen account and the conversation continues there. A tab in the middle of a turn asks first.
+- When a higher-ranked account comes back from its limit, Turno asks whether to move the agent tabs on lower-ranked accounts back to it. A tab in the middle of a turn switches when the turn ends.
+- Switching an agent tab whose conversation has no messages yet opens a fresh session on the new account instead of failing with "No conversation found".
+
+### Terminal
+- Typing while Turno restarts an agent on another account (or while it opens a new one) no longer corrupts the command: keystrokes are held and delivered to the agent once it's up.
+- Shift+Enter inserts a new line in the agent prompt again; before, the Enter also went through and sent the prompt.
+- Ctrl+V pastes the clipboard text right away. It used to send a raw Ctrl+V to the program, which made Claude Code look for an image in the clipboard (slow) and never paste the text.
+- Claude Code opened by Turno starts in the normal permission mode, even if your Claude settings default to bypass permissions.
+
+### Status bar
+- Spend only counts pay-as-you-go API usage. Runs on a subscription plan no longer record a cost (and past runs were cleaned up).
+- The terminal count and RAM were removed from the status bar.
+
 ## 0.9.6 (2026-10-24)
 
 ### Accounts

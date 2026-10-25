@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useModalLayer } from './modalStack'
-import { dockApi, focusTab, openAdhoc, openAgent, openAgentChat, openFanout, openHistory, openRoutine, openRoutineEditorModal, openTasks, openTerminal } from './layout'
+import { dockApi, focusTab, getActiveAgentKey, openAdhoc, openAgent, openAgentChat, openFanout, openHistory, openRoutine, openRoutineEditorModal, openTasks, openTerminal } from './layout'
 import { openSettingsModal } from './SettingsModal'
 import { openOnboarding, openWhatsNew } from './Onboarding'
 import { ITEMS, PAGES } from './settingsRegistry'
 import { getStore } from './store'
 import { getSidebarState, openItem } from './sidebarStore'
 import { getSettingsSnapshot, updateSettings } from './appearance'
-import { getAgentsState as getAgentsSnapshot } from './agentStore'
+import { getAgentSession, getAgentsState as getAgentsSnapshot, usageText } from './agentStore'
+import { switchAccount } from './accountSwitch'
 import { agentDef } from '../../shared/agents'
 import { shortcutFor } from './shortcuts'
 import { AWAKE_MODES } from './awake'
@@ -48,6 +49,14 @@ function buildCommands(): Command[] {
   const ag = getAgentsSnapshot()
   for (const a of ag.accounts.filter((x) => x.enabled && ag.installed.includes(x.agent)))
     add('New', `New agent on ${a.label}${ag.signedOut.includes(a.id) ? ' (not signed in)' : ag.usage[a.id]?.state === 'exhausted' ? ' (at its limit)' : ''}`, () => openAgent({ agent: a.agent, accountId: a.id }), undefined, agentDef(a.agent)?.name, `account:${a.id}`)
+  // Switch: leva a aba de agente focada (ou a ultima focada) para outra conta, continuando a conversa
+  const key = getActiveAgentKey()
+  const cur = key ? getAgentSession(key) : undefined
+  for (const a of ag.accounts.filter((x) => x.enabled && ag.installed.includes(x.agent) && !ag.signedOut.includes(x.id) && x.id !== cur?.accountId)) {
+    const u = ag.usage[a.id]
+    const note = u?.state === 'exhausted' ? ' (at its limit)' : usageText(u) ? ` (${usageText(u)})` : ''
+    add('Switch', `Switch account to ${a.label}${note}`, () => void switchAccount(a.id, key), undefined, `switch change account ${agentDef(a.agent)?.name ?? ''}`, `switch:${a.id}`)
+  }
   add('New', 'New chat', () => openAgentChat())
   add('New', 'New terminal', () => openTerminal(), shortcutFor('New terminal'))
   for (const conn of (settings?.connections ?? []).filter((x) => x.kind === 'endpoint')) add('New', `New terminal: Claude Code on ${conn.name}`, () => openTerminal(undefined, { profile: conn.id, initialCommand: 'claude --chrome' }))

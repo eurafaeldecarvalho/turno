@@ -1,6 +1,6 @@
 {
   "name": "turno",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "private": true,
   "description": "Desktop app to schedule and run AI agent routines on your PC (Claude Code or local models via Ollama), with split terminals and a live chat with the running agent.",
   "desktopName": "turno.desktop",

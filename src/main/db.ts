@@ -90,6 +90,8 @@ export function updateRun(id: string, patch: Patch): void {
   )
 }
 
+export const runsWithCost = (): Array<{ id: string }> => db.prepare('SELECT id FROM runs WHERE cost_usd IS NOT NULL').all() as Array<{ id: string }>
+
 export function getRun(id: string): RunRecord | undefined {
   return db.prepare('SELECT * FROM runs WHERE id = ?').get(id) as RunRecord | undefined
 }

@@ -7,6 +7,17 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.7',
+    items: [
+      { title: 'See and switch the active account', text: 'The status bar shows the account your agent tab is on, with its usage. Click it — or use "Switch account to …" in the command palette — to move the conversation to another account.' },
+      { title: 'Back to your preferred account', text: 'When a higher-ranked account resets its limit, Turno asks whether to move your agent tabs back to it.' },
+      { title: 'Typing during a switch is safe', text: 'What you type while an agent restarts on another account is held and delivered once it is ready, instead of breaking the command.' },
+      { title: 'Shift+Enter and Ctrl+V', text: 'Shift+Enter adds a new line in the agent prompt, and Ctrl+V pastes text instantly.' },
+      { title: 'Normal permissions by default', text: 'Claude Code opened by Turno no longer starts in bypass permissions mode.' },
+      { title: 'Real spend only', text: 'Subscription runs no longer count as spend in the status bar.' },
+    ],
+  },
+  {
     version: '0.9.6',
     items: [
       { title: 'Steadier account switching', text: 'A late usage report from an account the app already switched away from no longer brings it back too early — a limited account stays out of rotation until it truly resets.' },

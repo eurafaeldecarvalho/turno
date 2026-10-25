@@ -134,7 +134,20 @@ function syncOpenTabs(): void {
     })
   // Status bar: todos os terminais abertos, inclusive os que ja estao numa pasta da sidebar.
   _termTotal = api.panels.filter((p) => (paramsOf(p) as { kind?: string }).kind === 'terminal').length
+  // aba de agente focada por ultimo (inclusive as de pasta): a conta "ativa" do rodape e do Switch account
+  const focusedKey = api.activePanel ? (paramsOf(api.activePanel) as TerminalParams).agent?.key : undefined
+  const keys = new Set(api.panels.map((p) => (paramsOf(p) as TerminalParams).agent?.key).filter(Boolean))
+  _agentKey = focusedKey ?? (_agentKey && keys.has(_agentKey) ? _agentKey : undefined)
   _emitTabs()
+}
+
+let _agentKey: string | undefined
+export const getActiveAgentKey = (): string | undefined => _agentKey
+export function useActiveAgentKey(): string | undefined {
+  return useSyncExternalStore(
+    (cb) => (_tabSubs.add(cb), () => _tabSubs.delete(cb)),
+    () => _agentKey,
+  )
 }
 
 export function useOpenTabs(): OpenTab[] {

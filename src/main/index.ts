@@ -7,8 +7,8 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import type { McpServerDef, RankStrategy, Task, RoutineDraft, RunRecord, RunRequest, Settings, SidebarState } from '../shared/types'
 import { claudeSessionExists, getSidebar, listClaudeSessions, saveSidebar } from './sidebar'
 import { registerPty, killAllPtys } from './pty'
-import { activeCount, answerPermission, initRunner, readRunEvents, rotatedFrom, setRotateHandler, startRun, stopAllRuns, stopRun, type PermissionDecision } from './runner'
-import { openDb, getRun, listRuns, threadOf, renameRoutineRuns } from './db'
+import { activeCount, answerPermission, clearSubscriptionCosts, initRunner, readRunEvents, rotatedFrom, setRotateHandler, startRun, stopAllRuns, stopRun, type PermissionDecision } from './runner'
+import { openDb, getRun, listRuns, threadOf, renameRoutineRuns, runsWithCost } from './db'
 import { getSettings, setSettings } from './settings'
 import { takeNotices } from './jsonStore'
 import { accountEnv, addAccount, agentsState, clearBlock, clearLimit, detectInstalled, getAccount, initAccounts, refreshLogin, removeAccount, reorderAccounts, setThresholds, updateAccount } from './accounts'
@@ -218,6 +218,18 @@ initRunner({
 })
 // run do ranking de contas que bateu o limite continua pela via do follow-up (cwd efetivo, locks, custo cumulativo)
 setRotateHandler(followUp)
+// uma vez: runs antigas guardavam o custo calculado de runs em assinatura (que nao e gasto)
+{
+  const mark = join(userData, 'cost-cleanup-1')
+  if (!existsSync(mark)) {
+    try {
+      clearSubscriptionCosts(runsWithCost().map((r) => r.id))
+      writeFileSync(mark, new Date().toISOString())
+    } catch (e) {
+      console.warn('[cost cleanup]', (e as Error).message)
+    }
+  }
+}
 registerPty(liveWc)
 
 // ---- botao Agent: contas, broker de troca, hub de MCP ----

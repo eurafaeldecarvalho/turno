@@ -21,7 +21,7 @@ export const SHORTCUTS: Shortcut[] = [
   { keys: 'Ctrl+Shift+W', label: 'Close the pane', group: 'Panels' },
   { keys: 'Ctrl+F', label: 'Find in terminal', group: 'Terminal' },
   { keys: 'Ctrl+Shift+A', label: 'Ask AI for a command', group: 'Terminal' },
-  { keys: 'Ctrl+Shift+C / Ctrl+Shift+V', label: 'Copy / paste', group: 'Terminal' },
+  { keys: 'Ctrl+Shift+C / Ctrl+V', label: 'Copy / paste (Ctrl+Shift+V also pastes)', group: 'Terminal' },
   { keys: 'Shift+Enter', label: 'New line in the Claude Code prompt', group: 'Terminal' },
 ]
 

@@ -392,6 +392,9 @@ export async function swap(key: string, reason: 'warning' | 'wall' | 'manual', t
   s.pendingSwap = undefined
   const fromName = getAccount(s.accountId)?.label ?? s.accountId
   const why = reason === 'wall' ? 'usage limit reached' : reason === 'warning' ? 'close to the usage limit' : 'switched by you'
+  // o Claude so grava a conversa na 1a mensagem: sessao ainda vazia nao tem o que retomar ("No conversation found")
+  const emptyClaude = s.agent === 'claude' && !!s.transcriptPath && !existsSync(s.transcriptPath)
+  if (next.agent === s.agent && emptyClaude) return launchSwap(s, next.id, {}, `now on ${next.label} · ${why} on ${fromName}`)
   // mesmo agente com sessao conhecida: retoma a MESMA conversa na outra conta (historico compartilhado)
   if (next.agent === s.agent && s.sessionId && agentDef(s.agent)?.resume) {
     return launchSwap(s, next.id, { resumeSessionId: s.sessionId, prompt: reason === 'wall' ? CONTINUE : undefined }, `continued on ${next.label} · ${why} on ${fromName}`)

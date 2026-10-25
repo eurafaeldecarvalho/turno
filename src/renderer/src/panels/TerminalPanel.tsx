@@ -44,6 +44,13 @@ interface TermHandle {
   dispose(): void
 }
 
+const SHIFT_ENTER = '\x1b\r' // Alt+Enter: nova linha no Claude Code e nos outros CLIs de agente
+
+// Claude aberto pelo Turno comeca no modo de permissao normal, mesmo com defaultMode "bypassPermissions" no
+// settings.json do usuario (copiado para as contas isoladas). Comando que ja escolhe o modo fica como esta.
+export const defaultPermissionMode = (cmd: string): string =>
+  /^\s*claude(\s|$)/.test(cmd) && !/--permission-mode\b|--dangerously-skip-permissions\b/.test(cmd) ? cmd.replace(/^(\s*claude)/, '$1 --permission-mode default') : cmd
+
 // cor do achado ativo da busca (selecao) por tema claro/escuro
 const FIND_ACTIVE = { dark: '#a87a12', light: '#f5c542' }
 let currentThemeId = ''
@@ -127,6 +134,8 @@ function createTerm(params: TerminalParams): TermHandle {
       offSwap()
       offType()
       clearTimeout(typeTimer)
+      clearTimeout(releaseTimer)
+      clearTimeout(releaseCap)
       if (ptyId) window.turno.pty.kill(ptyId)
       if (agent) void window.turno.agents.close(agent.key)
       term.dispose()
@@ -215,6 +224,26 @@ function createTerm(params: TerminalParams): TermHandle {
   let typeAfter: string | undefined // agente que nao aceita prompt no comando: digita quando a tela parar de mudar
   let typeTimer: ReturnType<typeof setTimeout> | undefined
   let commandSent = false
+  // Enquanto o Turno digita o comando (abrir ou trocar de conta), o que a pessoa digita fica guardado: misturado no
+  // meio do comando ele estragava a linha. Volta para o agente quando a tela assenta.
+  let hold = !!pending || !!agent
+  let held = ''
+  let releaseTimer: ReturnType<typeof setTimeout> | undefined
+  let releaseCap: ReturnType<typeof setTimeout> | undefined
+  const release = (): void => {
+    clearTimeout(releaseTimer)
+    clearTimeout(releaseCap)
+    if (!hold) return
+    hold = false
+    const t = held
+    held = ''
+    if (t && ptyId) window.turno.pty.write(ptyId, t)
+  }
+  const startHold = (): void => {
+    hold = true
+    clearTimeout(releaseTimer)
+    clearTimeout(releaseCap)
+  }
   const offData = window.turno.pty.onData((id, d) => {
     if (id !== ptyId) return
     term.write(d)
@@ -225,8 +254,9 @@ function createTerm(params: TerminalParams): TermHandle {
       setTimeout(async () => {
         // aba de agente: o main ja preparou a pasta da conta (confiavel, Chrome)
         if (!agent && /^\s*claude\b/.test(cmd)) await window.turno.routines.prepareClaude(cur.lastCwd ?? params.cwd, /--chrome\b/.test(cmd)).catch(() => {})
-        window.turno.pty.write(id, cmd + '\r')
+        window.turno.pty.write(id, defaultPermissionMode(cmd) + '\r')
         commandSent = true
+        releaseCap = setTimeout(release, 12_000) // agente que nunca para de redesenhar: devolve o teclado assim mesmo
       }, 150)
     } else if (typeAfter && commandSent) {
       clearTimeout(typeTimer)
@@ -234,7 +264,11 @@ function createTerm(params: TerminalParams): TermHandle {
         if (!typeAfter || !ptyId) return
         window.turno.pty.write(ptyId, typeAfter + '\r')
         typeAfter = undefined
+        releaseTimer = setTimeout(release, 1500)
       }, 2000)
+    } else if (hold && commandSent) {
+      clearTimeout(releaseTimer)
+      releaseTimer = setTimeout(release, 1500)
     }
   })
   const offSession = window.turno.pty.onSession((id, s) => {
@@ -288,6 +322,8 @@ function createTerm(params: TerminalParams): TermHandle {
         if (old) window.turno.pty.kill(old)
         clearTimeout(typeTimer)
         commandSent = false
+        held = '' // digitado para a sessao que morreu: nao vai para a nova
+        startHold()
         term.write(`\r\n\x1b[36m── ${l.banner ?? 'continued on another account'} ──\x1b[0m\r\n`)
         pending = l.command
         typeAfter = l.typeAfter
@@ -296,11 +332,31 @@ function createTerm(params: TerminalParams): TermHandle {
     : () => {}
   // O broker pede para escrever no agente (ex.: a nota de passagem antes de trocar de agente)
   const offType = agent ? window.turno.agents.onType((key, text) => void (key === agent.key && ptyId && window.turno.pty.write(ptyId, text + '\r'))) : () => {}
-  const input = term.onData((d) => ptyId && window.turno.pty.write(ptyId, d))
+  const input = term.onData((d) => {
+    if (hold) held += d
+    else if (ptyId) window.turno.pty.write(ptyId, d)
+  })
   term.attachCustomKeyEventHandler((e) => {
-    // Shift+Enter: nova linha no prompt do Claude Code interativo (mesmo valor que o Wave envia).
-    if (e.type === 'keydown' && e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.altKey) {
-      if (ptyId) window.turno.pty.write(ptyId, '\x1b\n')
+    // Shift+Enter: nova linha no prompt do agente. Barra o keydown E o keypress: so o keydown deixava o keypress
+    // do Enter passar e o xterm mandava um Enter normal (o prompt era enviado).
+    if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      if (e.type === 'keydown') {
+        e.preventDefault()
+        if (hold) held += SHIFT_ENTER
+        else if (ptyId) window.turno.pty.write(ptyId, SHIFT_ENTER)
+      }
+      return false
+    }
+    // Ctrl+V cola o texto da area de transferencia (como no Windows Terminal). Antes ia um ^V cru para o programa:
+    // o Claude Code procurava imagem no clipboard (lento) e o texto nunca era colado. Sem texto, segue o ^V.
+    if (e.code === 'KeyV' && e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) {
+      if (e.type === 'keydown') {
+        e.preventDefault()
+        void navigator.clipboard
+          .readText()
+          .catch(() => '')
+          .then((t) => (t ? term.paste(t) : term.input('\x16')))
+      }
       return false
     }
     if (e.type === 'keydown' && e.ctrlKey && !e.shiftKey && e.code === 'KeyF') {

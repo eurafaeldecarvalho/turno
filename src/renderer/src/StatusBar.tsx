@@ -1,58 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useLive } from './liveTerms'
 import { menuKeyNav } from './modalStack'
 import type { AwakeMode, AwakeStatus } from '../../shared/types'
 import { useStore, isActive } from './store'
 import { updateSettings } from './appearance'
-import { openHistory, useTerminalTotal } from './layout'
+import { openHistory, useActiveAgentKey } from './layout'
 import { IconCoffee } from './icons'
-import { useAgents, usageText, usageTone } from './agentStore'
+import { useAgents, useAgentSessions, usageText, usageTone } from './agentStore'
 import { openSettingsModal } from './SettingsModal'
 import { AWAKE_MODES } from './awake'
-
-function fmtMb(kb: number): string {
-  const mb = kb / 1024
-  return mb >= 1000 ? `${(mb / 1024).toFixed(1)} GB` : `${Math.round(mb)} MB`
-}
+import { switchAccount } from './accountSwitch'
 
 function fmtUsd(v: number): string {
   return v > 0 && v < 0.01 ? '<$0.01' : `$${v.toFixed(2)}`
 }
 
-// Segmento de terminais abertos + RAM total dos processos pty.
-function TerminalSegment() {
-  const open = useTerminalTotal()
-  // terminais escondidos (item de pasta fechado na aba) continuam rodando e entram na memoria
-  const hidden = [...useLive().values()].filter((v) => v === 'hidden').length
-  const termCount = open + hidden
-  const [totalKb, setTotalKb] = useState(0)
-
-  useEffect(() => {
-    if (!termCount) { setTotalKb(0); return }
-    let cancelled = false
-    const poll = (): void => {
-      void window.turno.stats.ptyMemory()
-        .then((items) => {
-          if (cancelled) return
-          setTotalKb(items.reduce((s, x) => s + x.memKb, 0))
-        })
-        .catch(() => { if (!cancelled) setTotalKb(0) })
-    }
-    poll()
-    const id = setInterval(poll, 5000)
-    return () => { cancelled = true; clearInterval(id) }
-  }, [termCount])
-
-  if (!termCount) return null
-  return (
-    <span className="sb-item sb-static">
-      {termCount} {termCount === 1 ? 'terminal' : 'terminals'}{hidden > 0 && <span className="sb-dim"> ({hidden} hidden)</span>}
-      {totalKb > 0 && <span className="sb-dim"> · {fmtMb(totalKb)}</span>}
-    </span>
-  )
-}
-
-// Segmento de uso do Claude: custo hoje e na semana.
+// Gasto cobrado por uso (chave de API) hoje e na semana. Runs em assinatura nao gravam custo (nao e gasto).
 function ClaudeUsageSegment() {
   const runs = useStore((s) => s.runs)
 
@@ -73,38 +35,84 @@ function ClaudeUsageSegment() {
   if (!hasCost) return null
 
   return (
-    <span className="sb-item sb-static" title="Claude cost today and this week (Mon–Sun)">
+    <span className="sb-item sb-static" title="Pay-as-you-go API spend today and this week (Mon–Sun). Runs on a subscription plan aren't counted.">
       {fmtUsd(todayCost)} today
       <span className="sb-dim"> · {fmtUsd(weekCost)} this week</span>
     </span>
   )
 }
 
-// Medidor de uso das contas de agentes (5h/7d, vindos do proprio Claude Code a cada resposta)
-function AccountUsageSegment() {
+// Conta ativa: a da aba de agente focada por ultimo (sem aba de agente, a que o proximo agente usaria),
+// com o uso SO dela. Clique abre a troca de conta.
+function ActiveAccountSegment() {
   const st = useAgents()
-  // conta sem login fica de fora (o ranking tambem a ignora): o dado guardado dela nao diz nada sobre o que da para usar
-  const withData = st.accounts.filter((a) => a.enabled && !st.signedOut.includes(a.id) && st.usage[a.id] && st.usage[a.id].state !== 'unknown')
-  if (!withData.length) return null
-  // a conta que seria usada agora (estrategia do Settings); sem nenhuma usavel, a primeira com dado.
-  // A melhor ainda sem dado de uso: mostra ela (neutro), nao o limite de outra conta
-  const bestAcc = st.accounts.find((a) => a.id === st.best)
-  if (bestAcc && !withData.some((a) => a.id === bestAcc.id))
-    return (
-      <button className="sb-item" title={`Next agent opens on ${bestAcc.label}\nClick to manage accounts`} onClick={() => openSettingsModal('agents')}>
-        <span className="dot dot-idle" />
-        {bestAcc.label}
-      </button>
-    )
-  const first = withData.find((a) => a.id === st.best) ?? withData[0]
-  const u = st.usage[first.id]
-  const tip = withData.map((a) => `${a.label}: ${usageText(st.usage[a.id]) || 'no data'}`).join('\n')
+  const sessions = useAgentSessions()
+  const key = useActiveAgentKey()
+  const sess = key ? sessions.find((s) => s.key === key) : undefined
+  const acc = st.accounts.find((a) => a.id === (sess?.accountId ?? st.best))
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent): void => void (!ref.current?.contains(e.target as Node) && setOpen(false))
+    ref.current?.querySelector<HTMLElement>('.sb-pop button:not(:disabled)')?.focus()
+    const keys = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') return void (setOpen(false), ref.current?.querySelector<HTMLElement>('.sb-item')?.focus())
+      menuKeyNav(e, ref.current?.querySelector('.sb-pop') ?? null)
+    }
+    window.addEventListener('mousedown', close)
+    window.addEventListener('keydown', keys)
+    return () => {
+      window.removeEventListener('mousedown', close)
+      window.removeEventListener('keydown', keys)
+    }
+  }, [open])
+  if (!acc) return null
+  const u = st.usage[acc.id]
+  const others = st.accounts.filter((a) => a.id !== acc.id && a.enabled && !st.signedOut.includes(a.id) && (!st.installed.length || st.installed.includes(a.agent)))
   return (
-    <button className="sb-item" title={`${tip}\nClick to manage accounts`} onClick={() => openSettingsModal('agents')}>
-      <span className={`dot dot-${usageTone(u)}`} />
-      {usageText(u)}
-      {withData.length > 1 && <span className="sb-dim"> · +{withData.length - 1}</span>}
-    </button>
+    <div className="sb-awake" ref={ref}>
+      <button
+        className="sb-item"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={sess ? `This agent tab runs on ${acc.label}. Click to switch account.` : `The next agent opens on ${acc.label}. Click to switch or manage accounts.`}
+        onClick={() => setOpen(!open)}
+      >
+        <span className={`dot dot-${usageTone(u)}`} />
+        <span>{acc.label}</span>
+        {usageText(u) && <span className="sb-dim">· {usageText(u)}</span>}
+      </button>
+      {open && (
+        <div className="sb-pop sb-pop-left" role="menu">
+          <div className="sb-pop-title">{sess ? 'Switch this agent tab to' : 'Switch account'}</div>
+          {!sess && <div className="sb-pop-note">Focus an agent tab to move its conversation to another account.</div>}
+          {others.map((a) => (
+            <button
+              key={a.id}
+              role="menuitem"
+              disabled={!sess}
+              onClick={() => {
+                setOpen(false)
+                void switchAccount(a.id, key)
+              }}
+            >
+              <span className={`dot dot-${usageTone(st.usage[a.id])}`} />
+              <span className="sb-opt">
+                <span>{a.label}</span>
+                <small>{usageText(st.usage[a.id]) || 'no usage data yet'}</small>
+              </span>
+            </button>
+          ))}
+          {!others.length && <div className="sb-pop-note">No other account is signed in.</div>}
+          <button role="menuitem" onClick={() => (setOpen(false), openSettingsModal('agents'))}>
+            <span className="sb-opt">
+              <span>Manage accounts…</span>
+            </span>
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -194,9 +202,8 @@ export function StatusBar() {
       <span className="sb-item sb-static">
         {on}/{routines.length} routines on
       </span>
-      <TerminalSegment />
+      <ActiveAccountSegment />
       <ClaudeUsageSegment />
-      <AccountUsageSegment />
       <span className="sb-spacer" />
       <AwakeSegment />
     </footer>

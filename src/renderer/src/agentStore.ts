@@ -19,6 +19,8 @@ export async function initAgents(): Promise<void> {
 }
 
 const sub = (cb: () => void): (() => void) => (subs.add(cb), () => subs.delete(cb))
+export const subscribeAgents = sub
+export const getAgentSessions = (): AgentSessionInfo[] => sessions
 export const useAgents = (): AgentsState => useSyncExternalStore(sub, () => state)
 export const useAgentSessions = (): AgentSessionInfo[] => useSyncExternalStore(sub, () => sessions)
 export const getAgentsState = (): AgentsState => state

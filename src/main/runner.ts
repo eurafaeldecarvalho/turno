@@ -370,6 +370,7 @@ export function startRun(o: StartOptions): string {
   let rateLimited = false
   const startedMs = Date.now()
   let lastSessionId: string | undefined // p/ retomar (--resume) se pausar por limite
+  let billed = false // so conta gasto cobrado por uso; o custo que o CLI calcula numa assinatura nao e gasto
   let maxCost = 0
   let maxSteps = 0
   const policies = o.policies ?? []
@@ -450,7 +451,14 @@ export function startRun(o: StartOptions): string {
         void stopRun(runId, 'stopped')
       }
     }
-    for (const x of summarize(line)) emit(x.kind, x.summary, { detail: x.detail, ref: x.ref })
+    if (line.includes('"subtype":"init"')) {
+      try {
+        billed = isUsageBilled(JSON.parse(line).apiKeySource, conn.kind)
+      } catch {
+        /* linha truncada */
+      }
+    }
+    for (const x of summarize(line)) emit(x.kind, x.kind === 'final' && !billed ? stripCost(x.summary) : x.summary, { detail: x.detail, ref: x.ref })
   })
   child.stderr!.on('data', (d: Buffer) => {
     bumpIdle()
@@ -505,7 +513,7 @@ export function startRun(o: StartOptions): string {
       ended_at: a.pauseUntil ? null : new Date().toISOString(),
       resume_at: a.pauseUntil ?? null,
       exit_code: code,
-      cost_usd: typeof result?.total_cost_usd === 'number' ? result.total_cost_usd : null,
+      cost_usd: billed && typeof result?.total_cost_usd === 'number' ? result.total_cost_usd : null,
       session_id: result?.session_id ?? lastSessionId ?? null,
       result: a.stopDetail ?? (result?.result ? String(result.result).slice(0, 20000) : (err ?? null)),
       ...(cwdOverride ? { cwd: cwdOverride } : {}),
@@ -561,9 +569,30 @@ export async function stopAllRuns(): Promise<void> {
   await Promise.all([...active.keys()].map((id) => stopRun(id)))
 }
 
+// Chave de API da Anthropic = cobrado por uso. "none" e login de assinatura; endpoint (Ollama, OpenRouter...) recebe
+// do CLI um preco calculado pela tabela da Anthropic, que nao e o que o provedor cobra.
+export const isUsageBilled = (apiKeySource: unknown, connKind: string): boolean =>
+  connKind === 'claude' && typeof apiKeySource === 'string' && !!apiKeySource && apiKeySource !== 'none'
+const stripCost = (s: string): string => s.replace(/ · ≈\$[\d.]+$/, '')
+
+// Runs gravadas antes desta regra: zera o custo das que rodaram numa assinatura (o init do stream diz a origem da chave).
+export function clearSubscriptionCosts(ids: string[]): void {
+  for (const id of ids) {
+    try {
+      const head = readFileSync(join(runsDir, id, 'events.ndjson'), 'utf8').slice(0, 200_000)
+      const src = /"apiKeySource":"([^"]*)"/.exec(head)?.[1]
+      const conn = getSettings().connections.find((c) => c.id === getRun(id)?.profile)
+      if (!isUsageBilled(src, conn?.kind ?? 'endpoint')) updateRun(id, { cost_usd: null })
+    } catch {
+      updateRun(id, { cost_usd: null }) // sem log da run: nao da para provar que foi cobrada
+    }
+  }
+}
+
 export function readRunEvents(runId: string): RunEvent[] {
   const f = join(runsDir, runId, 'turno-events.ndjson')
   if (!existsSync(f)) return []
+  const unbilled = getRun(runId)?.cost_usd == null
   return readFileSync(f, 'utf8')
     .split('\n')
     .filter(Boolean)
@@ -571,6 +600,7 @@ export function readRunEvents(runId: string): RunEvent[] {
       try {
         const ev = JSON.parse(l) as RunEvent
         if (ev.kind === 'final') ev.summary = ev.summary.replace('ended with an error (success)', 'ended with an error').replace(/ 1 steps /, ' 1 step ')
+        if (ev.kind === 'final' && unbilled) ev.summary = stripCost(ev.summary)
         // runs gravadas antes do app ficar todo em ingles (so mensagens do sistema, nunca o texto do agente)
         if (ev.kind === 'final' || ev.kind === 'exit' || ev.kind === 'init') ev.summary = ev.summary
           .replace(/^turno concluído/, 'turn completed')
