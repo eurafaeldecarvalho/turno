@@ -13,6 +13,7 @@ import { onSettings, useSettings } from '../appearance'
 import { terminalOptions } from '../terminalOptions'
 import { itemExists, patchItem } from '../sidebarStore'
 import { killParked, park, setLive, unpark } from '../liveTerms'
+import { ackNeeds } from '../agentStore'
 import type { TermSession } from '../../../shared/types'
 import { themeById } from '../../../shared/themes'
 import { IconChevron, IconClose } from '../icons'
@@ -128,6 +129,7 @@ function createTerm(params: TerminalParams): TermHandle {
       sel.dispose()
       el.removeEventListener('contextmenu', onContext)
       input.dispose()
+      keyAck.dispose()
       offData()
       offSession()
       offExit()
@@ -332,6 +334,9 @@ function createTerm(params: TerminalParams): TermHandle {
     : () => {}
   // O broker pede para escrever no agente (ex.: a nota de passagem antes de trocar de agente)
   const offType = agent ? window.turno.agents.onType((key, text) => void (key === agent.key && ptyId && window.turno.pty.write(ptyId, text + '\r'))) : () => {}
+  // tecla na aba = respondeu: o "Needs you" dela sai da sidebar (onData nao serve: o xterm manda sozinho o aviso
+  // de foco/blur que o Claude Code pede, e trocar de aba ja "respondia")
+  const keyAck = term.onKey(() => agent && ackNeeds(agent.key))
   const input = term.onData((d) => {
     if (hold) held += d
     else if (ptyId) window.turno.pty.write(ptyId, d)
@@ -635,7 +640,7 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
   }
   return (
     <div className="term-wrap">
-      <div ref={host} className="term-host" onMouseDown={() => api.setActive()} />
+      <div ref={host} className="term-host" onMouseDown={() => (api.setActive(), ackNeeds(paramsOf({ params, api }).agent?.key))} />
       {ai !== null && (
         <div className={`term-find term-ai ${aiLow ? 'at-bottom' : ''}`}>
           <span className="muted small" title="connection used for the suggestion">via {aiConnName || '—'}</span>

@@ -73,3 +73,16 @@ export const STATUS_TEXT: Record<AgentSessionInfo['status'], string> = {
   parked: 'all accounts at limit',
 }
 export const needsYou = (s?: AgentSessionInfo): boolean => !!s && (s.status === 'needs-input' || s.status === 'needs-permission' || s.status === 'error' || s.status === 'parked')
+
+// "Needs you" visto: some da sidebar quando a pessoa clica nele ou vai para a aba; um pedido NOVO (outro status
+// ou outra mensagem) aparece de novo.
+const acked = new Map<string, string>()
+const needSig = (s: AgentSessionInfo): string => `${s.status}|${s.message ?? ''}`
+export function ackNeeds(key: string | undefined): void {
+  const s = key ? sessions.find((x) => x.key === key) : undefined
+  if (!s || !needsYou(s) || acked.get(s.key) === needSig(s)) return
+  acked.set(s.key, needSig(s))
+  sessions = [...sessions] // snapshot novo: quem le a lista re-renderiza
+  emit()
+}
+export const needsYouUnseen = (s?: AgentSessionInfo): boolean => !!s && needsYou(s) && acked.get(s.key) !== needSig(s)

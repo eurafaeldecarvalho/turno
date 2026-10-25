@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, type MouseEvent as RMouseEvent, type ReactNode } from 'react'
 import { FolderAgentDialog } from './FolderAgentDialog'
-import { needsYou, STATUS_TEXT, usageText, useAgents, useAgentSessions } from './agentStore'
+import { ackNeeds, needsYou, needsYouUnseen, STATUS_TEXT, usageText, useAgents, useAgentSessions } from './agentStore'
 import { AgentButton } from './AgentButton'
 import { toast } from './Toast'
 import { createPortal } from 'react-dom'
@@ -787,8 +787,15 @@ Drag onto a folder to keep it` : tab.title}>
 
 // "Precisa de voce": agentes esperando resposta, permissao, com erro ou sem conta livre (inclui abas de pastas).
 function NeedsYou() {
-  const sessions = useAgentSessions().filter(needsYou)
+  const sessions = useAgentSessions().filter(needsYouUnseen)
   useOpenTabs() // re-renderiza quando as abas mudam
+  // ir para a aba (clique na aba, atalho, paleta) conta como visto
+  const api = dockApi()
+  useEffect(() => {
+    if (!api) return
+    const d = api.onDidActivePanelChange(({ panel: p }) => ackNeeds(p ? (paramsOf(p) as { agent?: { key: string } }).agent?.key : undefined))
+    return () => d.dispose()
+  }, [api])
   const rows = sessions
     .map((s) => ({ s, panel: dockApi()?.panels.find((p) => (paramsOf(p) as { agent?: { key: string } }).agent?.key === s.key) }))
     .filter((r) => r.panel)
@@ -799,7 +806,7 @@ function NeedsYou() {
       <ul className="routines">
         {rows.map(({ s, panel }) => (
           <li key={s.key} className="routine">
-            <button className="routine-main" onClick={() => focusTab(panel!.id)} title={s.message ?? STATUS_TEXT[s.status]}>
+            <button className="routine-main" onClick={() => (ackNeeds(s.key), focusTab(panel!.id))} title={s.message ?? STATUS_TEXT[s.status]}>
               <span className="item-icon"><span className={`tab-status st-${s.status}`} aria-hidden /></span>
               <span className="routine-text">
                 <span className="routine-name">{panel!.title}</span>

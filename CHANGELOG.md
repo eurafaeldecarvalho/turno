@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.9 (2026-10-25)
+
+### Sidebar
+- "Needs you" entries clear once you've seen them: clicking the entry, going to its tab, or clicking or typing in that tab removes it. A new request from the same agent (another permission, another question) shows up again.
+
 ## 0.9.8 (2026-10-25)
 
 ### Status bar

@@ -7,6 +7,12 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.9',
+    items: [
+      { title: '"Needs you" clears when seen', text: 'Click the entry or go to its tab and it leaves the sidebar. A new request from that agent shows up again.' },
+    ],
+  },
+  {
     version: '0.9.8',
     items: [
       { title: 'Time until reset', text: 'The status bar shows how long until the 5-hour and 7-day limits of the active account reset, next to the usage percentage.' },
