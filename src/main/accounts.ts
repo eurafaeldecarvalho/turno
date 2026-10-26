@@ -540,7 +540,8 @@ function removeHome(home: string): void {
 
 // ---------- conexoes de API no ranking ----------
 // Cada conexao endpoint (Cohere, OpenRouter, Ollama...) vira uma conta do Claude Code no ranking: o mesmo CLI, apontado
-// para o provedor pelo env. Entra no fim, ligada; o usuario reordena/desliga como as assinaturas. Conexao removida sai.
+// para o provedor pelo env. Entra no fim (ligada, menos servidor local); o usuario reordena/liga/desliga como as
+// assinaturas. Conexao removida sai.
 // A fonte vem de fora (settings + cofre) para este modulo nao depender do safeStorage do Electron.
 interface ConnectionSource {
   list: () => Connection[] | undefined // undefined = settings.json nao pode ser lido agora (nada muda no ranking)
@@ -569,7 +570,9 @@ export function syncConnectionAccounts(opts: { edited?: boolean } = {}): void {
       if (cur.label !== c.name) (cur.label = c.name), (changed = true)
       continue
     }
-    s.accounts.push({ id: connectionAccountId(c.id), agent: 'claude', connection: c.id, label: c.name, rank: nextRank(), enabled: true, home: null, createdAt: new Date().toISOString() })
+    // servidor local (bootCommand, ex. o Ollama que ja vem de fabrica) entra DESLIGADO: sem ele instalado, cair nele no
+    // limite trocaria "esperar o reset" por um servidor morto. Provedor de API que o usuario adicionou entra ligado.
+    s.accounts.push({ id: connectionAccountId(c.id), agent: 'claude', connection: c.id, label: c.name, rank: nextRank(), enabled: !c.bootCommand, home: null, createdAt: new Date().toISOString() })
     changed = true
   }
   if (opts.edited)

@@ -354,6 +354,16 @@ describe('conexoes (API) no ranking de contas', () => {
     expect(m.effectiveUsage('conn-cohere').state).toBe('unknown')
   })
 
+  it('naoDeveTrocarParaOOllamaDeFabricaQuandoUsuarioNaoConfigurouNada', async () => {
+    const { DEFAULT_CONNECTIONS } = await import('../providers')
+    seed([acc('a', 1)])
+    const { m } = await load(DEFAULT_CONNECTIONS)
+    m.syncConnectionAccounts()
+    expect(m.getAccount('conn-qwen-local')?.enabled).toBe(false) // aparece, mas desligada: o usuario liga se quiser
+    m.markAccount('a', 'exhausted', 'usage limit reached', new Date(Date.now() + 3600_000).toISOString())
+    expect(m.pickAccount({ agent: 'claude', exclude: ['a'] })).toBeUndefined()
+  })
+
   it('deveRecusarRemoverContaDeConexaoPeloRanking', async () => {
     seed([])
     const { m } = await load([cohere])
