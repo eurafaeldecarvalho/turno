@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.13 (2026-10-26)
+
+### Agents
+- New agents and chats open in a start folder you choose: Settings › Agents & accounts › Start folder, or the folder in the status bar (Choose folder… / Use home folder). Empty means your home folder, as before. Tasks and sidebar folders still open in their own folder; a start folder that no longer exists is flagged and agents open in home.
+
 ## 0.9.12 (2026-10-26)
 
 ### Accounts

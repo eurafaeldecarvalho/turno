@@ -7,6 +7,10 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.13',
+    items: [{ title: 'Choose where agents open', text: 'Pick a start folder for new agents and chats in Settings › Agents & accounts, or click the folder in the status bar.' }],
+  },
+  {
     version: '0.9.12',
     items: [{ title: 'Tidier account list', text: 'The Subscription/API badge and "opens next" now sit side by side in Agents & accounts.' }],
   },
