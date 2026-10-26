@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { defaultShell, preferredShell, resolveShell } from '../platform'
+import { defaultShell, preferredShell, resolveShell, savedShell } from '../platform'
 
 describe('defaultShell (fallback puro por plataforma)', () => {
   it('Windows -> pwsh.exe', () => {
@@ -50,5 +50,23 @@ describe('resolveShell (shell salvo que nao existe nesta maquina cai no preferid
   })
   it('naoDeveMexerNoWindows (ConPTY resolve pelo PATH do Windows)', () => {
     expect(resolveShell('pwsh.exe', { platform: 'win32', shellEnv: '', pathEnv: '', exists: () => false })).toBe('pwsh.exe')
+  })
+})
+
+describe('savedShell (o que vale do settings: vazio = padrao do sistema)', () => {
+  const only = (...paths: string[]) => (p: string): boolean => paths.includes(p)
+  const linux = { platform: 'linux' as const, shellEnv: '/usr/bin/fish', pathEnv: '/usr/bin:/bin' }
+
+  it('deveVirarPadraoDoSistemaQuandoShellSalvoNaoRodaAqui', () => {
+    expect(savedShell('pwsh.exe', { ...linux, exists: only('/usr/bin/fish') })).toBe('')
+  })
+  it('deveManterEscolhaDoUsuarioQueRodaAqui', () => {
+    expect(savedShell('/usr/bin/zsh', { ...linux, exists: only('/usr/bin/zsh') })).toBe('/usr/bin/zsh')
+  })
+  it('deveManterVazioComoPadraoDoSistema', () => {
+    expect(savedShell('', { ...linux, exists: only('/usr/bin/fish') })).toBe('')
+  })
+  it('naoDeveMexerNoWindows', () => {
+    expect(savedShell('pwsh.exe', { platform: 'win32', shellEnv: '', pathEnv: '', exists: () => false })).toBe('pwsh.exe')
   })
 })

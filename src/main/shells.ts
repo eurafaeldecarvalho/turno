@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import type { ShellInfo } from '../shared/types'
-import { IS_WIN } from './platform'
+import { IS_WIN, defaultShell } from './platform'
 
 function which(exe: string): string | undefined {
   try {
@@ -46,13 +46,13 @@ export function listFonts(): string[] {
 
 // Shells disponiveis, na ordem de preferencia (Windows e POSIX).
 export function detectShells(): ShellInfo[] {
-  const out: ShellInfo[] = []
+  // path vazio = padrao do sistema, resolvido ao abrir o terminal ($SHELL no POSIX)
+  const system = (!IS_WIN && process.env.SHELL) || defaultShell()
+  const out: ShellInfo[] = [{ id: 'system', name: `System default (${system.split(/[\\/]/).pop()})`, path: '' }]
   const add = (id: string, name: string, path: string | undefined): void => {
     if (path && existsSync(path)) out.push({ id, name, path })
   }
   if (!IS_WIN) {
-    // POSIX: o shell do usuario ($SHELL) primeiro, depois os comuns.
-    if (process.env.SHELL && existsSync(process.env.SHELL)) out.push({ id: 'user', name: `Default (${process.env.SHELL.split('/').pop()})`, path: process.env.SHELL })
     add('bash', 'Bash', existsSync('/bin/bash') ? '/bin/bash' : '/usr/bin/bash')
     add('zsh', 'Zsh', existsSync('/bin/zsh') ? '/bin/zsh' : '/usr/bin/zsh')
     add('fish', 'Fish', ['/usr/bin/fish', '/usr/local/bin/fish', '/opt/homebrew/bin/fish'].find(existsSync))

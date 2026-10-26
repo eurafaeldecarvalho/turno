@@ -42,3 +42,10 @@ export function resolveShell(requested: string | undefined, env: ShellEnv): stri
   if (env.shellEnv && runnable(env.shellEnv, env)) return env.shellEnv
   return defaultShell(env.platform)
 }
+
+// Shell salvo no settings: vazio = padrao do sistema (resolvido ao abrir o terminal). Um salvo que nao roda
+// nesta maquina (ex.: settings vindo do Windows) volta a ser o padrao do sistema, em vez de um valor morto na tela.
+export function savedShell(saved: string, env: ShellEnv): string {
+  if (!saved || env.platform === 'win32') return saved
+  return runnable(saved, env) ? saved : ''
+}

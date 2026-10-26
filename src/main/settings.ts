@@ -4,7 +4,8 @@ import { readJson, reportBadShape, writeJsonAtomic } from './jsonStore'
 import { THEMES } from '../shared/themes'
 import type { Settings } from '../shared/types'
 import { DEFAULT_CONNECTIONS } from './providers'
-import { preferredShell } from './platform'
+import { savedShell } from './platform'
+import { existsSync } from 'node:fs'
 
 const file = (): string => join(app.getPath('userData'), 'settings.json')
 
@@ -19,7 +20,7 @@ export const TERMINAL_DEFAULTS: Settings['terminal'] = {
   scrollback: 10000,
   copyOnSelect: true,
   rightClickPaste: true,
-  defaultShell: preferredShell(),
+  defaultShell: '', // vazio = shell padrao do sistema; o usuario troca se quiser
   drawBoldInBright: true,
   cursorWidth: 1,
   minimumContrastRatio: 1,
@@ -75,7 +76,7 @@ const VALID_TERM: Record<string, (v: unknown) => boolean> = {
   windowOpacity: range(0.3, 1),
   fontWeight: oneOf('normal', '500', '600'),
   cursorStyle: oneOf('block', 'bar', 'underline'),
-  defaultShell: nonEmpty,
+  defaultShell: (v) => typeof v === 'string',
   fontFamily: nonEmpty,
 }
 
@@ -117,7 +118,10 @@ function load(): void {
       if (c.bad.length && !reportBadShape(file(), c.bad)) blocked = true
     }
   }
-  cache = { ...defaults(), ...saved, terminal: { ...TERMINAL_DEFAULTS, ...(saved.terminal ?? {}) } }
+  const terminal = { ...TERMINAL_DEFAULTS, ...(saved.terminal ?? {}) }
+  const env = { platform: process.platform, shellEnv: process.env.SHELL, pathEnv: process.env.PATH, exists: existsSync }
+  terminal.defaultShell = savedShell(terminal.defaultShell, env)
+  cache = { ...defaults(), ...saved, terminal }
 }
 
 export function getSettings(): Settings {

@@ -392,7 +392,7 @@ function createTerm(params: TerminalParams): TermHandle {
   // O comando do Turno vai quando o shell mostra o prompt (OSC 9;9, pwsh/cmd com a integracao do Turno): mandado antes,
   // ele era lido "adiantado" e o 1o prompt chegava DEPOIS, como se o agente ja tivesse saido. Shell sem esse aviso
   // (bash): pouco depois da primeira saida. Teto: o shell com aviso que demora (perfil lento) recebe assim mesmo.
-  const shellPath = params.shell || getSettingsSnapshot()?.terminal.defaultShell || 'pwsh.exe'
+  const shellPath = params.shell || getSettingsSnapshot()?.terminal.defaultShell || (window.turno.winBuild ? 'pwsh.exe' : '')
   const promptAware = /pwsh|powershell/i.test(shellPath) || /cmd\.exe$/i.test(shellPath)
   let pendingTimer: ReturnType<typeof setTimeout> | undefined
   let promptTimer: ReturnType<typeof setTimeout> | undefined
