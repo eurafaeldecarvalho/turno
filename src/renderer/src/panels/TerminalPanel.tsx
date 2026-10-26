@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { defaultPermissionMode } from '../../../shared/claudeCommand'
 import { isModalOpen } from '../modalStack'
 import type { IDockviewPanelProps } from 'dockview-react'
 import { Terminal } from '@xterm/xterm'
@@ -63,19 +64,8 @@ const SHIFT_ENTER = '\x1b\r' // Alt+Enter: nova linha no Claude Code e nos outro
 // eslint-disable-next-line no-control-regex
 const TERMINAL_REPLY = /^(\x1b\[\??[\d;]*[Rn]|\x1b\[[?>=]?[\d;]*c|\x1b\[\?[\d;]*\$y|\x1b\[\?\d*u|\x1b\[[IO]|\x1b\][^\x07\x1b]*(\x07|\x1b\\)|\x1bP[^\x1b]*\x1b\\)+$/
 
-// Claude aberto pelo Turno comeca no modo de permissao normal, mesmo com defaultMode "bypassPermissions" no
-// settings.json do usuario (copiado para as contas isoladas). Comando que ja escolhe o modo fica como esta.
-// So olha as flags FORA de aspas: o prompt (texto do usuario, de uma tarefa, de um repo) pode citar a flag.
-// Vale para `claude` em qualquer posicao de comando (`cd x; claude`, `& claude.exe`), nao so no comeco da linha.
-const CLAUDE_AT_COMMAND = /(^\s*|[;&|(]\s*|&\s+)(claude(?:\.exe)?)(?=\s|$|;|&|\|)/g
-export const defaultPermissionMode = (cmd: string): string => {
-  const bare = cmd.replace(/"[^"]*"|'[^']*'/g, '')
-  if (/--permission-mode\b|--dangerously-skip-permissions\b/.test(bare) || !new RegExp(CLAUDE_AT_COMMAND.source).test(bare)) return cmd
-  // so fora das aspas (o texto do prompt nao muda); "^" so vale no comeco da linha, nao logo depois de uma aspa
-  return cmd.replace(/("[^"]*"|'[^']*')|([^"']+)/g, (_m, quoted: string | undefined, plain: string, at: number) =>
-    quoted ?? plain.replace(CLAUDE_AT_COMMAND, (x, pre: string, name: string, i: number) => (i === 0 && !pre.trim() && at > 0 ? x : `${pre}${name} --permission-mode default`)),
-  )
-}
+// Modo de permissao do Claude aberto pelo Turno: ver shared/claudeCommand.ts
+export { defaultPermissionMode }
 
 // Colar texto no pty. Com bracketed paste (Claude Code e outros TUIs) vai inteiro e marcado como colagem, sem
 // caracteres de controle que fechariam a colagem antes da hora.
