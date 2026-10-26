@@ -27,6 +27,8 @@ const MIGRATIONS = [
   `ALTER TABLE runs ADD COLUMN parent_id TEXT;`,
   `ALTER TABLE runs ADD COLUMN resume_at TEXT;`,
   `UPDATE runs SET status='aborted' WHERE status='over_budget';`,
+  // custo que o CLI informa (teto de custo das rotinas) separado do gasto cobrado (cost_usd, so chave de API)
+  `ALTER TABLE runs ADD COLUMN cli_cost_usd REAL; UPDATE runs SET cli_cost_usd = cost_usd;`,
 ]
 
 export function openDb(file: string): void {
@@ -78,7 +80,7 @@ export function insertRun(r: {
   )
 }
 
-const UPDATABLE = ['status', 'started_at', 'ended_at', 'skip_reason', 'exit_code', 'cost_usd', 'session_id', 'result', 'resume_at', 'cwd'] as const
+const UPDATABLE = ['status', 'started_at', 'ended_at', 'skip_reason', 'exit_code', 'cost_usd', 'cli_cost_usd', 'session_id', 'result', 'resume_at', 'cwd'] as const
 type Patch = Partial<Pick<RunRecord, (typeof UPDATABLE)[number]>>
 
 export function updateRun(id: string, patch: Patch): void {
@@ -90,7 +92,7 @@ export function updateRun(id: string, patch: Patch): void {
   )
 }
 
-export const runsWithCost = (): Array<{ id: string }> => db.prepare('SELECT id FROM runs WHERE cost_usd IS NOT NULL').all() as Array<{ id: string }>
+export const allRunIds = (): string[] => (db.prepare('SELECT id FROM runs').all() as Array<{ id: string }>).map((r) => r.id)
 
 export function getRun(id: string): RunRecord | undefined {
   return db.prepare('SELECT * FROM runs WHERE id = ?').get(id) as RunRecord | undefined

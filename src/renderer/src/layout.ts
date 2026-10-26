@@ -242,10 +242,37 @@ export function openAgentChat(cwd?: string, refId?: string): void {
   api.addPanel({ id: uid('chat'), component: 'chat', tabComponent: 'tab', title: `chat ${n}`, params: { kind: 'chat', cwd }, ...(ref ? { position: { referencePanel: ref } } : {}) })
 }
 
+// Teclas digitadas logo depois de pedir uma aba nova (Ctrl+Shift+N...), antes de ela existir na tela: o foco ainda
+// nao esta em lugar nenhum e elas sumiam. Guardadas aqui (so caracteres, nunca Enter) e entregues ao terminal novo.
+let early: { at: number; buf: string } | undefined
+const EARLY_MS = 800
+if (typeof window !== 'undefined')
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      if (!early || Date.now() - early.at > EARLY_MS) return void (early = undefined)
+      const t = document.activeElement
+      if (t && t !== document.body && t.tagName !== 'HTML') return // algo ja tem o foco (inclusive o terminal novo)
+      if (e.key.length !== 1 || e.ctrlKey || e.altKey || e.metaKey) return
+      early.buf += e.key
+      e.preventDefault()
+    },
+    true,
+  )
+// Esvazia o que ja foi guardado; a captura segue ate o fim da janela (o terminal chama de novo quando recebe o foco)
+export function takeEarlyKeys(): string {
+  if (!early) return ''
+  const b = early.buf
+  early.buf = ''
+  if (Date.now() - early.at > EARLY_MS) early = undefined
+  return b
+}
+
 export function openTerminal(dir?: Dir, params: TerminalParams = {}, title?: string, refId?: string, fixedId?: string): void {
   if (!api) return
   const existing = fixedId ? api.getPanel(fixedId) : undefined
   if (existing) return existing.api.setActive()
+  early = { at: Date.now(), buf: '' }
   const label = params.agent ? (params.agent.agent ? (agentDef(params.agent.agent)?.name ?? params.agent.agent).toLowerCase() : 'agent') : params.profile === 'qwen-local' ? 'qwen' : params.profile === 'claude-max' ? 'claude' : 'terminal'
   termCounts[label] = (termCounts[label] ?? 0) + 1
   // pula nomes ja usados (aba aberta ou item salvo numa pasta): dois "terminal 4" diferentes confundiam

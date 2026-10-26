@@ -4,12 +4,12 @@ import { randomUUID } from 'node:crypto'
 import { createInterface } from 'node:readline'
 import { mkdirSync, createWriteStream, existsSync, readFileSync, realpathSync, rmSync, writeFileSync, WriteStream } from 'node:fs'
 import { join, relative } from 'node:path'
-import type { RunEvent, RunEventKind, RunRecord, RunRequest, RunStatus, RunTrigger } from '../shared/types'
+import type { Connection, RunEvent, RunEventKind, RunRecord, RunRequest, RunStatus, RunTrigger } from '../shared/types'
 import { childEnv } from './env'
 import { getRun, insertRun, pruneRuns, updateRun } from './db'
 import { release } from './locks'
 import { getSettings } from './settings'
-import { effectiveModel, requireConnection, resolveProviderEnv } from './providers'
+import { effectiveModel, isAnthropicApi, requireConnection, resolveProviderEnv } from './providers'
 import { evaluateThresholds, matchedRateLimit, parseRateLimit, type AbortPolicy } from './abort'
 import { wrapForSandbox } from './sandbox'
 import { canCleanup, createWorktree, deleteBranch, isManagedWorktreePath, removeWorktree, resolveRepoRoot, worktreeBase, worktreeBranch, worktreeCwd, worktreeDecision, worktreeHead, worktreeMainRoot, worktreeStatus, worktreeTeardown } from './worktree'
@@ -453,7 +453,9 @@ export function startRun(o: StartOptions): string {
     }
     if (line.includes('"subtype":"init"')) {
       try {
-        billed = isUsageBilled(JSON.parse(line).apiKeySource, conn.kind)
+        // so o evento de inicio de verdade (nivel de cima): uma ferramenta pode ter "subtype":"init" no proprio input
+        const e = JSON.parse(line)
+        if (e?.type === 'system' && e.subtype === 'init') billed = isUsageBilled(e.apiKeySource, conn)
       } catch {
         /* linha truncada */
       }
@@ -514,6 +516,7 @@ export function startRun(o: StartOptions): string {
       resume_at: a.pauseUntil ?? null,
       exit_code: code,
       cost_usd: billed && typeof result?.total_cost_usd === 'number' ? result.total_cost_usd : null,
+      cli_cost_usd: typeof result?.total_cost_usd === 'number' ? result.total_cost_usd : null,
       session_id: result?.session_id ?? lastSessionId ?? null,
       result: a.stopDetail ?? (result?.result ? String(result.result).slice(0, 20000) : (err ?? null)),
       ...(cwdOverride ? { cwd: cwdOverride } : {}),
@@ -569,23 +572,50 @@ export async function stopAllRuns(): Promise<void> {
   await Promise.all([...active.keys()].map((id) => stopRun(id)))
 }
 
-// Chave de API da Anthropic = cobrado por uso. "none" e login de assinatura; endpoint (Ollama, OpenRouter...) recebe
-// do CLI um preco calculado pela tabela da Anthropic, que nao e o que o provedor cobra.
-export const isUsageBilled = (apiKeySource: unknown, connKind: string): boolean =>
-  connKind === 'claude' && typeof apiKeySource === 'string' && !!apiKeySource && apiKeySource !== 'none'
+// Chave de API da Anthropic = cobrado por uso. "none" e login de assinatura; endpoint de outro provedor (Ollama,
+// OpenRouter...) recebe do CLI um preco calculado pela tabela da Anthropic, que nao e o que o provedor cobra.
+// Endpoint que e a propria API da Anthropic conta como cobrado.
+export const isUsageBilled = (apiKeySource: unknown, conn: Connection | undefined): boolean =>
+  !!conn && (conn.kind === 'claude' || isAnthropicApi(conn, connectionToken(conn))) && typeof apiKeySource === 'string' && !!apiKeySource && apiKeySource !== 'none'
 const stripCost = (s: string): string => s.replace(/ · ≈\$[\d.]+$/, '')
 
-// Runs gravadas antes desta regra: zera o custo das que rodaram numa assinatura (o init do stream diz a origem da chave).
-export function clearSubscriptionCosts(ids: string[]): void {
+// Runs gravadas antes destas regras (inclusive pela limpeza mais agressiva da 0.9.9): refaz os dois custos a partir
+// do log da propria run. cli_cost_usd = o que o CLI informou (teto de custo); cost_usd = so o que foi cobrado por uso.
+// Sem log: nada muda. Sem a origem da chave ou com a conexao apagada: o gasto fica como esta (pode ser real).
+// Roda em segundo plano depois que o app abriu: cede a vez entre uma run e outra (logs grandes, muitas runs).
+export async function repairRunCosts(ids: string[]): Promise<void> {
+  const billedCache = new Map<string, boolean>() // conexao|origem da chave: o token da conexao e lido uma vez so
+  const billed = (src: string, conn: Connection): boolean => {
+    const k = `${conn.id}|${src}`
+    if (!billedCache.has(k)) billedCache.set(k, isUsageBilled(src, conn))
+    return billedCache.get(k)!
+  }
   for (const id of ids) {
+    await new Promise((r) => setImmediate(r))
+    let log = ''
     try {
-      const head = readFileSync(join(runsDir, id, 'events.ndjson'), 'utf8').slice(0, 200_000)
-      const src = /"apiKeySource":"([^"]*)"/.exec(head)?.[1]
-      const conn = getSettings().connections.find((c) => c.id === getRun(id)?.profile)
-      if (!isUsageBilled(src, conn?.kind ?? 'endpoint')) updateRun(id, { cost_usd: null })
+      log = readFileSync(join(runsDir, id, 'events.ndjson'), 'utf8')
     } catch {
-      updateRun(id, { cost_usd: null }) // sem log da run: nao da para provar que foi cobrada
+      continue
     }
+    // so eventos de nivel de cima (result / system init): o input de uma ferramenta tambem e JSON e poderia forjar campos
+    let total: number | undefined
+    let src: string | undefined
+    for (const line of log.split('\n')) {
+      if (!line.includes('"total_cost_usd"') && !line.includes('"apiKeySource"')) continue
+      try {
+        const e = JSON.parse(line)
+        if (e?.type === 'result' && typeof e.total_cost_usd === 'number' && Number.isFinite(e.total_cost_usd)) total = Math.max(total ?? 0, e.total_cost_usd)
+        else if (e?.type === 'system' && e.subtype === 'init' && typeof e.apiKeySource === 'string' && src === undefined) src = e.apiKeySource
+      } catch {
+        /* linha truncada */
+      }
+    }
+    if (total !== undefined) updateRun(id, { cli_cost_usd: total })
+    if (src === undefined) continue
+    const conn = getSettings().connections.find((c) => c.id === getRun(id)?.profile)
+    if (src === 'none' || (conn && !billed(src, conn))) updateRun(id, { cost_usd: null })
+    else if (conn && total !== undefined) updateRun(id, { cost_usd: total })
   }
 }
 

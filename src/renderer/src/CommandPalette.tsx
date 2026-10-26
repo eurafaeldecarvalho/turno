@@ -8,7 +8,7 @@ import { getStore } from './store'
 import { getSidebarState, openItem } from './sidebarStore'
 import { getSettingsSnapshot, updateSettings } from './appearance'
 import { getAgentSession, getAgentsState as getAgentsSnapshot, usageText } from './agentStore'
-import { switchAccount } from './accountSwitch'
+import { announceSwitch, switchAccount } from './accountSwitch'
 import { agentDef } from '../../shared/agents'
 import { shortcutFor } from './shortcuts'
 import { AWAKE_MODES } from './awake'
@@ -24,6 +24,7 @@ interface Command {
   hint?: string
   boost?: number // destinos principais (paginas do Settings) antes dos itens dentro delas
   run: () => void
+  pre?: () => void // roda no clique, antes de a paleta fechar (o run vem depois)
 }
 
 let open = false
@@ -56,6 +57,8 @@ function buildCommands(): Command[] {
     const u = ag.usage[a.id]
     const note = u?.state === 'exhausted' ? ' (at its limit)' : usageText(u) ? ` (${usageText(u)})` : ''
     add('Switch', `Switch account to ${a.label}${note}`, () => void switchAccount(a.id, key), undefined, `switch change account ${agentDef(a.agent)?.name ?? ''}`, `switch:${a.id}`)
+    // a aba ja comeca a guardar o teclado no clique: o que fosse digitado nos 60 ms ate o comando rodar ia para o Claude que fecha
+    c[c.length - 1].pre = () => announceSwitch(key)
   }
   add('New', 'New chat', () => openAgentChat())
   add('New', 'New terminal', () => openTerminal(), shortcutFor('New terminal'))
@@ -197,6 +200,7 @@ function Palette() {
     } catch {
       /* sem localStorage: segue sem recentes */
     }
+    c.pre?.()
     closePalette()
     // roda depois de o modal sair (o foco volta para quem abriu e o comando pode abrir outro modal)
     setTimeout(c.run, 60)

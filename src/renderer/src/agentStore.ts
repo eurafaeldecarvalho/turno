@@ -15,7 +15,12 @@ export async function initAgents(): Promise<void> {
   sessions = ss
   emit()
   window.turno.agents.onState((x) => ((state = x), emit()))
-  window.turno.agents.onSessions((x) => ((sessions = x), emit()))
+  window.turno.agents.onSessions((x) => {
+    sessions = x
+    // saiu do estado de "precisa de voce" (ou a aba fechou): o proximo pedido, mesmo com o mesmo texto, e novo
+    for (const k of [...acked.keys()]) if (!needsYou(sessions.find((s) => s.key === k))) acked.delete(k)
+    emit()
+  })
 }
 
 const sub = (cb: () => void): (() => void) => (subs.add(cb), () => subs.delete(cb))

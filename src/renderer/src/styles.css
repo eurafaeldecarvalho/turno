@@ -444,6 +444,7 @@ body.resizing-x .dock { pointer-events: none; }
 .sb-radio { width: 12px; height: 12px; margin-top: 3px; border-radius: 50%; border: 1.5px solid var(--faint); flex: none; }
 .sb-pop button.on .sb-radio { border-color: var(--accent); background: radial-gradient(var(--accent) 0 3px, transparent 3.5px); }
 .sb-pop.sb-pop-left { right: auto; left: 0; }
+.term-ai .ai-cmd { white-space: pre; overflow: auto; max-height: 6.5em; }
 .sb-pop button:disabled { opacity: .5; cursor: default; }
 .sb-pop button:disabled:hover { background: none; }
 .sb-pop button .dot { margin-top: 5px; }

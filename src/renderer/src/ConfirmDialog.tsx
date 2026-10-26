@@ -26,7 +26,14 @@ function answer(ok: boolean): void {
   current = undefined
   emit()
   c?.resolve(ok)
+  const w = closedWaiters.splice(0)
+  setTimeout(() => w.forEach((f) => f()), 0)
 }
+
+// Avisos em segundo plano esperam o popup atual fechar em vez de cancela-lo
+const closedWaiters: Array<() => void> = []
+export const isConfirmOpen = (): boolean => !!current
+export const onConfirmClosed = (f: () => void): void => void closedWaiters.push(f)
 
 export function ConfirmHost() {
   const ask = useSyncExternalStore(

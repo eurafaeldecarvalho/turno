@@ -10,6 +10,7 @@ import { accountEnv, agentsState, whenText, effectiveUsage, getAccount, markAcco
 import { notify } from './notify'
 import { claudeLaunchExtras } from './mcphub'
 import { prepareClaude } from './claudeprep'
+import { claudeSessionExists } from './sidebar'
 
 // Broker das conversas de agente: o Turno e o dono da conversa; cada sessao do fornecedor e uma "tentativa"
 // que pode ser trocada (outra conta / outro agente) na MESMA aba quando a cota chega no limite.
@@ -181,7 +182,8 @@ export function prepareLaunch(o: PrepareOpts): AgentLaunch {
     if (o.chrome ?? prev?.chrome) extra += ' --chrome'
     // vai digitado no shell: so o formato de nome/alias de modelo
     const model = o.model ?? prev?.model
-    if (model && /^[\w.:[\]-]{1,80}$/.test(model)) extra += ` --model ${model}`
+    // nunca comeca com "-": viraria outra opcao do CLI (ex.: uma flag de permissao) em vez do valor de --model
+    if (model && /^[\w.:[\]][\w.:[\]-]{0,79}$/.test(model)) extra += ` --model ${model}`
   }
   const { command, typeAfter } = agentCommand(def, { resumeId: o.resumeSessionId, prompt: o.prompt, extraArgs: extra || undefined })
   const launchId = randomUUID()
@@ -393,7 +395,8 @@ export async function swap(key: string, reason: 'warning' | 'wall' | 'manual', t
   const fromName = getAccount(s.accountId)?.label ?? s.accountId
   const why = reason === 'wall' ? 'usage limit reached' : reason === 'warning' ? 'close to the usage limit' : 'switched by you'
   // o Claude so grava a conversa na 1a mensagem: sessao ainda vazia nao tem o que retomar ("No conversation found")
-  const emptyClaude = s.agent === 'claude' && !!s.transcriptPath && !existsSync(s.transcriptPath)
+  // confere no historico compartilhado (~/.claude/projects) e no caminho da sessao: a pasta da conta pode ter sumido
+  const emptyClaude = s.agent === 'claude' && !!s.sessionId && !!s.transcriptPath && !existsSync(s.transcriptPath) && !claudeSessionExists(s.sessionId)
   if (next.agent === s.agent && emptyClaude) return launchSwap(s, next.id, {}, `now on ${next.label} · ${why} on ${fromName}`)
   // mesmo agente com sessao conhecida: retoma a MESMA conversa na outra conta (historico compartilhado)
   if (next.agent === s.agent && s.sessionId && agentDef(s.agent)?.resume) {

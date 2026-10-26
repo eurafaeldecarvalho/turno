@@ -8,14 +8,16 @@ import { SearchAddon } from '@xterm/addon-search'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { LigaturesAddon } from '@xterm/addon-ligatures'
-import { discarded, paramsOf, type AgentTermParams, type TerminalParams } from '../layout'
-import { onSettings, useSettings } from '../appearance'
+import { discarded, paramsOf, takeEarlyKeys, type AgentTermParams, type TerminalParams } from '../layout'
+import { getSettingsSnapshot, onSettings, useSettings } from '../appearance'
 import { terminalOptions } from '../terminalOptions'
 import { itemExists, patchItem } from '../sidebarStore'
 import { killParked, park, setLive, unpark } from '../liveTerms'
 import { ackNeeds } from '../agentStore'
+import { askConfirm } from '../ConfirmDialog'
 import type { TermSession } from '../../../shared/types'
 import { themeById } from '../../../shared/themes'
+import { agentDef } from '../../../shared/agents'
 import { IconChevron, IconClose } from '../icons'
 
 type Cur = { lastCwd?: string; lastSession?: TermSession }
@@ -42,15 +44,61 @@ interface TermHandle {
   agent?: AgentTermParams
   lastOutput(): string // ultimas linhas do buffer (contexto p/ o NL->comando)
   runCommand(cmd: string): void // injeta um comando no pty
+  typeEarly(keys: string): void // teclas digitadas antes de a aba ter foco (guardadas pelo layout)
   dispose(): void
 }
 
+// Sugestao da IA que o Turno nao executa (veio de texto que estava na tela). Testa o texto ja limpo e sem os truques de
+// escape dos shells (cl^aude, 'cl'+'aude', cl$()aude, cl\aude): nada que abra o Claude ou mexa nas permissoes dele.
+// E melhor esforco (um shell tem formas demais de montar um nome); a protecao de verdade e a pessoa ver o comando
+// antes do Execute, e o comando executado ainda passa por defaultPermissionMode.
+export function suggestionProblem(cmd: string): 'multiline' | 'claude' | undefined {
+  const c = stripControls(cmd).trim()
+  if (/[\r\n]/.test(c)) return 'multiline'
+  const flat = c.replace(/[\^'"`+()$\s{}[\]\\]/g, '').toLowerCase()
+  return /claude|anthropic|dangerously|bypasspermissions|permission-?mode/.test(flat) ? 'claude' : undefined
+}
 const SHIFT_ENTER = '\x1b\r' // Alt+Enter: nova linha no Claude Code e nos outros CLIs de agente
+// Relatorios que o xterm manda sozinho ao programa: CPR/DSR, DA1/DA2, DECRQM, flags do teclado kitty, foco, OSC e DCS
+// eslint-disable-next-line no-control-regex
+const TERMINAL_REPLY = /^(\x1b\[\??[\d;]*[Rn]|\x1b\[[?>=]?[\d;]*c|\x1b\[\?[\d;]*\$y|\x1b\[\?\d*u|\x1b\[[IO]|\x1b\][^\x07\x1b]*(\x07|\x1b\\)|\x1bP[^\x1b]*\x1b\\)+$/
 
 // Claude aberto pelo Turno comeca no modo de permissao normal, mesmo com defaultMode "bypassPermissions" no
 // settings.json do usuario (copiado para as contas isoladas). Comando que ja escolhe o modo fica como esta.
-export const defaultPermissionMode = (cmd: string): string =>
-  /^\s*claude(\s|$)/.test(cmd) && !/--permission-mode\b|--dangerously-skip-permissions\b/.test(cmd) ? cmd.replace(/^(\s*claude)/, '$1 --permission-mode default') : cmd
+// So olha as flags FORA de aspas: o prompt (texto do usuario, de uma tarefa, de um repo) pode citar a flag.
+// Vale para `claude` em qualquer posicao de comando (`cd x; claude`, `& claude.exe`), nao so no comeco da linha.
+const CLAUDE_AT_COMMAND = /(^\s*|[;&|(]\s*|&\s+)(claude(?:\.exe)?)(?=\s|$|;|&|\|)/g
+export const defaultPermissionMode = (cmd: string): string => {
+  const bare = cmd.replace(/"[^"]*"|'[^']*'/g, '')
+  if (/--permission-mode\b|--dangerously-skip-permissions\b/.test(bare) || !new RegExp(CLAUDE_AT_COMMAND.source).test(bare)) return cmd
+  // so fora das aspas (o texto do prompt nao muda); "^" so vale no comeco da linha, nao logo depois de uma aspa
+  return cmd.replace(/("[^"]*"|'[^']*')|([^"']+)/g, (_m, quoted: string | undefined, plain: string, at: number) =>
+    quoted ?? plain.replace(CLAUDE_AT_COMMAND, (x, pre: string, name: string, i: number) => (i === 0 && !pre.trim() && at > 0 ? x : `${pre}${name} --permission-mode default`)),
+  )
+}
+
+// Colar texto no pty. Com bracketed paste (Claude Code e outros TUIs) vai inteiro e marcado como colagem, sem
+// caracteres de controle que fechariam a colagem antes da hora.
+// sem nenhum caractere de controle (so tab e quebra de linha): ESC tiraria a colagem do modo marcado (inclusive com
+// marcas aninhadas que se remontam) ou viraria tecla no ConPTY; ^C, ^D etc. agiriam no programa
+// eslint-disable-next-line no-control-regex
+const stripControls = (s: string): string => s.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/g, '')
+
+// Varias linhas num programa sem bracketed paste (shell, REPL, agente ainda subindo): cada quebra de linha vira Enter
+// e a linha roda como comando. Como no Windows Terminal, pergunta antes de colar.
+// bracketed: o programa que esta na frente ligou o modo (o flag do xterm sozinho pode ter ficado ligado por um programa
+// que ja saiu). Fora dele, a quebra de linha no fim e tirada (como no Windows Terminal): colar nunca da Enter sozinho.
+async function pasteInto(term: Terminal, text: string, bracketed: boolean): Promise<void> {
+  let t = stripControls(text)
+  if (!bracketed) t = t.replace(/[\r\n]+$/, '')
+  if (!t) return
+  if (!bracketed && /[\r\n]/.test(t)) {
+    const n = t.split(/\r\n|\r|\n/).filter((l) => l.trim()).length
+    const ok = await askConfirm({ title: 'Paste multiple lines?', message: `The text has ${n} lines. The program in this terminal doesn't mark pasted text, so each line may run as a command as soon as it is pasted.`, confirmLabel: 'Paste', danger: false })
+    if (!ok) return
+  }
+  term.paste(t)
+}
 
 // cor do achado ativo da busca (selecao) por tema claro/escuro
 const FIND_ACTIVE = { dark: '#a87a12', light: '#f5c542' }
@@ -100,7 +148,17 @@ function createTerm(params: TerminalParams): TermHandle {
       return out.join('\n').trim().slice(-4000)
     },
     runCommand(cmd) {
-      if (ptyId) window.turno.pty.write(ptyId, cmd + '\r')
+      // sugestao da IA (veio de texto que estava na tela): uma linha so, sem caracteres de controle, Claude sem bypass
+      if (suggestionProblem(cmd)) return
+      const c = defaultPermissionMode(stripControls(cmd).trim())
+      if (!c) return
+      if (ptyId) window.turno.pty.write(ptyId, c + '\r')
+    },
+    typeEarly(keys) {
+      if (!keys) return
+      if (hold) held += keys
+      else if (ptyId) window.turno.pty.write(ptyId, keys)
+      else preSpawn += keys
     },
     alive: () => !dead && !disposed,
     bind(b) {
@@ -128,16 +186,23 @@ function createTerm(params: TerminalParams): TermHandle {
       offSettings()
       sel.dispose()
       el.removeEventListener('contextmenu', onContext)
+      el.removeEventListener('paste', onNativePaste, true)
       input.dispose()
       keyAck.dispose()
+      offAgentState()
       offData()
       offSession()
       offExit()
       offSwap()
+      window.removeEventListener('turno:agent-switching', onSwitching)
+      window.removeEventListener('turno:agent-switch-cancel', onSwitchCancel)
+      clearTimeout(switchTimer)
       offType()
       clearTimeout(typeTimer)
       clearTimeout(releaseTimer)
       clearTimeout(releaseCap)
+      clearTimeout(pendingTimer)
+      clearTimeout(promptTimer)
       if (ptyId) window.turno.pty.kill(ptyId)
       if (agent) void window.turno.agents.close(agent.key)
       term.dispose()
@@ -157,8 +222,32 @@ function createTerm(params: TerminalParams): TermHandle {
     else if ('lastSession' in patch) patchItem(itemId, { agent: undefined, sessionId: undefined }) // saiu do Claude
     else if (patch.lastCwd) patchItem(itemId, { cwd: patch.lastCwd })
   }
+  // Colagem marcada (bracketed paste) que o Turno confia: ligada pelo programa que esta na frente AGORA. Zera a cada
+  // prompt do shell (OSC 9;9) e a cada processo novo; o flag do xterm sozinho fica ligado se o programa sair sem desligar.
+  let bpOn = false
+  let shellInFront = false // prompt do shell visivel (OSC 9;9) desde o ultimo comando que o Turno mandou
+  let promptSignal = false // este shell manda OSC 9;9 a cada prompt
+  let onPrompt: () => void = () => {}
+  let lateFirstPrompt = false
+  // ...e so com o Claude rodando NESTE terminal (detector de processos do main): um programa aninhado (cmd, ssh, REPL)
+  // nao manda o prompt que zera o modo, e um texto exibido com ESC[?2004h ligaria a confianca sozinho
+  // (aba de agente em conta isolada: o detector so ve a pasta padrao do Claude; vale o aviso do broker de que o Claude
+  // da aba subiu, ate o prompt do shell voltar)
+  // So em shell que avisa o proprio prompt (pwsh/cmd com a integracao do Turno): no Git Bash nao ha como saber que o
+  // Claude ja saiu.
+  const bracketed = (): boolean => bpOn && term.modes.bracketedPasteMode && (!!cur.lastSession || (hooked && agentUp && promptSignal && !shellInFront))
+  // pelo parser do xterm: segue a ordem real da saida (sequencia partida entre pedacos, prompt ainda na fila)
+  const has2004 = (ps: (number | number[])[]): boolean => ps.some((p) => p === 2004 || (Array.isArray(p) && p.includes(2004)))
+  term.parser.registerCsiHandler({ prefix: '?', final: 'h' }, (ps) => (has2004(ps) && (bpOn = true), false))
+  term.parser.registerCsiHandler({ prefix: '?', final: 'l' }, (ps) => (has2004(ps) && (bpOn = false), false))
   term.parser.registerOscHandler(9, (data) => {
     if (!data.startsWith('9;')) return false
+    bpOn = false
+    promptSignal = true
+    // 1o prompt de um shell que recebeu o comando adiantado (perfil lento, teto de espera): o agente ainda vai subir
+    if (lateFirstPrompt) lateFirstPrompt = false
+    else shellInFront = true
+    onPrompt() // comando do Turno esperando o prompt: vai agora
     const path = data.slice(2).replace(/^"|"$/g, '')
     if (path && path !== cur.lastCwd) remember({ lastCwd: path })
     return true
@@ -214,60 +303,137 @@ function createTerm(params: TerminalParams): TermHandle {
   const onContext = (e: MouseEvent): void => {
     if (!rightClickPaste) return
     e.preventDefault()
+    // programa que rastreia o mouse (o Claude Code cola sozinho no clique direito): o clique e dele, colar aqui duplicava
+    if (term.modes.mouseTrackingMode !== 'none') return
     if (term.hasSelection()) {
       void navigator.clipboard.writeText(term.getSelection())
       term.clearSelection()
-    } else void navigator.clipboard.readText().then((t) => t && term.paste(t))
+    } else void navigator.clipboard.readText().then((t) => void (t && pasteInto(term, t, bracketed())))
   }
   el.addEventListener('contextmenu', onContext)
+  // Qualquer colagem nativa (Shift+Insert, menu do navegador) passa pela mesma limpeza: sem isto o xterm colava o
+  // texto cru pelo proprio evento de paste
+  const onNativePaste = (e: ClipboardEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    const t = e.clipboardData?.getData('text/plain')
+    if (t) void pasteInto(term, t, bracketed())
+  }
+  el.addEventListener('paste', onNativePaste, true)
 
   const agent = params.agent
   let pending = params.initialCommand
   let typeAfter: string | undefined // agente que nao aceita prompt no comando: digita quando a tela parar de mudar
   let typeTimer: ReturnType<typeof setTimeout> | undefined
   let commandSent = false
-  // Enquanto o Turno digita o comando (abrir ou trocar de conta), o que a pessoa digita fica guardado: misturado no
-  // meio do comando ele estragava a linha. Volta para o agente quando a tela assenta.
+  // Enquanto o Turno digita o comando (abrir ou trocar de conta), o que a pessoa digita fica guardado: no meio do
+  // comando estragava a linha. Logo depois do Enter do comando o texto vai (o console guarda ate o agente ler);
+  // agente que recebe o prompt digitado depois (typeAfter) so recebe o texto depois desse prompt.
   let hold = !!pending || !!agent
   let held = ''
+  // teclas digitadas antes de esta aba existir na tela (logo depois do atalho de aba nova)
+  let preSpawn = ''
+  {
+    const k = takeEarlyKeys()
+    if (hold) held += k
+    else preSpawn = k
+  }
   let releaseTimer: ReturnType<typeof setTimeout> | undefined
   let releaseCap: ReturnType<typeof setTimeout> | undefined
+  // Claude (hooks) que ainda nao avisou que subiu: o texto vai SEM quebra de linha. Se ele nao subir, o texto fica
+  // parado na linha do shell em vez de virar comando; se subiu, cai no prompt (ou na pergunta de confianca na pasta).
+  let hooked = false
+  let agentUp = false
   const release = (): void => {
     clearTimeout(releaseTimer)
     clearTimeout(releaseCap)
     if (!hold) return
     hold = false
-    const t = held
+    let t = held
     held = ''
+    if ((hooked && !agentUp) || shellInFront) t = t.replace(/[\r\n]+/g, ' ')
     if (t && ptyId) window.turno.pty.write(ptyId, t)
+  }
+  const offAgentState = agent
+    ? window.turno.agents.onSessions((list) => {
+        const s = list.find((x) => x.key === agent.key)
+        if (!s) return
+        hooked = agentDef(s.agent)?.usage === 'claude'
+        const up = s.status !== 'starting' && s.status !== 'swapping'
+        // o Claude avisou que subiu DEPOIS do ultimo prompt visto: e ele que esta na frente (prompt com redesenho no
+        // Enter, como o "transient prompt" do oh-my-posh/Starship, manda um OSC 9;9 a mais logo depois do comando)
+        if (up && !agentUp && hooked && commandSent) shellInFront = false
+        // subiu: o texto guardado vai assim que a tela assentar (o onData adia enquanto ela muda)
+        if (up && !agentUp && hold && commandSent && !typeAfter) {
+          clearTimeout(releaseTimer)
+          releaseTimer = setTimeout(release, 800)
+        }
+        agentUp = up
+      })
+    : () => {}
+  // digita o prompt do Turno (quando a tela assentou, ou no teto de espera) e so depois devolve o teclado
+  const typePrompt = (): void => {
+    clearTimeout(typeTimer)
+    clearTimeout(releaseCap)
+    // o agente fechou e o prompt do shell voltou: o texto do prompt viraria comando do shell
+    // Sem certeza de que o agente esta na frente (o prompt do shell apareceu depois do comando, ou o shell nao avisa o
+    // proprio prompt, como o bash): o prompt vai SEM o Enter. No agente a pessoa so confirma; se o agente fechou, nada
+    // roda no shell. (Prompt com redesenho no Enter, como o transient prompt do oh-my-posh, tambem cai aqui.)
+    if (typeAfter && ptyId) window.turno.pty.write(ptyId, typeAfter + (promptSignal && !shellInFront ? '\r' : ''))
+    typeAfter = undefined
+    clearTimeout(releaseTimer)
+    releaseTimer = setTimeout(release, 600)
   }
   const startHold = (): void => {
     hold = true
     clearTimeout(releaseTimer)
     clearTimeout(releaseCap)
   }
+  // O comando do Turno vai quando o shell mostra o prompt (OSC 9;9, pwsh/cmd com a integracao do Turno): mandado antes,
+  // ele era lido "adiantado" e o 1o prompt chegava DEPOIS, como se o agente ja tivesse saido. Shell sem esse aviso
+  // (bash): pouco depois da primeira saida. Teto: o shell com aviso que demora (perfil lento) recebe assim mesmo.
+  const shellPath = params.shell || getSettingsSnapshot()?.terminal.defaultShell || 'pwsh.exe'
+  const promptAware = /pwsh|powershell/i.test(shellPath) || /cmd\.exe$/i.test(shellPath)
+  let pendingTimer: ReturnType<typeof setTimeout> | undefined
+  let promptTimer: ReturnType<typeof setTimeout> | undefined
+  const sendPending = (): void => {
+    clearTimeout(pendingTimer)
+    pendingTimer = undefined
+    clearTimeout(promptTimer)
+    const cmd = pending
+    const id = ptyId
+    if (!cmd || !id || disposed) return
+    pending = undefined
+    // mandado antes do 1o prompt de um shell que avisa o prompt: esse prompt vai chegar depois, e nao quer dizer que o agente saiu
+    if (promptAware && !promptSignal) lateFirstPrompt = true
+    void (async () => {
+      // aba de agente: o main ja preparou a pasta da conta (confiavel, Chrome)
+      if (!agent && /^\s*claude\b/.test(cmd)) await window.turno.routines.prepareClaude(cur.lastCwd ?? params.cwd, /--chrome\b/.test(cmd)).catch(() => {})
+      window.turno.pty.write(id, defaultPermissionMode(cmd) + '\r')
+      commandSent = true
+      shellInFront = false
+      if (typeAfter) releaseCap = setTimeout(typePrompt, 12_000) // agente que nunca para de redesenhar
+      else {
+        // o agente descarta o que chega antes de ele ler o teclado: o texto guardado espera a tela dele assentar
+        // (o onData adia a cada mudanca), com teto para quem nunca para de redesenhar
+        releaseTimer = setTimeout(release, 1500)
+        releaseCap = setTimeout(release, 15_000)
+      }
+    })()
+  }
+  onPrompt = () => {
+    if (!pending) return
+    clearTimeout(promptTimer)
+    promptTimer = setTimeout(sendPending, 50)
+  }
   const offData = window.turno.pty.onData((id, d) => {
     if (id !== ptyId) return
     term.write(d)
-    // So manda o comando inicial depois que o shell imprimiu algo (o prompt): antes disso ele se perde.
     if (pending) {
-      const cmd = pending
-      pending = undefined
-      setTimeout(async () => {
-        // aba de agente: o main ja preparou a pasta da conta (confiavel, Chrome)
-        if (!agent && /^\s*claude\b/.test(cmd)) await window.turno.routines.prepareClaude(cur.lastCwd ?? params.cwd, /--chrome\b/.test(cmd)).catch(() => {})
-        window.turno.pty.write(id, defaultPermissionMode(cmd) + '\r')
-        commandSent = true
-        releaseCap = setTimeout(release, 12_000) // agente que nunca para de redesenhar: devolve o teclado assim mesmo
-      }, 150)
+      if (!pendingTimer) pendingTimer = setTimeout(sendPending, promptAware ? 6000 : 150)
     } else if (typeAfter && commandSent) {
       clearTimeout(typeTimer)
-      typeTimer = setTimeout(() => {
-        if (!typeAfter || !ptyId) return
-        window.turno.pty.write(ptyId, typeAfter + '\r')
-        typeAfter = undefined
-        releaseTimer = setTimeout(release, 1500)
-      }, 2000)
+      typeTimer = setTimeout(typePrompt, 2000)
     } else if (hold && commandSent) {
       clearTimeout(releaseTimer)
       releaseTimer = setTimeout(release, 1500)
@@ -281,6 +447,7 @@ function createTerm(params: TerminalParams): TermHandle {
   const offExit = window.turno.pty.onExit((id, code) => {
     if (id !== ptyId) return
     dead = true
+    bpOn = false
     term.write(`\r\n\x1b[90m[process exited: ${code}]\x1b[0m\r\n`)
     if (!binding && h.itemId) killParked(h.itemId) // morreu escondido: some o indicador
   })
@@ -290,6 +457,8 @@ function createTerm(params: TerminalParams): TermHandle {
       if (disposed) return window.turno.pty.kill(id)
       ptyId = id
       dead = false
+      if (preSpawn) (window.turno.pty.write(id, preSpawn), (preSpawn = ''))
+      bpOn = false // processo novo (inclusive na troca de conta): o modo do anterior nao vale
     })
     .catch((e) => {
       dead = true
@@ -315,16 +484,68 @@ function createTerm(params: TerminalParams): TermHandle {
       })
   }
   launchAgent()
+  // Texto que estava na caixa de entrada do Claude (lido da tela): a troca de conta o leva para a sessao nova.
+  // Linhas de continuacao viram espaco (redigitado antes de o Claude novo subir, quebra de linha seria um Enter).
+  const scrapeDraft = (): string => {
+    if (!hooked) return ''
+    const buf = term.buffer.active
+    const rows: string[] = []
+    for (let i = buf.viewportY; i < buf.viewportY + term.rows; i++) rows.push(buf.getLine(i)?.translateToString(true) ?? '')
+    let at = -1
+    for (let i = rows.length - 1; i >= 0; i--) if (/^\s*[>❯]\s/.test(rows[i])) (at = i), (i = -1)
+    if (at < 0) return ''
+    const parts = [rows[at].replace(/^\s*[>❯]\s?/, '')]
+    for (let i = at + 1; i < rows.length && !/^\s*[─━-]{3,}/.test(rows[i]) && rows[i].trim(); i++) parts.push(rows[i].trim())
+    // o Claude preenche as linhas da caixa com espacos (e NBSP): tudo vira um espaco so
+    const text = parts.join(' ').replace(/[\s\u00a0]+/g, ' ').trim()
+    return /^Try ".*"$/.test(text) ? '' : text // dica cinza do Claude com a caixa vazia
+  }
+  // Troca pedida pelo Turno (menu, paleta, aviso de reset): a partir do pedido o teclado fica guardado (antes ia para o
+  // Claude que ia ser fechado). Se a troca nao vier, devolve.
+  let switching = false
+  let switchTimer: ReturnType<typeof setTimeout> | undefined
+  const onSwitching = (e: Event): void => {
+    if (!agent || (e as CustomEvent<string>).detail !== agent.key || hold) return
+    switching = true
+    held = ''
+    startHold()
+    clearTimeout(switchTimer)
+    switchTimer = setTimeout(() => {
+      switching = false
+      release()
+    }, 15_000)
+  }
+  window.addEventListener('turno:agent-switching', onSwitching)
+  const onSwitchCancel = (e: Event): void => {
+    if (!agent || (e as CustomEvent<string>).detail !== agent.key || !switching) return
+    switching = false
+    clearTimeout(switchTimer)
+    release()
+  }
+  window.addEventListener('turno:agent-switch-cancel', onSwitchCancel)
   // Troca de conta/agente na mesma aba: mata o processo atual e sobe o novo no mesmo terminal.
   const offSwap = agent
     ? window.turno.agents.onSwap((l) => {
         if (l.key !== agent.key) return
+        const draft = scrapeDraft()
+        const typed = switching ? held.replace(/[\r\n]+/g, ' ') : ''
+        switching = false
+        clearTimeout(switchTimer)
         const old = ptyId
         ptyId = undefined
         if (old) window.turno.pty.kill(old)
         clearTimeout(typeTimer)
+        clearTimeout(pendingTimer) // o teto de espera era do pty antigo
+        clearTimeout(promptTimer)
+        pendingTimer = undefined
+        lateFirstPrompt = false
+        promptSignal = false // shell novo: o 1o prompt dele ainda nao chegou
         commandSent = false
-        held = '' // digitado para a sessao que morreu: nao vai para a nova
+        // o rascunho da caixa do Claude antigo e o que foi digitado depois do pedido de troca vao para o Claude novo (sem Enter)
+        // (espaco no fim: o que a pessoa ainda digitar durante a troca emenda como palavra nova)
+        // (espaco depois do rascunho so se nada foi digitado ainda: o que vier emenda como palavra nova; ja digitando, continua)
+        held = typed ? [draft, typed].filter(Boolean).join(' ') : draft ? draft + ' ' : ''
+        agentUp = false
         startHold()
         term.write(`\r\n\x1b[36m── ${l.banner ?? 'continued on another account'} ──\x1b[0m\r\n`)
         pending = l.command
@@ -338,7 +559,9 @@ function createTerm(params: TerminalParams): TermHandle {
   // de foco/blur que o Claude Code pede, e trocar de aba ja "respondia")
   const keyAck = term.onKey(() => agent && ackNeeds(agent.key))
   const input = term.onData((d) => {
-    if (hold) held += d
+    // respostas automaticas do terminal (posicao do cursor, atributos, foco...) nao sao digitacao: seguram o CLI
+    // que perguntou se ficarem presas (o Codex desiste de ler a posicao do cursor em ~2 s)
+    if (hold && !TERMINAL_REPLY.test(d)) held += d
     else if (ptyId) window.turno.pty.write(ptyId, d)
   })
   term.attachCustomKeyEventHandler((e) => {
@@ -360,7 +583,7 @@ function createTerm(params: TerminalParams): TermHandle {
         void navigator.clipboard
           .readText()
           .catch(() => '')
-          .then((t) => (t ? term.paste(t) : term.input('\x16')))
+          .then((t) => (t ? pasteInto(term, t, bracketed()) : term.input('\x16')))
       }
       return false
     }
@@ -374,7 +597,8 @@ function createTerm(params: TerminalParams): TermHandle {
       return false
     }
     if (e.code === 'KeyV') {
-      void navigator.clipboard.readText().then((t) => t && term.paste(t))
+      e.preventDefault() // senao o Chromium tambem cola (colar como texto simples) pelo evento nativo, sem limpeza
+      void navigator.clipboard.readText().then((t) => void (t && pasteInto(term, t, bracketed())))
       return false
     }
     if (e.code === 'KeyA') {
@@ -510,7 +734,15 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
     const hits = h.search.onDidChangeResults((r) => setHits(r.resultCount ? { i: r.resultIndex + 1, n: r.resultCount } : { i: 0, n: 0 }))
     const focusTerm = (): void => void (!isModalOpen() && h.term.focus())
     const focus = api.onDidActiveChange((e) => e.isActive && (focusTerm(), requestAnimationFrame(() => h.redraw())))
-    if (api.isActive) setTimeout(focusTerm, 50)
+    // foco ja na montagem (tecla digitada logo depois do atalho de nova aba nao cai no vazio) e de novo quando o dock assenta
+    // quando o foco chega, as teclas que o layout guardou (digitadas antes disso) entram nesta aba
+    // (as tentativas tardias so pegam o foco se ele ainda estiver no vazio: nunca tiram de onde a pessoa clicou)
+    const focusAndDrain = (force: boolean): void => {
+      const a = document.activeElement
+      if (force || !a || a === document.body) focusTerm()
+      h.typeEarly(takeEarlyKeys())
+    }
+    if (api.isActive) for (const ms of [0, 50, 200, 500, 900]) ms ? setTimeout(() => focusAndDrain(ms <= 50), ms) : focusAndDrain(true)
 
     return () => {
       clearTimeout(t)
@@ -660,8 +892,14 @@ export function TerminalPanel({ params, api }: IDockviewPanelProps<TerminalParam
           {ai.loading && <span className="muted">thinking…</span>}
           {ai.result && ai.result.command && (
             <>
-              <code className="mono" title={ai.result.explanation}>{ai.result.command}</code>
-              <button className="btn primary" onClick={execAi}>Execute</button>
+              <code className="mono ai-cmd" title={ai.result.explanation}>{ai.result.command}</code>
+              {suggestionProblem(ai.result.command) === 'multiline' ? (
+                <span className="muted small">More than one line: Turno won't run it. Copy and review it first.</span>
+              ) : suggestionProblem(ai.result.command) === 'claude' ? (
+                <span className="muted small">Starts Claude: Turno won't run it from a suggestion. Type it yourself if you want it.</span>
+              ) : (
+                <button className="btn primary" onClick={execAi}>Execute</button>
+              )}
             </>
           )}
           {ai.result && !ai.result.command && <span className="muted">{ai.result.explanation || 'no command'}</span>}

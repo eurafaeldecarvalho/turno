@@ -7,6 +7,14 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.10',
+    items: [
+      { title: 'Nothing you type gets lost', text: 'Keys typed right after opening a tab or asking to switch accounts now reach the new agent, and the text in Claude\'s input box moves with you to the new account.' },
+      { title: 'Safer paste', text: 'Pasting several lines into a shell asks first, a single line never runs by itself, and pasted text can\'t carry hidden control keys. Right-click no longer pastes twice in Claude Code.' },
+      { title: 'Smarter "account available again"', text: 'Only when a higher-ranked account truly reset, one dialog at a time, and a busy tab waits for its turn to end.' },
+    ],
+  },
+  {
     version: '0.9.9',
     items: [
       { title: '"Needs you" clears when seen', text: 'Click the entry or go to its tab and it leaves the sidebar. A new request from that agent shows up again.' },

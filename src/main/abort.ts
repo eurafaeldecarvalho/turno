@@ -76,8 +76,9 @@ export function parseRateLimit(line: string): RateLimitInfo | undefined {
 
 // Custo ja gasto na conversa inteira (soma dos segmentos anteriores). Usado p/ o teto cost_usd ser CUMULATIVO
 // atraves de pausas/retomadas — senao cada --resume recomecaria o orcamento do zero (overspend).
-export function priorCost(runs: Array<{ cost_usd: number | null }>): number {
-  return runs.reduce((s, r) => s + (r.cost_usd ?? 0), 0)
+// Usa o custo informado pelo CLI (cli_cost_usd): o cost_usd so guarda o que foi cobrado por chave de API.
+export function priorCost(runs: Array<{ cost_usd: number | null; cli_cost_usd?: number | null }>): number {
+  return runs.reduce((s, r) => s + (r.cli_cost_usd ?? r.cost_usd ?? 0), 0)
 }
 
 // Lista final de policies da rotina: as declaradas + budget_usd legado como acucar de cost_usd (sem duplicar).

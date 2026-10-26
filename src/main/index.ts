@@ -7,8 +7,8 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import type { McpServerDef, RankStrategy, Task, RoutineDraft, RunRecord, RunRequest, Settings, SidebarState } from '../shared/types'
 import { claudeSessionExists, getSidebar, listClaudeSessions, saveSidebar } from './sidebar'
 import { registerPty, killAllPtys } from './pty'
-import { activeCount, answerPermission, clearSubscriptionCosts, initRunner, readRunEvents, rotatedFrom, setRotateHandler, startRun, stopAllRuns, stopRun, type PermissionDecision } from './runner'
-import { openDb, getRun, listRuns, threadOf, renameRoutineRuns, runsWithCost } from './db'
+import { activeCount, answerPermission, initRunner, repairRunCosts, readRunEvents, rotatedFrom, setRotateHandler, startRun, stopAllRuns, stopRun, type PermissionDecision } from './runner'
+import { openDb, getRun, listRuns, threadOf, renameRoutineRuns, allRunIds } from './db'
 import { getSettings, setSettings } from './settings'
 import { takeNotices } from './jsonStore'
 import { accountEnv, addAccount, agentsState, clearBlock, clearLimit, detectInstalled, getAccount, initAccounts, refreshLogin, removeAccount, reorderAccounts, setThresholds, updateAccount } from './accounts'
@@ -111,6 +111,10 @@ function createWindow(): void {
     if (loadedOnce) killAllPtys()
     loadedOnce = true
   })
+  // A janela nunca navega para outro endereco (arquivo ou link solto em cima dela, link clicado): a pagina nova
+  // mataria os terminais e herdaria a API do preload. Recarregar a propria janela nao passa por aqui.
+  win.webContents.on('will-navigate', (e) => e.preventDefault())
+  win.webContents.on('will-redirect', (e) => e.preventDefault())
   win.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url)
     return { action: 'deny' }
@@ -218,16 +222,18 @@ initRunner({
 })
 // run do ranking de contas que bateu o limite continua pela via do follow-up (cwd efetivo, locks, custo cumulativo)
 setRotateHandler(followUp)
-// uma vez: runs antigas guardavam o custo calculado de runs em assinatura (que nao e gasto)
+// uma vez: refaz os custos das runs antigas pelo log (assinatura nao e gasto; o teto usa o custo do CLI).
+// Marcador novo: a limpeza da 0.9.9 ("cost-cleanup-1") apagava custos reais; este reparo os recupera.
+// Em segundo plano, depois que o app abriu (le o log de cada run); so as runs que ja existiam ao abrir.
 {
-  const mark = join(userData, 'cost-cleanup-1')
+  const mark = join(userData, 'cost-repair-2')
   if (!existsSync(mark)) {
-    try {
-      clearSubscriptionCosts(runsWithCost().map((r) => r.id))
-      writeFileSync(mark, new Date().toISOString())
-    } catch (e) {
-      console.warn('[cost cleanup]', (e as Error).message)
-    }
+    const ids = allRunIds()
+    setTimeout(() => {
+      repairRunCosts(ids)
+        .then(() => writeFileSync(mark, new Date().toISOString()))
+        .catch((e) => console.warn('[cost repair]', (e as Error).message))
+    }, 10_000)
   }
 }
 registerPty(liveWc)

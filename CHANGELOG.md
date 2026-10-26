@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.9.10 (2026-10-25)
+
+Review, red-team and QA pass over 0.9.7–0.9.9.
+
+### Typing and switching accounts
+- Keys typed right after opening a tab (Ctrl+Shift+N / Ctrl+Shift+T) or right after asking for an account switch are no longer lost; they reach the new terminal/agent.
+- Switching accounts carries what was in Claude's input box (and anything typed during the switch) to the new session instead of dropping it.
+- Text typed while an agent starts is only delivered once its screen settles; if the agent never starts, it never runs as a shell command.
+- Turno now types its launch command when the shell shows its prompt (no more "agent closed" false alarms on slow profiles or transient prompts).
+
+### Paste
+- Every paste path (Ctrl+V, Ctrl+Shift+V, Shift+Insert, right-click, the browser's paste) strips control characters, so pasted text can't break out of a marked paste or send keys.
+- Pasting several lines into a shell asks first ("Paste multiple lines?"); a single line never runs on its own (trailing newline removed). Pasting into Claude Code goes through unchanged, once.
+- Right-click in Claude Code no longer pastes twice.
+
+### Permissions and safety
+- The normal permission mode is also enforced for `claude` later in a command line (`cd x; claude`); a model name or session id can't smuggle in a flag.
+- The AI command bar won't execute multi-line suggestions or anything that would start Claude.
+- Dropping a file or link on the window no longer navigates away (which killed every terminal).
+
+### Accounts
+- "Account available again" only appears when a higher-ranked account really reset (not when you change a threshold), one dialog at a time, never on top of another dialog, and only for agents whose conversation can be resumed. A tab in the middle of a turn (including a permission prompt) switches when the turn ends, and only if the account still has quota.
+- A manual switch cancels a pending automatic one; switching while a switch is in progress says so.
+- "Needs you" shows again when the same request comes back later.
+
+### Spend
+- Pay-as-you-go spend also counts an endpoint pointing at the Anthropic API. The routine cost limit keeps adding up across resumes (it uses the CLI-reported cost, stored separately). Past runs are re-checked from their logs once, in the background, restoring costs the 0.9.9 cleanup removed.
+
 ## 0.9.9 (2026-10-25)
 
 ### Sidebar

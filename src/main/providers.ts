@@ -18,6 +18,10 @@ export const DEFAULT_CONNECTIONS: Connection[] = [
   },
 ]
 
+// Endpoint que e a API da propria Anthropic (chave de API, cobrada por uso), nao um provedor compativel.
+export const isAnthropicApi = (conn: Connection, token?: string): boolean =>
+  conn.kind === 'endpoint' && conn.via !== 'translate' && (/^https?:\/\/api\.anthropic\.com(\/|:|$)/i.test(conn.baseUrl ?? '') || /^sk-ant-api/.test(token ?? conn.token ?? ''))
+
 // Env que o binario `claude` recebe para falar com este provedor.
 // claude = sem env (auth e do proprio CLI). endpoint = aponta o CLI para o baseUrl/model/token.
 export function resolveProviderEnv(conn: Connection, token?: string): Record<string, string> {
@@ -25,7 +29,7 @@ export function resolveProviderEnv(conn: Connection, token?: string): Record<str
   // via tradutor: o CLI recebe so o endereco local e o token da sessao do tradutor; a chave do provedor fica no main
   const tr = conn.via === 'translate'
   // a API da propria Anthropic so aceita a chave em x-api-key (ANTHROPIC_API_KEY); compativeis (z.ai etc.) usam Bearer
-  const apiKeyStyle = !tr && (/^https?:\/\/api\.anthropic\.com(\/|:|$)/i.test(conn.baseUrl ?? '') || /^sk-ant-api/.test(token ?? conn.token ?? ''))
+  const apiKeyStyle = isAnthropicApi(conn, token)
   const env: Record<string, string> = {
     ANTHROPIC_BASE_URL: tr ? translatorBase(conn.id) : (conn.baseUrl ?? ''),
     ANTHROPIC_AUTH_TOKEN: tr || apiKeyStyle ? (tr ? translatorInfo().token : '') : (token ?? conn.token ?? ''),

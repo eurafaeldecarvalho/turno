@@ -128,7 +128,8 @@ export interface RunRecord {
   ended_at: string | null
   skip_reason: string | null
   exit_code: number | null
-  cost_usd: number | null
+  cost_usd: number | null // gasto cobrado por uso (chave de API); assinatura/endpoint = null
+  cli_cost_usd?: number | null // custo que o CLI informa (vale para o teto de custo, nao e gasto)
   session_id: string | null
   result: string | null
   profile: string

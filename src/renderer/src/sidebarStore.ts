@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { toast } from './Toast'
 import { LINK_HINT } from '../../shared/links'
+import { SESSION_ID } from '../../shared/agents'
 import type { AgentId, SidebarFolder, SidebarItem, SidebarState } from '../../shared/types'
 import { discarded, openAgent, openTerminal, panelForItem, paramsOf, setTakenNames, type TerminalParams } from './layout'
 import { isParked, killParked, parkedAgent, setLive } from './liveTerms'
@@ -193,8 +194,9 @@ export async function resolveCommand(item: SidebarItem): Promise<string> {
     const exists = await window.turno.sidebar.claudeSessionExists(item.sessionId)
     cmd = exists ? agent.resumeCmd : agent.newCmd
   } else cmd = item.sessionId ? agent.resumeCmd : agent.newCmd
-  cmd = cmd.replace(/\{id\}/g, item.sessionId ?? '')
-  if (agent.hasModel && item.model && !/--model\b/.test(cmd)) cmd += ` --model ${item.model}`
+  // id e modelo vao soltos na linha de comando: so o formato esperado, e nunca comecando com "-" (viraria uma opcao)
+  cmd = cmd.replace(/\{id\}/g, item.sessionId && SESSION_ID.test(item.sessionId) ? item.sessionId : '')
+  if (agent.hasModel && item.model && /^[\w.:[\]][\w.:[\]-]{0,79}$/.test(item.model) && !/--model\b/.test(cmd)) cmd += ` --model ${item.model}`
   return cmd
 }
 
@@ -233,7 +235,7 @@ export async function openItem(item: SidebarItem): Promise<void> {
     // Aba escondida: o terminal continua vivo, so volta para a tela.
   } else if (item.kind === 'terminal') {
     // Reabre onde parou: retoma a ultima sessao do Claude, senao so o shell na ultima pasta.
-    if (item.sessionId && /^[A-Za-z0-9_-]{1,128}$/.test(item.sessionId) && (await window.turno.sidebar.claudeSessionExists(item.sessionId)))
+    if (item.sessionId && SESSION_ID.test(item.sessionId) && (await window.turno.sidebar.claudeSessionExists(item.sessionId)))
       cmd = `claude --resume ${item.sessionId} --chrome` // modelo: env da conexao do profile (nunca flag de modelo fixa)
     else if (item.sessionId) patchItem(item.id, { agent: undefined, sessionId: undefined }) // sessao sumiu: vira terminal comum
   } else cmd = await resolveCommand(item)

@@ -134,7 +134,8 @@ export const blockedText = (label: string, reason?: string): string =>
     ? `${label} needs a new sign-in: use Sign in in Settings › Agents & accounts, then Check sign-in.`
     : `${label}: ${reason}.`
 
-export const SESSION_ID = /^[A-Za-z0-9_-]{1,128}$/
+// nunca comeca com "-": o id vai solto na linha de comando e viraria uma opcao do CLI
+export const SESSION_ID = /^[A-Za-z0-9_][A-Za-z0-9_-]{0,127}$/
 
 export function agentCommand(a: AgentDef, opts: { resumeId?: string; prompt?: string; extraArgs?: string }): { command: string; typeAfter?: string } {
   // id de sessao vira texto do comando: fora do formato (letras, numeros, - e _) e ignorado em vez de ir para o shell
