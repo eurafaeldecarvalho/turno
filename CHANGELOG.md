@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.15 (2026-10-26)
+
+### Agents
+- Claude Code opened by Turno (agent tabs and terminals) starts in auto mode (`--permission-mode auto`). A command that already chooses a permission mode is left as is.
+
 ## 0.9.14 (2026-10-26)
 
 ### Settings

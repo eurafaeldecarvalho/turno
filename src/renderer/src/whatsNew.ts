@@ -7,6 +7,10 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.15',
+    items: [{ title: 'Claude starts in auto mode', text: 'Agents and terminals open Claude Code in auto mode. Use Shift+Tab inside Claude to change the mode for that session.' }],
+  },
+  {
     version: '0.9.14',
     items: [{ title: 'Search for a font', text: 'In Settings, type in the font field to filter the suggested and installed fonts, each shown in its own style. Installed fonts now show up on Linux too.' }],
   },
