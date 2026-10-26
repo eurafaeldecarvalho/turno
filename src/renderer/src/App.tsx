@@ -611,7 +611,7 @@ async function runSmoke(): Promise<void> {
     }
     // passa o mouse pelas opcoes (o hover muda o destaque): o Settings nao pode cair
     await new Promise((r) => setTimeout(r, 300))
-    for (const li of [...document.querySelectorAll('.font-picker [role="option"]')].slice(0, 4)) {
+    for (const li of Array.from(document.querySelectorAll('.font-picker [role="option"]')).slice(0, 4)) {
       li.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
       await new Promise((r) => setTimeout(r, 120))
     }
