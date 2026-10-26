@@ -7,6 +7,10 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.12',
+    items: [{ title: 'Tidier account list', text: 'The Subscription/API badge and "opens next" now sit side by side in Agents & accounts.' }],
+  },
+  {
     version: '0.9.11',
     items: [
       { title: 'API connections in the ranking', text: 'Cohere, OpenRouter and other API connections now appear in Agents & accounts with an API badge. When your subscriptions hit their limit, the conversation continues on the next connection in the ranking.' },

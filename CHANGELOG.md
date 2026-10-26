@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.12 (2026-10-26)
+
+### Accounts
+- In Settings › Agents & accounts, the Subscription/API badge and "opens next" sit side by side, and rows no longer leave an empty line under the name.
+
 ## 0.9.11 (2026-10-26)
 
 ### API connections in the account ranking
