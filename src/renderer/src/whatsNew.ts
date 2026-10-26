@@ -7,6 +7,10 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.16',
+    items: [{ title: 'Font list fixed', text: 'Moving the mouse over the font list no longer closes Settings.' }],
+  },
+  {
     version: '0.9.15',
     items: [{ title: 'Claude starts in auto mode', text: 'Agents and terminals open Claude Code in auto mode. Use Shift+Tab inside Claude to change the mode for that session.' }],
   },

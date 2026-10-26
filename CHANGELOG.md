@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.16 (2026-10-26)
+
+### Fixes
+- Moving the mouse over the font list no longer closes Settings with "destroy_ is not a function".
+
 ## 0.9.15 (2026-10-26)
 
 ### Agents
