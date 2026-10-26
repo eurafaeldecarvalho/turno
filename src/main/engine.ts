@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 import { listMcp, precheckMcp } from './mcphub'
 import { notify } from './notify'
-import { effectiveUsage, getAccount, pickAccount, signedIn } from './accounts'
+import { effectiveUsage, getAccount, pickReadyAccount, signedIn } from './accounts'
 import { Cron } from 'croner'
 import { watch, type FSWatcher } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
@@ -259,7 +259,8 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
   if (claudeExtras && (r.config.sandbox ?? 'none') !== 'none' && (r.config.account_pool || r.config.account || listMcp().some((m) => r.config.mcp?.includes(m.id))))
     return void skip(r, trigger, scheduledAt, 'choosing an account and MCP servers do not work with a sandbox; turn them off in the routine', runId)
   if (conn.kind === 'claude' && r.config.account_pool) {
-    if (!pickAccount({ agent: 'claude', allowWarning: true })) return void skip(r, trigger, scheduledAt, 'no Claude account is available (every one is off, not signed in or at its usage limit)', runId)
+    // conexao local no topo (ex. Ollama): sobe o servidor antes; nao subiu = sai do ranking e vale a proxima
+    if (!(await pickReadyAccount({ agent: 'claude', allowWarning: true }, ensureProvider))) return void skip(r, trigger, scheduledAt, 'no Claude account is available (every one is off, not signed in or at its usage limit)', runId)
   } else if (conn.kind === 'claude' && r.config.account) {
     // rotina fixada numa conta especifica: checa essa conta (nao o login padrao), senao falha so na hora de rodar
     const acc = getAccount(r.config.account)
@@ -343,7 +344,7 @@ export async function followUp(runId: string, text: string): Promise<{ runId: st
     : { profile: run.profile as RunRequest['profile'], prompt: '', cwd: run.cwd ?? undefined }
   // Conversa no ranking de contas: a conta atual passou do limiar (aviso) -> o proximo turno ja vai na proxima conta
   if (base.pool && base.accountId && !['ok', 'unknown'].includes(effectiveUsage(base.accountId).state))
-    base.accountId = pickAccount({ agent: 'claude', exclude: [base.accountId], allowWarning: effectiveUsage(base.accountId).state !== 'warning' })?.id ?? base.accountId
+    base.accountId = (await pickReadyAccount({ agent: 'claude', exclude: [base.accountId], allowWarning: effectiveUsage(base.accountId).state !== 'warning' }, ensureProvider))?.id ?? base.accountId
   // Connection da run original pode ter sido removida: falha cedo (antes do insert) em vez de cair no provedor pago.
   requireConnection(getSettings(), base.profile)
   const r = run.routine ? findRoutine(run.routine) : undefined

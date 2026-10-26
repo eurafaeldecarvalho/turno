@@ -82,3 +82,11 @@ export function runConnection(base: Connection, account: { connection?: string }
   if (!c) throw new Error(`connection "${account.connection}" doesn't exist anymore; pick another account in Settings › Agents & accounts`)
   return c
 }
+
+// Provedor, modelo e env de uma run. Conta de conexao: so o env e o modelo DELA (o modelo do pedido e nome da Anthropic,
+// ex. "opus", e o extraEnv do perfil base podia trazer ANTHROPIC_MODEL); sem modelo na conexao, o provedor usa o padrao.
+export function runProvider(base: Connection, account: { connection?: string } | undefined, conns: Connection[], reqModel?: string): { conn: Connection; model: string | undefined; baseEnv: boolean } {
+  const conn = runConnection(base, account, conns)
+  if (account?.connection) return { conn, model: conn.model, baseEnv: false }
+  return { conn, model: effectiveModel(conn, reqModel), baseEnv: true }
+}

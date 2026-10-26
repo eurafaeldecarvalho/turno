@@ -257,6 +257,80 @@ describe('conexoes (API) no ranking de contas', () => {
     expect(m.getAccount('default-claude')).toBeDefined()
   })
 
+  it('naoDeveMexerNoRankingQuandoSettingsNaoPodeSerLido', async () => {
+    seed([acc('conn-cohere', 1, { connection: 'cohere', label: 'Cohere', enabled: false })])
+    const { m } = await load([])
+    m.setConnectionSource({ list: () => undefined, env: () => ({}) })
+    m.syncConnectionAccounts()
+    expect(m.getAccount('conn-cohere')).toMatchObject({ enabled: false, rank: 1 })
+    expect(m.pickAccount()).toBeUndefined()
+  })
+
+  it('deveFalharEmVezDeRodarNaAssinaturaQuandoConexaoDaContaSumiu', async () => {
+    seed([acc('conn-velha', 1, { connection: 'velha' })])
+    const { m } = await load([])
+    expect(() => m.accountEnv(m.getAccount('conn-velha')!)).toThrow(/velha/)
+  })
+
+  it('deveDesbloquearContaDeConexaoQuandoUsuarioEditaAsConexoes', async () => {
+    seed([])
+    const { m } = await load([cohere])
+    m.syncConnectionAccounts()
+    m.markAccount('conn-cohere', 'blocked', 'the provider rejected the API key')
+    m.syncConnectionAccounts()
+    expect(m.effectiveUsage('conn-cohere').state).toBe('blocked')
+    m.syncConnectionAccounts({ edited: true })
+    expect(m.effectiveUsage('conn-cohere').state).toBe('unknown')
+  })
+
+  it('naoDeveTrocarAssinaturaPertoDoLimitePorConexaoAbaixoDelaNoRanking', async () => {
+    seed([acc('a', 1)])
+    const { m } = await load([cohere])
+    m.syncConnectionAccounts()
+    m.recordUsage('a', { fiveHour: { pct: 92, resetsAt: new Date(Date.now() + 3600_000).toISOString() } })
+    expect(m.effectiveUsage('a').state).toBe('warning')
+    expect(m.pickAccount({ agent: 'claude' })).toBeUndefined() // troca no aviso: fica na assinatura
+    expect(m.pickAccount({ agent: 'claude', allowWarning: true })?.id).toBe('a')
+    m.markAccount('a', 'exhausted', 'usage limit reached', new Date(Date.now() + 3600_000).toISOString())
+    expect(m.pickAccount({ agent: 'claude' })?.id).toBe('conn-cohere') // bateu no limite: agora sim
+  })
+
+  it('deveRespeitarConexaoQueOUsuarioPosAcimaDaAssinatura', async () => {
+    seed([acc('conn-cohere', 1, { connection: 'cohere', label: 'Cohere' }), acc('a', 2)])
+    const { m } = await load([cohere])
+    expect(m.pickAccount({ agent: 'claude' })?.id).toBe('conn-cohere')
+  })
+
+  it('deveColocarALoginNovaDeAssinaturaAcimaDasConexoes', async () => {
+    seed([])
+    const { m } = await load([cohere])
+    m.syncConnectionAccounts() // instalacao nova: a conexao entra antes de detectar o Claude
+    const bin = join(dir, 'bin')
+    mkdirSync(bin)
+    writeFileSync(join(bin, 'claude'), '#!/bin/sh\n', { mode: 0o755 })
+    writeFileSync(join(bin, 'claude.cmd'), '@echo off\r\n')
+    const prev = { PATH: process.env.PATH, Path: process.env.Path }
+    process.env.PATH = process.env.Path = [bin, prev.PATH ?? prev.Path].filter(Boolean).join(delimiter)
+    try {
+      await m.detectInstalled()
+    } finally {
+      process.env.PATH = prev.PATH
+      process.env.Path = prev.Path
+    }
+    expect(m.agentsState().accounts.filter((a) => a.agent === 'claude').map((a) => a.id)).toEqual(['default-claude', 'conn-cohere'])
+  })
+
+  it('devePularConexaoLocalQueNaoSobeEUsarAProxima', async () => {
+    const ollama = { id: 'ollama', name: 'Ollama', kind: 'endpoint' as const, baseUrl: 'http://localhost:11434', model: 'qwen', bootCommand: 'ollama serve' }
+    seed([acc('conn-ollama', 1, { connection: 'ollama', label: 'Ollama' }), acc('conn-cohere', 2, { connection: 'cohere', label: 'Cohere' })])
+    const { m } = await load([ollama, cohere])
+    const tried: string[] = []
+    const pick = await m.pickReadyAccount({ agent: 'claude', allowWarning: true }, async (c) => (tried.push(c.id), c.id !== 'ollama'))
+    expect(pick?.id).toBe('conn-cohere')
+    expect(tried).toEqual(['ollama']) // so sobe quem tem bootCommand
+    expect(m.effectiveUsage('conn-ollama').state).toBe('exhausted')
+  })
+
   it('deveRecusarRemoverContaDeConexaoPeloRanking', async () => {
     seed([])
     const { m } = await load([cohere])
@@ -344,4 +418,28 @@ describe('settings.json da conta isolada acompanha o do usuario', () => {
     m.syncClaudeSettings(join(dir, 'acc-home'))
     expect(JSON.parse(readFileSync(join(dir, 'acc-home', 'settings.json'), 'utf8')).tui).toBe('default')
   })
+})
+
+describe('refreshLogin sem efeito colateral', () => {
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'turno-acc-'))
+    vi.resetModules()
+    process.env.CLAUDE_CONFIG_DIR = join(dir, 'user-claude')
+    mkdirSync(process.env.CLAUDE_CONFIG_DIR)
+    writeFileSync(join(process.env.CLAUDE_CONFIG_DIR, '.claude.json'), JSON.stringify({ oauthAccount: { emailAddress: 'eu@exemplo.com' } }))
+  })
+  afterEach(() => {
+    delete process.env.CLAUDE_CONFIG_DIR
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('naoDeveCarimbarEmailDaAssinaturaNaContaDeConexao', async () => {
+    writeFileSync(join(dir, 'accounts.json'), JSON.stringify({ accounts: [{ id: 'conn-cohere', agent: 'claude', connection: 'cohere', label: 'Cohere', rank: 1, enabled: true, home: null, createdAt: 'x' }] }))
+    const m = await import('../accounts')
+    m.setConnectionSource({ list: () => [{ id: 'cohere', name: 'Cohere', kind: 'endpoint' }], env: () => ({}) })
+    expect(m.refreshLogin('conn-cohere')).toBe(true)
+    expect(m.getAccount('conn-cohere')?.label).toBe('Cohere')
+    expect(m.getAccount('conn-cohere')?.email).toBeUndefined()
+  })
+
 })

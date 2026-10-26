@@ -9,7 +9,7 @@ import { claudeSessionExists, getSidebar, listClaudeSessions, saveSidebar } from
 import { registerPty, killAllPtys } from './pty'
 import { activeCount, answerPermission, initRunner, repairRunCosts, readRunEvents, rotatedFrom, setRotateHandler, startRun, stopAllRuns, stopRun, type PermissionDecision } from './runner'
 import { openDb, getRun, listRuns, threadOf, renameRoutineRuns, allRunIds } from './db'
-import { getSettings, setSettings } from './settings'
+import { getSettings, setSettings, settingsReadable } from './settings'
 import { takeNotices } from './jsonStore'
 import { accountEnv, addAccount, agentsState, setConnectionSource, syncConnectionAccounts, clearBlock, clearLimit, detectInstalled, getAccount, initAccounts, refreshLogin, removeAccount, reorderAccounts, setThresholds, updateAccount } from './accounts'
 import { closeSession, initBroker, listSessions, prepareLaunch, prepareRaw, swap, type PrepareOpts } from './agentBroker'
@@ -240,7 +240,7 @@ registerPty(liveWc)
 
 // ---- botao Agent: contas, broker de troca, hub de MCP ----
 // conexoes de API (Settings › Connections) entram no ranking como contas do Claude Code apontadas para o provedor
-setConnectionSource({ list: () => getSettings().connections, env: (c) => resolveProviderEnv(c, connectionToken(c)) })
+setConnectionSource({ list: () => (settingsReadable() ? getSettings().connections : undefined), env: (c) => resolveProviderEnv(c, connectionToken(c)) })
 initAccounts((s) => send('agents:state', s))
 syncConnectionAccounts()
 const brokerReady = initBroker(send, () => showWindow())
@@ -434,6 +434,7 @@ ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
       if (now.theme !== before.theme) applyTitleBar()
       if (now.keepAwake !== before.keepAwake) setAwakeMode(now.keepAwake)
       if (now.terminal.windowOpacity !== before.terminal.windowOpacity) applyOpacity()
+      syncConnectionAccounts() // agora com as conexoes reais
       send('settings:changed', now)
     }
     throw e
@@ -443,7 +444,7 @@ ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
   if (patch.theme) applyTitleBar()
   if (patch.keepAwake) setAwakeMode(patch.keepAwake)
   if (patch.terminal?.windowOpacity !== undefined) applyOpacity()
-  if (patch.connections) syncConnectionAccounts() // conexao nova/renomeada/removida reflete no ranking
+  if (patch.connections) syncConnectionAccounts({ edited: true }) // conexao nova/renomeada/removida (ou chave trocada) reflete no ranking
   send('settings:changed', s)
   return s
 })

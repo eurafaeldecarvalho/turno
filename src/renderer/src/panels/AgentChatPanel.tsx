@@ -30,7 +30,8 @@ export function AgentChatPanel({ params, api }: IDockviewPanelProps<AgentChatPar
   const signedIn = claudeAccounts.filter((a) => !agents.signedOut.includes(a.id))
   // mesma regra do main (pickAccount com allowWarning): logada, ligada e fora de esgotada/bloqueada
   const usable = signedIn.filter((a) => !['exhausted', 'blocked'].includes(agents.usage[a.id]?.state ?? 'unknown'))
-  const best = usable.find((a) => ['ok', 'unknown'].includes(agents.usage[a.id]?.state ?? 'unknown')) ?? usable[0]
+  // a escolha vem do main (estrategia de Settings; conexao paga so depois da assinatura acima bater no limite)
+  const best = usable.find((a) => a.id === agents.best) ?? usable.find((a) => ['ok', 'unknown'].includes(agents.usage[a.id]?.state ?? 'unknown')) ?? usable[0]
   // mesmo texto do botao Agent e do main (shared/agents.ts)
   const why = unavailableText(allClaude, agents.usage, agents.signedOut, 'Claude account')
   const [cwd, setCwd] = useState(params.cwd ?? '')

@@ -104,7 +104,7 @@ export function agentsState(): AgentsState {
 // Login padrao do usuario (home null) e agentes cujo login o Turno nao sabe ler contam como logados.
 export function signedIn(a: AgentAccount): boolean {
   // conexao de API: "logada" enquanto a conexao existir em Settings › Connections
-  if (a.connection) return !!connSource?.list().some((c) => c.id === a.connection)
+  if (a.connection) return !!connSource?.list()?.some((c) => c.id === a.connection)
   if (!a.home) return true
   try {
     if (a.agent === 'claude') {
@@ -183,7 +183,7 @@ function ensureDefaults(): void {
   for (const id of installed) {
     if (s.accounts.some((a) => a.agent === id && !a.connection)) continue // conta de conexao nao e login do CLI
     const def = agentDef(id)!
-    s.accounts.push({ id: `default-${id}`, agent: id, label: id === 'claude' ? 'Claude' : def.name, rank: nextRank(), enabled: true, home: null, createdAt: new Date().toISOString() })
+    s.accounts.push({ id: `default-${id}`, agent: id, label: id === 'claude' ? 'Claude' : def.name, rank: subscriptionRank(), enabled: true, home: null, createdAt: new Date().toISOString() })
     changed = true
   }
   if (changed) save()
@@ -191,6 +191,14 @@ function ensureDefaults(): void {
   if (claude) refreshLogin(claude.id) // nome com o e-mail da assinatura
 }
 const nextRank = (): number => Math.max(0, ...load().accounts.map((a) => a.rank)) + 1
+// Assinatura nova entra logo depois da ultima assinatura (acima das conexoes de API, que sao pagas por uso): as que
+// estavam dali para baixo descem uma posicao. Sem conexoes no caminho, e o mesmo que nextRank.
+function subscriptionRank(): number {
+  const s = load()
+  const rank = Math.max(0, ...s.accounts.filter((a) => !a.connection).map((a) => a.rank)) + 1
+  for (const a of s.accounts) if (a.rank >= rank) a.rank++
+  return rank
+}
 
 // ---------- contas ----------
 export const getAccount = (id: string): AgentAccount | undefined => load().accounts.find((a) => a.id === id)
@@ -204,7 +212,7 @@ export function addAccount(agent: string, label?: string): { account: AgentAccou
   const home = join(profilesDir(), id, 'home')
   provision(def.id, home)
   const n = s.accounts.filter((a) => a.agent === agent).length + 1
-  const account: AgentAccount = { id, agent, label: label?.trim() || `${def.name} · account ${n}`, rank: nextRank(), enabled: true, home, createdAt: new Date().toISOString() }
+  const account: AgentAccount = { id, agent, label: label?.trim() || `${def.name} · account ${n}`, rank: subscriptionRank(), enabled: true, home, createdAt: new Date().toISOString() }
   s.accounts.push(account)
   save()
   return { account, login: def.login ?? def.launch ?? def.cmd, env: accountEnv(account) }
@@ -255,6 +263,7 @@ export function removeAccount(id: string): void {
 export function refreshLogin(id: string): boolean {
   const a = getAccount(id)
   if (!a) return false
+  if (a.connection) return signedIn(a) // conexao de API: sem login de CLI (nada de e-mail de assinatura nela)
   if (!a.home) {
     // login padrao do usuario: confere os arquivos de login de verdade (antes respondia sempre "logado")
     if (a.agent === 'claude') {
@@ -306,8 +315,10 @@ function nameDefaultClaude(a: AgentAccount, email: string | undefined): void {
 // o login da pasta (todas as "contas" usariam a mesma credencial sem aviso).
 export function accountEnv(a: AgentAccount): Record<string, string> {
   if (a.connection) {
-    const conn = connSource?.list().find((c) => c.id === a.connection)
-    return conn && connSource ? connSource.env(conn) : {}
+    // env vazio rodaria o Claude Code na assinatura do usuario com o nome da conexao: falha em vez disso
+    const conn = connSource?.list()?.find((c) => c.id === a.connection)
+    if (!conn || !connSource) throw new Error(`connection "${a.connection}" isn't available; check Settings › Connections`)
+    return connSource.env(conn)
   }
   const def = agentDef(a.agent)
   if (!def?.homeVar || !a.home) return {}
@@ -382,7 +393,15 @@ export function pickAccount(opts: { exclude?: string[]; agent?: string; excludeA
   }
   const ranked = [...s.accounts].sort(byStrategy(s.thresholds.strategy ?? 'rank')).filter(usable)
   const st = (a: AgentAccount): string => effectiveUsage(a.id).state
-  return ranked.find((a) => st(a) === 'ok' || st(a) === 'unknown') ?? (opts.allowWarning ? ranked.find((a) => st(a) === 'warning') : undefined)
+  // conexao de API (paga por uso) so assume quando as assinaturas ACIMA dela batem no limite: uma assinatura so perto do
+  // limite (aviso) ainda tem cota e segura as conexoes abaixo dela
+  let warnedAbove = false
+  for (const a of ranked) {
+    const state = st(a)
+    if ((state === 'ok' || state === 'unknown') && !(a.connection && warnedAbove)) return a
+    if (state === 'warning' && !a.connection) warnedAbove = true
+  }
+  return opts.allowWarning ? ranked.find((a) => st(a) === 'warning') : undefined
 }
 
 // Ordem das contas conforme a estrategia: empate sempre cai na ordem da lista.
@@ -519,7 +538,7 @@ function removeHome(home: string): void {
 // para o provedor pelo env. Entra no fim, ligada; o usuario reordena/desliga como as assinaturas. Conexao removida sai.
 // A fonte vem de fora (settings + cofre) para este modulo nao depender do safeStorage do Electron.
 interface ConnectionSource {
-  list: () => Connection[]
+  list: () => Connection[] | undefined // undefined = settings.json nao pode ser lido agora (nada muda no ranking)
   env: (c: Connection) => Record<string, string>
 }
 let connSource: ConnectionSource | undefined
@@ -528,10 +547,12 @@ export function setConnectionSource(src: ConnectionSource): void {
 }
 export const connectionAccountId = (connId: string): string => `conn-${connId}`
 
-export function syncConnectionAccounts(): void {
+// edited: o usuario mexeu nas conexoes (ex.: trocou a chave): conta bloqueada por chave recusada volta a valer
+export function syncConnectionAccounts(opts: { edited?: boolean } = {}): void {
   const s = load()
-  if (!connSource || blocked) return
-  const conns = connSource.list().filter((c) => c.kind === 'endpoint')
+  const list = connSource?.list()
+  if (!list || blocked) return
+  const conns = list.filter((c) => c.kind === 'endpoint')
   let changed = false
   const before = s.accounts.length
   s.accounts = s.accounts.filter((a) => !a.connection || conns.some((c) => c.id === a.connection))
@@ -545,5 +566,23 @@ export function syncConnectionAccounts(): void {
     s.accounts.push({ id: connectionAccountId(c.id), agent: 'claude', connection: c.id, label: c.name, rank: nextRank(), enabled: true, home: null, createdAt: new Date().toISOString() })
     changed = true
   }
+  if (opts.edited)
+    for (const a of s.accounts)
+      if (a.connection && usage[a.id]?.state === 'blocked') {
+        usage[a.id] = { ...usage[a.id], state: 'unknown', reason: undefined }
+        saveUsageSoon()
+        changed = true
+      }
   if (changed) save()
+}
+
+// Melhor conta que da para usar AGORA: conexao local (ex. Ollama, com bootCommand) e ligada antes; se nao subir, sai do
+// ranking por 20 min e vale a proxima. Sem isso a run caia num servidor parado e falhava em vez de seguir no ranking.
+export async function pickReadyAccount(opts: Parameters<typeof pickAccount>[0], ensure: (c: Connection) => Promise<boolean>): Promise<AgentAccount | undefined> {
+  for (;;) {
+    const a = pickAccount(opts)
+    const conn = a?.connection ? connSource?.list()?.find((c) => c.id === a.connection) : undefined
+    if (!a || !conn?.bootCommand || (await ensure(conn))) return a
+    markAccount(a.id, 'exhausted', `${conn.name} is not running (tried to start it)`, new Date(Date.now() + 20 * 60_000).toISOString())
+  }
 }

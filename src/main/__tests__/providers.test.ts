@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveProviderEnv, effectiveModel, getConnection, findConnection, requireConnection, runConnection, DEFAULT_CONNECTIONS } from '../providers'
+import { resolveProviderEnv, effectiveModel, getConnection, findConnection, requireConnection, runConnection, runProvider, DEFAULT_CONNECTIONS } from '../providers'
 import type { Connection } from '../../shared/types'
 
 const endpoint: Connection = {
@@ -114,5 +114,19 @@ describe('runConnection (conta de conexao no ranking troca o provedor da run)', 
   })
   it('deveRecusarQuandoConexaoDaContaFoiRemovida (nunca cai na assinatura em silencio)', () => {
     expect(() => runConnection(max, { connection: 'cohere' }, [max])).toThrow(/cohere/)
+  })
+})
+
+describe('runProvider (provedor, modelo e env base de uma run)', () => {
+  const max = { id: 'claude-max', name: 'Claude', kind: 'claude' as const, extraEnv: { ANTHROPIC_MODEL: 'claude-opus-x' } }
+  const semModelo = { id: 'or', name: 'OpenRouter', kind: 'endpoint' as const, baseUrl: 'https://x' }
+  it('deveUsarModeloDoPedidoNaAssinatura', () => {
+    expect(runProvider(max, undefined, [max], 'opus')).toEqual({ conn: max, model: 'opus', baseEnv: true })
+  })
+  it('naoDeveMandarModeloDaAnthropicParaConexaoSemModelo', () => {
+    expect(runProvider(max, { connection: 'or' }, [max, semModelo], 'opus').model).toBeUndefined()
+  })
+  it('naoDeveHerdarEnvDoPerfilBaseNaContaDeConexao', () => {
+    expect(runProvider(max, { connection: 'or' }, [max, semModelo], 'opus').baseEnv).toBe(false)
   })
 })

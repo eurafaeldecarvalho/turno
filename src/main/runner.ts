@@ -9,8 +9,8 @@ import { childEnv } from './env'
 import { getRun, insertRun, pruneRuns, updateRun } from './db'
 import { release } from './locks'
 import { getSettings } from './settings'
-import { effectiveModel, isAnthropicApi, requireConnection, resolveProviderEnv, runConnection } from './providers'
-import { evaluateThresholds, matchedRateLimit, parseProviderLimit, parseRateLimit, type AbortPolicy } from './abort'
+import { isAnthropicApi, requireConnection, resolveProviderEnv, runProvider } from './providers'
+import { evaluateThresholds, matchedRateLimit, parseProviderFailure, parseRateLimit, type AbortPolicy } from './abort'
 import { wrapForSandbox } from './sandbox'
 import { canCleanup, createWorktree, deleteBranch, isManagedWorktreePath, removeWorktree, resolveRepoRoot, worktreeBase, worktreeBranch, worktreeCwd, worktreeDecision, worktreeHead, worktreeMainRoot, worktreeStatus, worktreeTeardown } from './worktree'
 import { connectionToken } from './secrets'
@@ -267,8 +267,7 @@ export function startRun(o: StartOptions): string {
   }
   const account = req.accountId && conn.kind === 'claude' ? getAccount(req.accountId) : undefined
   // conta do ranking que e conexao de API: a run roda nesse provedor (modelo, env e cobranca dele)
-  const runConn = runConnection(conn, account, getSettings().connections)
-  const model = effectiveModel(runConn, req.model)
+  const { conn: runConn, model, baseEnv } = runProvider(conn, account, getSettings().connections, req.model)
   // Isolation por worktree (opt-in): roda a run num git worktree isolado, NUNCA no diretorio principal (sob o editor).
   // So canonicaliza/mexe no cwd quando a rotina pede isolamento — run normal fica com o cwd configurado, intacto.
   const wantsWorktree = (o.isolation ?? 'none') === 'worktree'
@@ -341,7 +340,7 @@ export function startRun(o: StartOptions): string {
     }
   }
   const providerEnv: Record<string, string> = {
-    ...resolveProviderEnv(conn, connectionToken(conn)),
+    ...(baseEnv ? resolveProviderEnv(conn, connectionToken(conn)) : {}),
     ...(account ? accountEnv(account) : {}),
     ...mcp.env,
     TURNO_RUN_ID: runId,
@@ -444,13 +443,21 @@ export function startRun(o: StartOptions): string {
         }
       }
     }
-    // Conexao de API sem cota (429) ou sem credito (402): sai do ranking por um tempo e a conversa segue na proxima
-    const pl = account?.connection ? parseProviderLimit(line) : undefined
-    if (pl && account) {
-      markAccount(account.id, 'exhausted', pl.kind === 'credits' ? 'no credits left on this provider' : 'usage limit reached on this provider')
+    // Conexao de API que nao da para usar agora: sai do ranking (por um tempo, ou ate conferir a chave) e a conversa
+    // segue na proxima conta. limite/credito = 1 h; servidor fora do ar = 20 min; chave recusada = bloqueada.
+    const pf = account?.connection ? parseProviderFailure(line) : undefined
+    if (pf && account) {
+      if (pf.kind === 'auth') markAccount(account.id, 'blocked', 'the provider rejected the API key: check it in Settings › Connections')
+      else
+        markAccount(
+          account.id,
+          'exhausted',
+          pf.kind === 'credits' ? 'no credits left on this provider' : pf.kind === 'down' ? 'the provider is not responding' : 'usage limit reached on this provider',
+          pf.kind === 'down' ? new Date(Date.now() + 20 * 60_000).toISOString() : undefined,
+        )
       if (req.pool && !a.rotate && pickAccount({ agent: 'claude', exclude: [account.id], allowWarning: true })) {
         a.rotate = true
-        a.stopDetail = `${pl.message || 'provider limit reached'}; Turno continues the conversation on the next account`
+        a.stopDetail = `${pf.message || 'provider unavailable'}; Turno continues the conversation on the next account`
         void stopRun(runId, 'rate_limited')
       }
     }

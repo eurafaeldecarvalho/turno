@@ -124,6 +124,12 @@ function load(): void {
   cache = { ...defaults(), ...saved, terminal }
 }
 
+// settings.json lido de verdade (nao os padroes de quando estava travado): quem apaga/cria coisas a partir dele checa antes
+export function settingsReadable(): boolean {
+  getSettings()
+  return !blocked
+}
+
 export function getSettings(): Settings {
   if (!cache) load()
   // Testes/smoke apontam para outra pasta sem mexer no settings.json.

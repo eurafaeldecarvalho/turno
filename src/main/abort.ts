@@ -88,10 +88,11 @@ export function policiesFromConfig(config: { abort?: AbortPolicy[]; budget_usd?:
   return list
 }
 
-// Conexao de API (Cohere, OpenRouter...) sem cota: o `claude -p` termina com um result de erro e o status HTTP do
-// provedor em api_error_status (medido: 429 = limite/cota do plano, 402 = sem credito). 5xx e temporario: nao conta.
-export function parseProviderLimit(line: string): { kind: 'limit' | 'credits'; message: string } | undefined {
-  if (!line.includes('"api_error_status"')) return undefined
+// Conexao de API (Cohere, OpenRouter...) que nao da para usar agora. O `claude -p` termina com um result de erro e o
+// status HTTP do provedor em api_error_status (medido): 429 = limite/cota do plano, 402 = sem credito, 401/403 = chave
+// recusada; sem status e ECONNREFUSED/ENOTFOUND = servidor fora do ar. 5xx e temporario: nao conta.
+export function parseProviderFailure(line: string): { kind: 'limit' | 'credits' | 'auth' | 'down'; message: string } | undefined {
+  if (!line.includes('"is_error"')) return undefined
   let e: { type?: unknown; is_error?: unknown; api_error_status?: unknown; result?: unknown }
   try {
     e = JSON.parse(line)
@@ -99,6 +100,8 @@ export function parseProviderLimit(line: string): { kind: 'limit' | 'credits'; m
     return undefined
   }
   if (e?.type !== 'result' || e.is_error !== true) return undefined
-  const kind = e.api_error_status === 429 ? 'limit' : e.api_error_status === 402 ? 'credits' : undefined
-  return kind ? { kind, message: typeof e.result === 'string' ? e.result : '' } : undefined
+  const message = typeof e.result === 'string' ? e.result : ''
+  const st = e.api_error_status
+  const kind = st === 429 ? 'limit' : st === 402 ? 'credits' : st === 401 || st === 403 ? 'auth' : st == null && /ECONNREFUSED|ENOTFOUND|EHOSTUNREACH/.test(message) ? 'down' : undefined
+  return kind ? { kind, message } : undefined
 }
