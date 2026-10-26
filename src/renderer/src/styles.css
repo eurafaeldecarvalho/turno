@@ -943,3 +943,7 @@ fieldset.field > legend { font-size: calc(var(--ui-size, 13px) * 12 / 13); color
    estendido ao arquetipo popover (menus, menu New, paleta de comandos). So entra, respeita reduced-motion. */
 .menu, .new-term-dropdown, .agent-menu, .modal.palette { transform-origin: top; animation: menu-in .14s cubic-bezier(.2, .8, .2, 1); }
 @media (prefers-reduced-motion: reduce) { .menu, .new-term-dropdown, .agent-menu, .modal.palette { animation: none; } }
+/* Seletor de fonte com busca: mesmo visual do seletor de tema, gatilho e um campo de texto */
+.font-trigger { cursor: text; padding-left: 10px; font-size: var(--ui-size, 13px); }
+.font-trigger:focus { outline: none; border-color: var(--faint); box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 5%, transparent); }
+.font-opt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

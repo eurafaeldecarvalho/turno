@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import type { ShellInfo } from '../shared/types'
 import { IS_WIN, defaultShell } from './platform'
+import { parseFcList } from '../shared/fonts'
 
 function which(exe: string): string | undefined {
   try {
@@ -20,7 +21,15 @@ const SYMBOL_FONTS = /^(Marlett|Webdings|Wingdings( \d)?|Symbol|MT Extra|Segoe (
 // Fontes instaladas, via PowerShell (WPF + GDI).
 export function listFonts(): string[] {
   if (fontsCache) return fontsCache
-  if (!IS_WIN) return (fontsCache = []) // fora do Windows: sem enumeracao (as fontes sugeridas ainda funcionam)
+  if (!IS_WIN) {
+    // Linux/macOS: fontconfig (fc-list). Sem fontconfig: so as sugeridas, e o usuario ainda digita qualquer nome
+    try {
+      fontsCache = parseFcList(execFileSync('fc-list', [':', 'family'], { encoding: 'utf8', timeout: 20000 })).filter((n) => !SYMBOL_FONTS.test(n))
+    } catch {
+      fontsCache = []
+    }
+    return fontsCache
+  }
   try {
     // GDI (InstalledFontCollection) corta o nome em 31 caracteres ("Bahnschrift SemiBold SemiConden");
     // WPF devolve as familias tipograficas com o nome inteiro. Usa as duas e descarta os nomes cortados do GDI.

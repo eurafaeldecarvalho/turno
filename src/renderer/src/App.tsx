@@ -597,7 +597,19 @@ async function runSmoke(): Promise<void> {
     const [last] = await window.turno.run.list(undefined, 1)
     if (last) openRun(last.id, 'Run')
   }
-  if (window.turno.smoke.view?.startsWith('settings')) openSettingsModal(window.turno.smoke.view === 'settings-picker' ? 'appearance' : window.turno.smoke.view.slice('settings-'.length))
+  if (window.turno.smoke.view?.startsWith('settings'))
+    openSettingsModal(window.turno.smoke.view === 'settings-picker' ? 'appearance' : window.turno.smoke.view === 'settings-fontpicker' ? 'terminal' : window.turno.smoke.view.slice('settings-'.length))
+  if (window.turno.smoke.view === 'settings-fontpicker') {
+    // Busca de fonte: foca o campo e digita "mono"; a lista deve mostrar so as fontes que batem (sugeridas + instaladas).
+    await new Promise((r) => setTimeout(r, 800))
+    const el = document.querySelector<HTMLInputElement>('.font-trigger')
+    el?.focus()
+    await new Promise((r) => setTimeout(r, 200))
+    if (el) {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(el, 'mono')
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+    }
+  }
   if (window.turno.smoke.view === 'settings-picker') {
     // Abre o seletor de tema e passa o mouse no 4o tema: o app inteiro deve pre-visualizar.
     await new Promise((r) => setTimeout(r, 600))

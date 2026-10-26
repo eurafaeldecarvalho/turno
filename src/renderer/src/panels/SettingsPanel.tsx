@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { AgentsSection } from './AgentsSection'
 import { StartFolderCard } from '../startFolder'
+import { filterFonts } from '../../../shared/fonts'
 import { McpSection } from './McpSection'
 import { openOnboarding, openWhatsNew } from '../Onboarding'
 import { toast } from '../Toast'
@@ -168,6 +169,8 @@ export function ThemePicker({ value, onPick, labelId }: { value: string; onPick:
 
 const MONO_HINT = /mono|code|consol|courier|cascadia|menlo|hack|iosevka|fira|jetbrains|nerd|terminal|fixed/i
 
+// Seletor de fonte com busca: digita e a lista filtra (sugeridas + instaladas no sistema, Windows ou Linux).
+// Enter escolhe a destacada; sem nenhuma, usa o nome digitado como fonte propria ("Use ...").
 function FontSelect({ value, options, onChange, system = [], fallback }: {
   value: string
   options: Array<{ v: string; l: string }>
@@ -175,35 +178,83 @@ function FontSelect({ value, options, onChange, system = [], fallback }: {
   system?: string[]
   fallback: string
 }) {
-  const suggested = new Set(options.map((o) => /^"?([^",]+)/.exec(o.v)?.[1].toLowerCase()))
-  const sysOpts = system.filter((f) => !suggested.has(f.toLowerCase())).map((f) => ({ v: `"${f}", ${fallback}`, l: f }))
-  const known = options.some((o) => o.v === value) || sysOpts.some((o) => o.v === value)
-  const [custom, setCustom] = useState(!known)
+  const uid = useId()
+  const root = useRef<HTMLDivElement>(null)
+  const suggestedNames = new Set(options.map((o) => /^"?([^",]+)/.exec(o.v)?.[1].toLowerCase()))
+  const installed = system.filter((f) => !suggestedNames.has(f.toLowerCase())).map((f) => ({ v: `"${f}", ${fallback}`, l: f }))
+  const all = [...options, ...installed]
+  // nome mostrado: o rotulo da opcao, ou a 1a familia do valor salvo (fonte digitada antes)
+  const label = all.find((o) => o.v === value)?.l ?? /^"?([^",]+)/.exec(value)?.[1] ?? value
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState('')
+  const [hi, setHi] = useState(0)
+  const sug = filterFonts(options, q)
+  const ins = filterFonts(installed, q)
+  const typed = q.trim()
+  const custom = typed && !all.some((o) => o.l.toLowerCase() === typed.toLowerCase()) ? [{ v: `"${typed}", ${fallback}`, l: `Use "${typed}"` }] : []
+  const items = [...sug, ...ins, ...custom]
+
+  const close = (): void => (setOpen(false), setQ(''))
+  const pick = (o: { v: string }): void => {
+    close()
+    if (o.v !== value) onChange(o.v)
+  }
+  useEffect(() => {
+    if (!open) return
+    const down = (e: MouseEvent): void => void (!root.current?.contains(e.target as Node) && close())
+    window.addEventListener('mousedown', down, true)
+    return () => window.removeEventListener('mousedown', down, true)
+  }, [open])
+  useEffect(() => document.getElementById(`${uid}-opt-${hi}`)?.scrollIntoView({ block: 'nearest' }), [hi, open])
+
+  const onKey = (e: React.KeyboardEvent): void => {
+    if (e.key === 'ArrowDown') (e.preventDefault(), open ? setHi((hi + 1) % Math.max(items.length, 1)) : setOpen(true))
+    else if (e.key === 'ArrowUp') (e.preventDefault(), setHi((hi - 1 + items.length) % Math.max(items.length, 1)))
+    else if (e.key === 'Enter') (e.preventDefault(), open && items[hi] && pick(items[hi]))
+    else if (e.key === 'Escape' && open) (e.stopPropagation(), close())
+    else if (e.key === 'Tab') close()
+  }
+  const row = (o: { v: string; l: string }, i: number): React.ReactElement => (
+    <li
+      key={o.v + i}
+      id={`${uid}-opt-${i}`}
+      role="option"
+      aria-selected={o.v === value}
+      className={`${i === hi ? 'hi' : ''} ${o.v === value ? 'on' : ''}`}
+      onMouseEnter={() => setHi(i)}
+      onClick={() => pick(o)}
+    >
+      <span className="grow font-opt" style={{ fontFamily: o.v }}>{o.l}</span>
+      <span className="theme-check" aria-hidden>{o.v === value && <IconCheck size={14} />}</span>
+    </li>
+  )
   return (
-    <div className="row">
-      <select
-        value={custom ? '__custom' : value}
-        onChange={(e) => {
-          if (e.target.value === '__custom') return setCustom(true)
-          setCustom(false)
-          onChange(e.target.value)
-        }}
-      >
-        <optgroup label="Suggested">
-          {options.map((o) => (
-            <option key={o.v} value={o.v}>{o.l}</option>
-          ))}
-        </optgroup>
-        {sysOpts.length > 0 && (
-          <optgroup label="Installed on Windows">
-            {sysOpts.map((o) => (
-              <option key={o.v} value={o.v}>{o.l}</option>
-            ))}
-          </optgroup>
-        )}
-        <option value="__custom">Other…</option>
-      </select>
-      {custom && <input className="mono" defaultValue={value} placeholder='"My Font", monospace' onBlur={(e) => e.target.value && onChange(e.target.value)} />}
+    <div className="theme-picker font-picker" ref={root} data-esc-local={open || undefined}>
+      <input
+        className="theme-trigger font-trigger"
+        role="combobox"
+        aria-expanded={open}
+        aria-autocomplete="list"
+        aria-controls={open ? `${uid}-list` : undefined}
+        aria-activedescendant={open && items[hi] ? `${uid}-opt-${hi}` : undefined}
+        value={open ? q : label}
+        placeholder={label}
+        style={{ fontFamily: open ? undefined : value }}
+        onFocus={() => (setOpen(true), setQ(''), setHi(0))}
+        onClick={() => !open && setOpen(true)}
+        onChange={(e) => (setQ(e.target.value), setHi(0), setOpen(true))}
+        onKeyDown={onKey}
+      />
+      {open && (
+        <ul className="theme-menu" role="listbox" id={`${uid}-list`} onMouseDown={(e) => e.preventDefault()}>
+          {sug.length > 0 && <li role="presentation" className="theme-group">Suggested</li>}
+          {sug.map((o, i) => row(o, i))}
+          {ins.length > 0 && <li role="presentation" className="theme-group">Installed</li>}
+          {ins.map((o, i) => row(o, sug.length + i))}
+          {custom.map((o, i) => row(o, sug.length + ins.length + i))}
+          {!items.length && <li role="presentation" className="theme-group">Type a font name</li>}
+        </ul>
+      )}
     </div>
   )
 }
