@@ -19,3 +19,26 @@ export function preferredShell(platform: NodeJS.Platform = process.platform, she
 export function homeDir(): string {
   return homedir()
 }
+
+export interface ShellEnv {
+  platform: NodeJS.Platform
+  shellEnv: string | undefined
+  pathEnv: string | undefined
+  exists: (p: string) => boolean
+}
+
+// Shell que da para executar nesta maquina: absoluto que existe, ou nome solto achado no PATH.
+function runnable(shell: string, env: ShellEnv): boolean {
+  if (shell.includes('/')) return env.exists(shell)
+  return (env.pathEnv ?? '').split(':').some((dir) => dir && env.exists(`${dir}/${shell}`))
+}
+
+// Shell que o terminal vai abrir. No POSIX, um shell salvo que nao existe aqui (ex.: "pwsh.exe" vindo de
+// settings do Windows) faria o execvp falhar em TODO terminal: cai no $SHELL do usuario e, por fim, no default.
+// No Windows nao mexe: o ConPTY resolve o nome pelo PATH do proprio Windows.
+export function resolveShell(requested: string | undefined, env: ShellEnv): string {
+  if (env.platform === 'win32') return requested || defaultShell(env.platform)
+  if (requested && runnable(requested, env)) return requested
+  if (env.shellEnv && runnable(env.shellEnv, env)) return env.shellEnv
+  return defaultShell(env.platform)
+}

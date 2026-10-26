@@ -7,7 +7,7 @@ import { childEnv } from './env'
 import { getConnection, resolveProviderEnv } from './providers'
 import { getSettings } from './settings'
 import { connectionToken } from './secrets'
-import { defaultShell, homeDir } from './platform'
+import { homeDir, resolveShell } from './platform'
 import { initTermSessions, trackPty, untrackPty } from './termsessions'
 import { onPtyData, onPtyExit, takeLaunchEnv } from './agentBroker'
 
@@ -48,7 +48,12 @@ export function registerPty(getWc: () => WebContents | undefined): void {
 
   ipcMain.handle('pty:create', (_e, opts: PtyCreateOptions) => {
     const id = nextId++
-    const shell = opts.shell || getSettings().terminal.defaultShell || defaultShell()
+    const shell = resolveShell(opts.shell || getSettings().terminal.defaultShell, {
+      platform: process.platform,
+      shellEnv: process.env.SHELL,
+      pathEnv: process.env.PATH,
+      exists: existsSync,
+    })
     const { args, env } = shellArgs(shell)
     const cwd = opts.cwd && isDir(opts.cwd) ? opts.cwd : homeDir() // arquivo no lugar da pasta tambem cai na home
     const p = pty.spawn(shell, args, {
