@@ -73,3 +73,12 @@ export function requireConnection(settings: { connections?: Connection[] }, id: 
   if (!c) throw new Error(`connection "${id}" doesn't exist anymore; pick one in Settings › Connections or in the routine`)
   return c
 }
+
+// Provedor em que a run roda de fato: a conta escolhida no ranking pode ser uma conexao de API (Cohere, OpenRouter...)
+// e ai o modelo, o env e o "cobrado por uso" vem dela. Conexao removida LANCA: nunca cai na assinatura em silencio.
+export function runConnection(base: Connection, account: { connection?: string } | undefined, conns: Connection[]): Connection {
+  if (!account?.connection) return base
+  const c = conns.find((x) => x.id === account.connection)
+  if (!c) throw new Error(`connection "${account.connection}" doesn't exist anymore; pick another account in Settings › Agents & accounts`)
+  return c
+}

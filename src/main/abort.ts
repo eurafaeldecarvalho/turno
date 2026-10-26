@@ -87,3 +87,18 @@ export function policiesFromConfig(config: { abort?: AbortPolicy[]; budget_usd?:
   if (config.budget_usd != null && !list.some((p) => p.kind === 'cost_usd')) list.push({ kind: 'cost_usd', limit: config.budget_usd })
   return list
 }
+
+// Conexao de API (Cohere, OpenRouter...) sem cota: o `claude -p` termina com um result de erro e o status HTTP do
+// provedor em api_error_status (medido: 429 = limite/cota do plano, 402 = sem credito). 5xx e temporario: nao conta.
+export function parseProviderLimit(line: string): { kind: 'limit' | 'credits'; message: string } | undefined {
+  if (!line.includes('"api_error_status"')) return undefined
+  let e: { type?: unknown; is_error?: unknown; api_error_status?: unknown; result?: unknown }
+  try {
+    e = JSON.parse(line)
+  } catch {
+    return undefined
+  }
+  if (e?.type !== 'result' || e.is_error !== true) return undefined
+  const kind = e.api_error_status === 429 ? 'limit' : e.api_error_status === 402 ? 'credits' : undefined
+  return kind ? { kind, message: typeof e.result === 'string' ? e.result : '' } : undefined
+}

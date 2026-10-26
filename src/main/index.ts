@@ -11,7 +11,7 @@ import { activeCount, answerPermission, initRunner, repairRunCosts, readRunEvent
 import { openDb, getRun, listRuns, threadOf, renameRoutineRuns, allRunIds } from './db'
 import { getSettings, setSettings } from './settings'
 import { takeNotices } from './jsonStore'
-import { accountEnv, addAccount, agentsState, clearBlock, clearLimit, detectInstalled, getAccount, initAccounts, refreshLogin, removeAccount, reorderAccounts, setThresholds, updateAccount } from './accounts'
+import { accountEnv, addAccount, agentsState, setConnectionSource, syncConnectionAccounts, clearBlock, clearLimit, detectInstalled, getAccount, initAccounts, refreshLogin, removeAccount, reorderAccounts, setThresholds, updateAccount } from './accounts'
 import { closeSession, initBroker, listSessions, prepareLaunch, prepareRaw, swap, type PrepareOpts } from './agentBroker'
 import { listMcp, mcpStatus, removeMcp, saveMcp } from './mcphub'
 import { connectJira, disconnectJira, listTasks, startTask } from './tasks'
@@ -26,7 +26,7 @@ import { detectShells, listFonts } from './shells'
 import { prepareClaude } from './claudeprep'
 import { claudeLogin, claudeLogout, claudeStatus } from './provider-auth'
 import { setSecret, deleteSecret, connectionToken } from './secrets'
-import { findConnection, getConnection } from './providers'
+import { findConnection, getConnection, resolveProviderEnv } from './providers'
 import { startTranslator } from './translator'
 import { checkConnection } from './doctor'
 import { suggestCommand } from './ai'
@@ -239,7 +239,10 @@ setRotateHandler(followUp)
 registerPty(liveWc)
 
 // ---- botao Agent: contas, broker de troca, hub de MCP ----
+// conexoes de API (Settings › Connections) entram no ranking como contas do Claude Code apontadas para o provedor
+setConnectionSource({ list: () => getSettings().connections, env: (c) => resolveProviderEnv(c, connectionToken(c)) })
 initAccounts((s) => send('agents:state', s))
+syncConnectionAccounts()
 const brokerReady = initBroker(send, () => showWindow())
 // tradutor Anthropic -> OpenAI das conexoes via='translate' (sobe cedo: o env dos agentes precisa da porta)
 void startTranslator((id) => {
@@ -440,6 +443,7 @@ ipcMain.handle('settings:set', (_e, patch: Partial<Settings>) => {
   if (patch.theme) applyTitleBar()
   if (patch.keepAwake) setAwakeMode(patch.keepAwake)
   if (patch.terminal?.windowOpacity !== undefined) applyOpacity()
+  if (patch.connections) syncConnectionAccounts() // conexao nova/renomeada/removida reflete no ranking
   send('settings:changed', s)
   return s
 })

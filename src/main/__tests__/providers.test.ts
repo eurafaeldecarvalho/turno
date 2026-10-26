@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveProviderEnv, effectiveModel, getConnection, findConnection, requireConnection, DEFAULT_CONNECTIONS } from '../providers'
+import { resolveProviderEnv, effectiveModel, getConnection, findConnection, requireConnection, runConnection, DEFAULT_CONNECTIONS } from '../providers'
 import type { Connection } from '../../shared/types'
 
 const endpoint: Connection = {
@@ -98,5 +98,21 @@ describe('requireConnection (guard central contra provedor errado)', () => {
   })
   it('retorna a connection quando existe', () => {
     expect(requireConnection({ connections: DEFAULT_CONNECTIONS }, 'qwen-local').id).toBe('qwen-local')
+  })
+})
+
+describe('runConnection (conta de conexao no ranking troca o provedor da run)', () => {
+  const max = { id: 'claude-max', name: 'Claude', kind: 'claude' as const }
+  const cohere = { id: 'cohere', name: 'Cohere', kind: 'endpoint' as const, baseUrl: 'https://x', model: 'command-a' }
+  it('deveUsarAConexaoDoPerfilQuandoContaEAssinatura', () => {
+    expect(runConnection(max, { connection: undefined }, [max, cohere])).toBe(max)
+    expect(runConnection(max, undefined, [max, cohere])).toBe(max)
+  })
+  it('deveUsarAConexaoDaContaQuandoContaEConexaoDeApi', () => {
+    expect(runConnection(max, { connection: 'cohere' }, [max, cohere])).toBe(cohere)
+    expect(effectiveModel(runConnection(max, { connection: 'cohere' }, [max, cohere]), 'sonnet')).toBe('command-a')
+  })
+  it('deveRecusarQuandoConexaoDaContaFoiRemovida (nunca cai na assinatura em silencio)', () => {
+    expect(() => runConnection(max, { connection: 'cohere' }, [max])).toThrow(/cohere/)
   })
 })

@@ -9,8 +9,8 @@ import { childEnv } from './env'
 import { getRun, insertRun, pruneRuns, updateRun } from './db'
 import { release } from './locks'
 import { getSettings } from './settings'
-import { effectiveModel, isAnthropicApi, requireConnection, resolveProviderEnv } from './providers'
-import { evaluateThresholds, matchedRateLimit, parseRateLimit, type AbortPolicy } from './abort'
+import { effectiveModel, isAnthropicApi, requireConnection, resolveProviderEnv, runConnection } from './providers'
+import { evaluateThresholds, matchedRateLimit, parseProviderLimit, parseRateLimit, type AbortPolicy } from './abort'
 import { wrapForSandbox } from './sandbox'
 import { canCleanup, createWorktree, deleteBranch, isManagedWorktreePath, removeWorktree, resolveRepoRoot, worktreeBase, worktreeBranch, worktreeCwd, worktreeDecision, worktreeHead, worktreeMainRoot, worktreeStatus, worktreeTeardown } from './worktree'
 import { connectionToken } from './secrets'
@@ -251,7 +251,6 @@ export function startRun(o: StartOptions): string {
   // Guard central: recusa profile de connection inexistente (nunca cai no provedor pago em silencio).
   // Cobre runRoutine, followUp e adhoc, que todos passam por aqui.
   const conn = requireConnection(getSettings(), req.profile)
-  const model = effectiveModel(conn, req.model)
   const runId = o.runId ?? newRunId()
   // Ranking de contas (botao Agent): escolhe a melhor conta Claude com cota; a conversa e compartilhada entre contas.
   // Sandbox (WSL/Docker) nao enxerga a pasta da conta nem o --mcp-config do host: recusa em vez de rodar na conta errada.
@@ -267,6 +266,9 @@ export function startRun(o: StartOptions): string {
     req.accountId = pick.id
   }
   const account = req.accountId && conn.kind === 'claude' ? getAccount(req.accountId) : undefined
+  // conta do ranking que e conexao de API: a run roda nesse provedor (modelo, env e cobranca dele)
+  const runConn = runConnection(conn, account, getSettings().connections)
+  const model = effectiveModel(runConn, req.model)
   // Isolation por worktree (opt-in): roda a run num git worktree isolado, NUNCA no diretorio principal (sob o editor).
   // So canonicaliza/mexe no cwd quando a rotina pede isolamento — run normal fica com o cwd configurado, intacto.
   const wantsWorktree = (o.isolation ?? 'none') === 'worktree'
@@ -441,6 +443,16 @@ export function startRun(o: StartOptions): string {
         }
       }
     }
+    // Conexao de API sem cota (429) ou sem credito (402): sai do ranking por um tempo e a conversa segue na proxima
+    const pl = account?.connection ? parseProviderLimit(line) : undefined
+    if (pl && account) {
+      markAccount(account.id, 'exhausted', pl.kind === 'credits' ? 'no credits left on this provider' : 'usage limit reached on this provider')
+      if (req.pool && !a.rotate && pickAccount({ agent: 'claude', exclude: [account.id], allowWarning: true })) {
+        a.rotate = true
+        a.stopDetail = `${pl.message || 'provider limit reached'}; Turno continues the conversation on the next account`
+        void stopRun(runId, 'rate_limited')
+      }
+    }
     if (!a.pauseUntil && !a.rotate) {
       const rl = parseRateLimit(line)
       const kind = rl?.rejected ? matchedRateLimit(rl.rateLimitType, policies) : undefined
@@ -455,7 +467,7 @@ export function startRun(o: StartOptions): string {
       try {
         // so o evento de inicio de verdade (nivel de cima): uma ferramenta pode ter "subtype":"init" no proprio input
         const e = JSON.parse(line)
-        if (e?.type === 'system' && e.subtype === 'init') billed = isUsageBilled(e.apiKeySource, conn)
+        if (e?.type === 'system' && e.subtype === 'init') billed = isUsageBilled(e.apiKeySource, runConn)
       } catch {
         /* linha truncada */
       }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { evaluateThresholds, matchedRateLimit, policiesFromConfig, parseRateLimit, priorCost, type AbortPolicy } from '../abort'
+import { evaluateThresholds, matchedRateLimit, policiesFromConfig, parseProviderLimit, parseRateLimit, priorCost, type AbortPolicy } from '../abort'
 
 describe('evaluateThresholds', () => {
   const m = { costUsd: 0.2, steps: 10, durationMin: 5 }
@@ -82,5 +82,24 @@ describe('policiesFromConfig (compat budget_usd)', () => {
   })
   it('sem budget nem abort -> vazio', () => {
     expect(policiesFromConfig({})).toEqual([])
+  })
+})
+
+describe('parseProviderLimit (conexao de API sem cota: linhas reais do claude -p)', () => {
+  const r = (status: number, text: string) =>
+    JSON.stringify({ type: 'result', subtype: 'success', is_error: true, api_error_status: status, terminal_reason: 'api_error', result: text, session_id: 's' })
+  it('deveDetectarLimiteQuando429', () => {
+    expect(parseProviderLimit(r(429, 'API Error: Request rejected (429) · You are using a Trial key, which is limited to 1000 API calls / month'))).toEqual({ kind: 'limit', message: 'API Error: Request rejected (429) · You are using a Trial key, which is limited to 1000 API calls / month' })
+  })
+  it('deveDetectarSemCreditoQuando402', () => {
+    expect(parseProviderLimit(r(402, 'API Error: 402 Insufficient credits'))?.kind).toBe('credits')
+  })
+  it('naoDeveTirarContaPorErroTemporarioDoServidor', () => {
+    expect(parseProviderLimit(r(500, 'API Error: 500 boom'))).toBeUndefined()
+  })
+  it('naoDeveConfundirResultadoDeSucessoOuOutraLinha', () => {
+    expect(parseProviderLimit(JSON.stringify({ type: 'result', is_error: false, result: 'ok 429' }))).toBeUndefined()
+    expect(parseProviderLimit('{"type":"assistant","message":{"content":[{"type":"text","text":"api_error_status 429"}]}}')).toBeUndefined()
+    expect(parseProviderLimit('nao e json "api_error_status":429')).toBeUndefined()
   })
 })

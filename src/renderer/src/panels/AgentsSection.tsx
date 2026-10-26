@@ -162,6 +162,9 @@ export function AgentsSection() {
                   aria-label="Account name"
                   key={a.label} // nome trocado fora daqui (Check sign-in): remonta com o novo valor
                   defaultValue={a.label}
+                  // conta de conexao: o nome vem de Settings › Connections (renomear aqui seria desfeito na proxima sincronia)
+                  readOnly={!!a.connection}
+                  title={a.connection ? 'Rename it in Settings › Connections' : undefined}
                   // com edicao pendente, Esc so desfaz o nome (data-esc-local); sem edicao, Esc fecha o Settings como sempre
                   onInput={(e) => e.currentTarget.toggleAttribute('data-esc-local', e.currentTarget.value !== a.label)}
                   onBlur={(e) => commitLabel(a, e.currentTarget, false)}
@@ -176,16 +179,20 @@ export function AgentsSection() {
                     }
                   }}
                 />
+                {a.connection ? (
+                  <span className="pill pill-warn acct-kind" title="Claude Code on this provider's API: billed by the provider per use (or its free quota)">API</span>
+                ) : (
+                  <span className="pill pill-ok acct-kind" title="Sign-in with a subscription plan (5h and weekly limits)">Subscription</span>
+                )}
                 <small className="muted">
                   {[
-                    // sem repetir o que o nome ja diz (agente, "default sign-in")
-                    a.label.startsWith(agentDef(a.agent)?.name ?? a.agent) ? '' : (agentDef(a.agent)?.name ?? a.agent),
-                    a.email ?? '',
-                    a.home ? 'separate sign-in' : /default sign-in/.test(a.label) ? '' : 'default sign-in',
+                    // sem repetir o que o nome ja diz (agente, e-mail)
+                    a.connection ? 'Claude Code on this provider' : a.label.startsWith(agentDef(a.agent)?.name ?? a.agent) || a.label.startsWith('Claude') ? '' : (agentDef(a.agent)?.name ?? a.agent),
+                    a.email && !a.label.includes(a.email) ? a.email : '',
                     installed ? '' : 'not installed',
                   ]
                     .filter(Boolean)
-                    .join(' · ') || 'Uses the sign-in you already have on this PC'}
+                    .join(' · ')}
                 </small>
                 {st.best === a.id && <span className="pill pill-ok agent-best" title="The Agent button opens this account next">opens next</span>}
                 {st.signedOut.includes(a.id) && <small className="tone-warn">Not signed in: Turno skips it until you sign in.</small>}
@@ -211,8 +218,8 @@ export function AgentsSection() {
                 <Switch checked={a.enabled} label={`Use ${a.label}`} onChange={(v) => void window.turno.agents.update(a.id, { enabled: v })} />
                 <button className="icon-btn" data-dir="up" aria-label="Move up" title="Move up" disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
                 <button className="icon-btn" data-dir="down" aria-label="Move down" title="Move down" disabled={i === accounts.length - 1} onClick={() => move(i, 1)}>↓</button>
-                {(a.home || loginExpired(u)) && <button className="btn small" onClick={() => void login(a.id, a.label)}>Sign in</button>}
-                {(a.home || loginExpired(u)) && <button className="btn ghost small" onClick={() => void check(a.id)}>Check sign-in</button>}
+                {!a.connection && (a.home || loginExpired(u)) && <button className="btn small" onClick={() => void login(a.id, a.label)}>Sign in</button>}
+                {!a.connection && (a.home || loginExpired(u)) && <button className="btn ghost small" onClick={() => void check(a.id)}>Check sign-in</button>}
                 {a.home && <button className="btn ghost small danger" onClick={() => void remove(a.id, a.label)}>Remove</button>}
               </span>
             </li>

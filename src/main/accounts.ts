@@ -4,7 +4,7 @@ import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSy
 import { homedir } from 'node:os'
 import { basename, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import type { AccountUsage, AgentAccount, AgentsState, RankStrategy, UsageWindow } from '../shared/types'
+import type { AccountUsage, AgentAccount, AgentsState, Connection, RankStrategy, UsageWindow } from '../shared/types'
 import { AGENTS, agentDef } from '../shared/agents'
 import { readJson, writeJsonAtomic } from './jsonStore'
 import { childEnv } from './env'
@@ -103,6 +103,8 @@ export function agentsState(): AgentsState {
 // Conta isolada sem login encontrado na pasta (acabou de ser criada, login cancelado): fora do ranking ate entrar.
 // Login padrao do usuario (home null) e agentes cujo login o Turno nao sabe ler contam como logados.
 export function signedIn(a: AgentAccount): boolean {
+  // conexao de API: "logada" enquanto a conexao existir em Settings › Connections
+  if (a.connection) return !!connSource?.list().some((c) => c.id === a.connection)
   if (!a.home) return true
   try {
     if (a.agent === 'claude') {
@@ -171,20 +173,22 @@ function ensureDefaults(): void {
   if (!installed || blocked) return
   let changed = false
   for (const a of s.accounts) {
-    // nome antigo (0.8.0 de testes): "login" virou "sign-in", como no resto da UI
+    // nome antigo "<Agente> · default sign-in/login": vira so o nome do agente (o Claude ganha o e-mail abaixo)
     const def = agentDef(a.agent)
-    if (def && !a.home && a.label === `${def.name} · default login`) {
-      a.label = `${def.name} · default sign-in`
+    if (def && !a.home && !a.connection && a.agent !== 'claude' && /· default (sign-in|login)$/.test(a.label) && a.label.startsWith(def.name)) {
+      a.label = def.name
       changed = true
     }
   }
   for (const id of installed) {
-    if (s.accounts.some((a) => a.agent === id)) continue
+    if (s.accounts.some((a) => a.agent === id && !a.connection)) continue // conta de conexao nao e login do CLI
     const def = agentDef(id)!
-    s.accounts.push({ id: `default-${id}`, agent: id, label: `${def.name} · default sign-in`, rank: nextRank(), enabled: true, home: null, createdAt: new Date().toISOString() })
+    s.accounts.push({ id: `default-${id}`, agent: id, label: id === 'claude' ? 'Claude' : def.name, rank: nextRank(), enabled: true, home: null, createdAt: new Date().toISOString() })
     changed = true
   }
   if (changed) save()
+  const claude = s.accounts.find((a) => a.id === 'default-claude')
+  if (claude) refreshLogin(claude.id) // nome com o e-mail da assinatura
 }
 const nextRank = (): number => Math.max(0, ...load().accounts.map((a) => a.rank)) + 1
 
@@ -240,6 +244,7 @@ export function removeAccount(id: string): void {
   const s = load()
   const a = s.accounts.find((x) => x.id === id)
   if (!a) return
+  if (a.connection) throw new Error(`"${a.label}" is a connection: remove it in Settings › Connections, or turn it off here`)
   if (a.home) removeHome(a.home)
   s.accounts = s.accounts.filter((x) => x.id !== id)
   delete usage[id]
@@ -253,12 +258,17 @@ export function refreshLogin(id: string): boolean {
   if (!a.home) {
     // login padrao do usuario: confere os arquivos de login de verdade (antes respondia sempre "logado")
     if (a.agent === 'claude') {
-      if (process.env.ANTHROPIC_API_KEY || existsSync(join(claudeDefaultHome(), '.credentials.json'))) return true
+      let email: string | undefined
+      let oauth = false
       try {
-        return !!JSON.parse(readFileSync(claudeDefaultJson(), 'utf8'))?.oauthAccount
+        const o = JSON.parse(readFileSync(claudeDefaultJson(), 'utf8'))?.oauthAccount
+        oauth = !!o
+        email = typeof o?.emailAddress === 'string' ? o.emailAddress : undefined
       } catch {
-        return false
+        /* sem .claude.json: sem login de assinatura */
       }
+      nameDefaultClaude(a, email)
+      return oauth || !!process.env.ANTHROPIC_API_KEY || existsSync(join(claudeDefaultHome(), '.credentials.json'))
     }
     if (a.agent === 'codex') return existsSync(join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'auth.json'))
     return true
@@ -281,9 +291,24 @@ export function refreshLogin(id: string): boolean {
   return existsSync(a.home) && readdirSync(a.home).length > 0
 }
 
+// Login padrao do Claude: "Claude · <email da assinatura>" (ou so "Claude" sem login), acompanhando troca de e-mail.
+// Nome que o usuario deu fica como esta: so mexe em nome automatico (antigo "default sign-in" ou o do e-mail anterior).
+function nameDefaultClaude(a: AgentAccount, email: string | undefined): void {
+  const auto = /· default (sign-in|login)$/.test(a.label) || a.label === 'Claude' || (!!a.email && a.label === `Claude · ${a.email}`)
+  const label = auto ? (email ? `Claude · ${email}` : 'Claude') : a.label
+  if (label === a.label && email === a.email) return
+  a.label = label
+  a.email = email
+  save()
+}
+
 // Env que coloca o agente na pasta da conta. Conta Claude isolada: limpa credenciais de API herdadas, que venceriam
 // o login da pasta (todas as "contas" usariam a mesma credencial sem aviso).
 export function accountEnv(a: AgentAccount): Record<string, string> {
+  if (a.connection) {
+    const conn = connSource?.list().find((c) => c.id === a.connection)
+    return conn && connSource ? connSource.env(conn) : {}
+  }
   const def = agentDef(a.agent)
   if (!def?.homeVar || !a.home) return {}
   const env: Record<string, string> = { [def.homeVar]: a.home }
@@ -472,4 +497,39 @@ function removeHome(home: string): void {
   // confere de novo: se sobrou alguma junction (unlink falhou), nao apaga nada
   if (readdirSync(home).some((n) => SHARED_DIRS.includes(n) && lstatSync(join(home, n)).isSymbolicLink())) throw new Error('could not unlink shared history folders; profile kept')
   rmSync(join(home, '..'), { recursive: true, force: true })
+}
+
+
+// ---------- conexoes de API no ranking ----------
+// Cada conexao endpoint (Cohere, OpenRouter, Ollama...) vira uma conta do Claude Code no ranking: o mesmo CLI, apontado
+// para o provedor pelo env. Entra no fim, ligada; o usuario reordena/desliga como as assinaturas. Conexao removida sai.
+// A fonte vem de fora (settings + cofre) para este modulo nao depender do safeStorage do Electron.
+interface ConnectionSource {
+  list: () => Connection[]
+  env: (c: Connection) => Record<string, string>
+}
+let connSource: ConnectionSource | undefined
+export function setConnectionSource(src: ConnectionSource): void {
+  connSource = src
+}
+export const connectionAccountId = (connId: string): string => `conn-${connId}`
+
+export function syncConnectionAccounts(): void {
+  const s = load()
+  if (!connSource || blocked) return
+  const conns = connSource.list().filter((c) => c.kind === 'endpoint')
+  let changed = false
+  const before = s.accounts.length
+  s.accounts = s.accounts.filter((a) => !a.connection || conns.some((c) => c.id === a.connection))
+  if (s.accounts.length !== before) changed = true
+  for (const c of conns) {
+    const cur = s.accounts.find((a) => a.connection === c.id)
+    if (cur) {
+      if (cur.label !== c.name) (cur.label = c.name), (changed = true)
+      continue
+    }
+    s.accounts.push({ id: connectionAccountId(c.id), agent: 'claude', connection: c.id, label: c.name, rank: nextRank(), enabled: true, home: null, createdAt: new Date().toISOString() })
+    changed = true
+  }
+  if (changed) save()
 }

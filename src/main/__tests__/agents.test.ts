@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { delimiter, join } from 'node:path'
 import { AGENTS, agentCommand, agentDef, isWallText, quoteArg, unavailableText, wallKind, parseReset } from '../../shared/agents'
 
 let dir = ''
@@ -163,5 +163,151 @@ describe('ranking de contas', () => {
     const env = m.accountEnv({ ...acc('z', 1), home: 'C:/p/home' } as never)
     expect(env).toMatchObject({ CLAUDE_CONFIG_DIR: 'C:/p/home', ANTHROPIC_API_KEY: '', ANTHROPIC_AUTH_TOKEN: '' })
     expect(m.accountEnv(acc('d', 1) as never)).toEqual({})
+  })
+})
+
+describe('conexoes (API) no ranking de contas', () => {
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'turno-acc-'))
+    vi.resetModules()
+  })
+  afterEach(() => rmSync(dir, { recursive: true, force: true }))
+
+  const acc = (id: string, rank: number, extra: object = {}) => ({ id, agent: 'claude', label: id, rank, enabled: true, home: null, createdAt: '2026-01-01', ...extra })
+  const seed = (accounts: unknown[]): void =>
+    writeFileSync(join(dir, 'accounts.json'), JSON.stringify({ accounts, thresholds: { fiveHour: 90, weekly: 95 } }))
+  const cohere = { id: 'cohere', name: 'Cohere', kind: 'endpoint' as const, baseUrl: 'https://api.cohere.com/compatibility/v1', model: 'command-a', via: 'translate' as const }
+  const claudeMax = { id: 'claude-max', name: 'Claude', kind: 'claude' as const }
+  const load = async (conns: unknown[]) => {
+    const m = await import('../accounts')
+    let list = conns
+    m.setConnectionSource({ list: () => list as never, env: (c) => ({ ANTHROPIC_BASE_URL: `env-of-${c.id}` }) })
+    return { m, setList: (l: unknown[]) => (list = l) }
+  }
+
+  it('deveEntrarNoFimDoRankingLigadaQuandoConexaoEndpointExiste', async () => {
+    seed([acc('a', 1), acc('b', 2)])
+    const { m } = await load([claudeMax, cohere])
+    m.syncConnectionAccounts()
+    const ids = m.agentsState().accounts.map((a) => a.id)
+    expect(ids).toEqual(['a', 'b', 'conn-cohere'])
+    expect(m.getAccount('conn-cohere')).toMatchObject({ agent: 'claude', connection: 'cohere', label: 'Cohere', enabled: true, home: null })
+  })
+
+  it('naoDeveDuplicarNemPerderRankOuDesligadoAoSincronizarDeNovo', async () => {
+    seed([acc('conn-cohere', 1, { connection: 'cohere', label: 'Cohere', enabled: false }), acc('a', 2)])
+    const { m } = await load([cohere])
+    m.syncConnectionAccounts()
+    m.syncConnectionAccounts()
+    expect(m.agentsState().accounts.map((a) => [a.id, a.rank, a.enabled])).toEqual([['conn-cohere', 1, false], ['a', 2, true]])
+  })
+
+  it('deveSeguirNomeDaConexaoESairDoRankingQuandoConexaoSome', async () => {
+    seed([acc('a', 1)])
+    const { m, setList } = await load([cohere])
+    m.syncConnectionAccounts()
+    setList([{ ...cohere, name: 'Cohere trial' }])
+    m.syncConnectionAccounts()
+    expect(m.getAccount('conn-cohere')?.label).toBe('Cohere trial')
+    setList([])
+    m.syncConnectionAccounts()
+    expect(m.getAccount('conn-cohere')).toBeUndefined()
+  })
+
+  it('deveTrocarParaConexaoQuandoAssinaturaDeRankSuperiorBateNoLimite', async () => {
+    seed([acc('a', 1)])
+    const { m } = await load([cohere])
+    m.syncConnectionAccounts()
+    expect(m.pickAccount({ agent: 'claude' })?.id).toBe('a')
+    m.markAccount('a', 'exhausted', 'usage limit reached', new Date(Date.now() + 3600_000).toISOString())
+    expect(m.pickAccount({ agent: 'claude' })?.id).toBe('conn-cohere')
+  })
+
+  it('deveApontarOAgenteParaOProvedorNoEnvDaContaDeConexao', async () => {
+    seed([])
+    const { m } = await load([cohere])
+    m.syncConnectionAccounts()
+    expect(m.accountEnv(m.getAccount('conn-cohere')!)).toEqual({ ANTHROPIC_BASE_URL: 'env-of-cohere' })
+  })
+
+  it('naoDeveEscolherContaDeConexaoQueNaoExisteMais', async () => {
+    seed([acc('conn-velha', 1, { connection: 'velha' }), acc('a', 2)])
+    const { m } = await load([])
+    expect(m.signedIn(m.getAccount('conn-velha')!)).toBe(false)
+    expect(m.pickAccount()?.id).toBe('a')
+  })
+
+  it('naoDeveImpedirOLoginPadraoDoClaudeQuandoSoHaContaDeConexao', async () => {
+    seed([])
+    const { m } = await load([cohere])
+    m.syncConnectionAccounts()
+    // claude "instalado": executavel falso num PATH so dele (o CI nao tem o Claude Code)
+    const bin = join(dir, 'bin')
+    mkdirSync(bin)
+    writeFileSync(join(bin, 'claude'), '#!/bin/sh\n', { mode: 0o755 })
+    writeFileSync(join(bin, 'claude.cmd'), '@echo off\r\n')
+    const prev = { PATH: process.env.PATH, Path: process.env.Path }
+    process.env.PATH = process.env.Path = [bin, prev.PATH ?? prev.Path].filter(Boolean).join(delimiter)
+    try {
+      await m.detectInstalled()
+    } finally {
+      process.env.PATH = prev.PATH
+      process.env.Path = prev.Path
+    }
+    expect(m.getAccount('default-claude')).toBeDefined()
+  })
+
+  it('deveRecusarRemoverContaDeConexaoPeloRanking', async () => {
+    seed([])
+    const { m } = await load([cohere])
+    m.syncConnectionAccounts()
+    expect(() => m.removeAccount('conn-cohere')).toThrow(/Connections/)
+  })
+})
+
+describe('nome da conta padrao (sem "default sign-in")', () => {
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'turno-acc-'))
+    vi.resetModules()
+  })
+  afterEach(() => {
+    delete process.env.CLAUDE_CONFIG_DIR
+    rmSync(dir, { recursive: true, force: true })
+  })
+  const acc = (id: string, label: string) => ({ id, agent: 'claude', label, rank: 1, enabled: true, home: null, createdAt: '2026-01-01' })
+  const claudeLogin = (email?: string): void => {
+    const home = join(dir, 'claude-home')
+    mkdirSync(home, { recursive: true })
+    process.env.CLAUDE_CONFIG_DIR = home
+    writeFileSync(join(home, '.claude.json'), JSON.stringify(email ? { oauthAccount: { emailAddress: email } } : {}))
+  }
+
+  it('deveMostrarClaudeEOEmailDaAssinaturaNaContaPadrao', async () => {
+    writeFileSync(join(dir, 'accounts.json'), JSON.stringify({ accounts: [acc('default-claude', 'Claude Code · default sign-in')] }))
+    claudeLogin('eu@exemplo.com')
+    const m = await import('../accounts')
+    m.refreshLogin('default-claude')
+    expect(m.getAccount('default-claude')).toMatchObject({ label: 'Claude · eu@exemplo.com', email: 'eu@exemplo.com' })
+  })
+
+  it('deveMostrarSoClaudeQuandoSemLogin', async () => {
+    writeFileSync(join(dir, 'accounts.json'), JSON.stringify({ accounts: [acc('default-claude', 'Claude Code · default sign-in')] }))
+    claudeLogin()
+    const m = await import('../accounts')
+    m.refreshLogin('default-claude')
+    expect(m.getAccount('default-claude')?.label).toBe('Claude')
+  })
+
+  it('deveAcompanharTrocaDeEmailMasNuncaSobrescreverNomeDadoPeloUsuario', async () => {
+    writeFileSync(join(dir, 'accounts.json'), JSON.stringify({ accounts: [{ ...acc('default-claude', 'Claude · velho@exemplo.com'), email: 'velho@exemplo.com' }, { ...acc('meu', 'Trabalho'), id: 'default-codex', agent: 'codex' }] }))
+    claudeLogin('novo@exemplo.com')
+    const m = await import('../accounts')
+    m.refreshLogin('default-claude')
+    expect(m.getAccount('default-claude')?.label).toBe('Claude · novo@exemplo.com')
+    writeFileSync(join(dir, 'accounts.json'), JSON.stringify({ accounts: [{ ...acc('default-claude', 'Pessoal'), email: 'novo@exemplo.com' }] }))
+    vi.resetModules()
+    const m2 = await import('../accounts')
+    m2.refreshLogin('default-claude')
+    expect(m2.getAccount('default-claude')?.label).toBe('Pessoal')
   })
 })

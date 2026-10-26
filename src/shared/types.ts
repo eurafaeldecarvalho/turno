@@ -326,6 +326,7 @@ export interface AgentAccount {
   rank: number // 1 = primeira escolha
   enabled: boolean
   home: string | null // pasta de config isolada; null = login padrao do usuario
+  connection?: string // conexao de API (Settings › Connections): o Claude Code roda nesse provedor; sem = assinatura
   email?: string
   createdAt: string
 }

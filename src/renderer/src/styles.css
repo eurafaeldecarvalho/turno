@@ -789,6 +789,7 @@ body.modal-open .drag { -webkit-app-region: no-drag; }
 .acct.off .acct-main { opacity: .55; }
 .acct-rank { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-3); color: var(--muted); font-size: calc(var(--ui-size, 13px) * 11 / 13); font-variant-numeric: tabular-nums; margin-top: 3px; }
 .acct-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.acct-main > .pill { align-self: flex-start; }
 .acct-label { border: 1px solid transparent; background: none; padding: 2px 4px; margin-left: -5px; font-weight: 600; color: var(--text); border-radius: 5px; width: 100%; }
 .acct-label:hover, .acct-label:focus { border-color: var(--border-strong); background: var(--bg); }
 .acct-actions { flex: none; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; max-width: 52%; }
@@ -932,7 +933,7 @@ fieldset.field > legend { font-size: calc(var(--ui-size, 13px) * 12 / 13); color
 .folder-list .section-toggle { text-transform: none; letter-spacing: 0; font-size: calc(var(--ui-size, 13px) * 12.5 / 13); color: var(--muted); font-weight: 600; }
 .folder-list .section-toggle:hover { color: var(--text); }
 .agent-acc { display: inline-flex; align-items: center; gap: 6px; }
-.agent-best { height: 16px; padding: 0 6px; font-size: calc(var(--ui-size, 13px) * 10 / 13); }
+.agent-best, .acct-kind { height: 16px; padding: 0 6px; font-size: calc(var(--ui-size, 13px) * 10 / 13); }
 .crash-panel { margin: 24px auto; max-width: 560px; }
 .crash-panel h3 { margin: 0; }
 .crash-dialog { position: fixed; z-index: 9000; right: 16px; bottom: 40px; max-width: 420px; margin: 0; padding: 12px 14px; gap: 6px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, .3); }

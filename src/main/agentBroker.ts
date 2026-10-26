@@ -183,7 +183,8 @@ export function prepareLaunch(o: PrepareOpts): AgentLaunch {
     // vai digitado no shell: so o formato de nome/alias de modelo
     const model = o.model ?? prev?.model
     // nunca comeca com "-": viraria outra opcao do CLI (ex.: uma flag de permissao) em vez do valor de --model
-    if (model && /^[\w.:[\]][\w.:[\]-]{0,79}$/.test(model)) extra += ` --model ${model}`
+    // conta de conexao de API: o modelo e o da conexao (ANTHROPIC_MODEL no env); --model do item mandaria um nome da Anthropic
+    if (model && !account.connection && /^[\w.:[\]][\w.:[\]-]{0,79}$/.test(model)) extra += ` --model ${model}`
   }
   const { command, typeAfter } = agentCommand(def, { resumeId: o.resumeSessionId, prompt: o.prompt, extraArgs: extra || undefined })
   const launchId = randomUUID()
