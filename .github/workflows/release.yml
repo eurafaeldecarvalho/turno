@@ -65,6 +65,16 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      # Notas = a secao desta versao no CHANGELOG.md (## X.Y.Z ...). Sem a secao, falha em vez de publicar sem notas.
+      - name: Release notes from CHANGELOG.md
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v v="$v" '$0 ~ "^## "v" " {f=1; next} f && /^## / {exit} f' CHANGELOG.md | sed -e '/./,$!d' > notes.md
+          if [ ! -s notes.md ]; then echo "::error::CHANGELOG.md has no '## $v' section"; exit 1; fi
+          cat notes.md
+
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -72,10 +82,12 @@ jobs:
 
       - run: ls -la dist
 
-      # Draft: review/edit the notes on GitHub, then publish.
+      # Publica direto (sem rascunho) como Latest; o auto-update dos usuarios pega na hora.
       - uses: softprops/action-gh-release@v2
         with:
-          draft: true
+          draft: false
+          make_latest: true
+          body_path: notes.md
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
