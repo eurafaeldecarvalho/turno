@@ -179,22 +179,26 @@ export function AgentsSection() {
                     }
                   }}
                 />
-                {a.connection ? (
-                  <span className="pill pill-warn acct-kind" title="Claude Code on this provider's API: billed by the provider per use (or its free quota)">API</span>
-                ) : (
-                  <span className="pill pill-ok acct-kind" title="Sign-in with a subscription plan (5h and weekly limits)">Subscription</span>
-                )}
-                <small className="muted">
-                  {[
+                {/* tipo da conta e "opens next" lado a lado */}
+                <span className="acct-badges">
+                  {a.connection ? (
+                    <span className="pill pill-warn acct-kind" title="Claude Code on this provider's API: billed by the provider per use (or its free quota)">API</span>
+                  ) : (
+                    <span className="pill pill-ok acct-kind" title="Sign-in with a subscription plan (5h and weekly limits)">Subscription</span>
+                  )}
+                  {st.best === a.id && <span className="pill pill-ok agent-best" title="The Agent button opens this account next">opens next</span>}
+                </span>
+                {(() => {
+                  const sub = [
                     // sem repetir o que o nome ja diz (agente, e-mail)
                     a.connection ? 'Claude Code on this provider' : a.label.startsWith(agentDef(a.agent)?.name ?? a.agent) || a.label.startsWith('Claude') ? '' : (agentDef(a.agent)?.name ?? a.agent),
                     a.email && !a.label.includes(a.email) ? a.email : '',
                     installed ? '' : 'not installed',
                   ]
                     .filter(Boolean)
-                    .join(' · ')}
-                </small>
-                {st.best === a.id && <span className="pill pill-ok agent-best" title="The Agent button opens this account next">opens next</span>}
+                    .join(' · ')
+                  return sub ? <small className="muted">{sub}</small> : null
+                })()}
                 {st.signedOut.includes(a.id) && <small className="tone-warn">Not signed in: Turno skips it until you sign in.</small>}
                 {(u?.fiveHour || u?.weekly) && (
                   <span className="acct-bars">

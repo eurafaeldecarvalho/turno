@@ -789,7 +789,7 @@ body.modal-open .drag { -webkit-app-region: no-drag; }
 .acct.off .acct-main { opacity: .55; }
 .acct-rank { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-3); color: var(--muted); font-size: calc(var(--ui-size, 13px) * 11 / 13); font-variant-numeric: tabular-nums; margin-top: 3px; }
 .acct-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.acct-main > .pill { align-self: flex-start; }
+.acct-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .acct-label { border: 1px solid transparent; background: none; padding: 2px 4px; margin-left: -5px; font-weight: 600; color: var(--text); border-radius: 5px; width: 100%; }
 .acct-label:hover, .acct-label:focus { border-color: var(--border-strong); background: var(--bg); }
 .acct-actions { flex: none; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; max-width: 52%; }
