@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
-import { agentDef } from '../../shared/agents'
+import { agentDef, agentStartCwd } from '../../shared/agents'
+import { getSettingsSnapshot } from './appearance'
 import { askConfirm } from './ConfirmDialog'
 import type { DockviewApi, Direction } from 'dockview-react'
 import type { ProfileId, TermSession } from '../../shared/types'
@@ -218,7 +219,7 @@ export function openAgent(o: { agent?: string; accountId?: string; model?: strin
   openTerminal(
     o.dir,
     {
-      cwd: o.cwd,
+      cwd: agentStartCwd(o.cwd, getSettingsSnapshot()?.agentStartDir),
       itemId: o.itemId,
       agent: { key: uid('agent'), agent: o.agent, accountId: o.accountId, prompt: o.prompt, folderId: o.folderId, resumeSessionId: o.resumeSessionId, model: o.model, chrome: o.chrome ?? (!o.agent || o.agent === 'claude') },
     },
@@ -239,7 +240,7 @@ export function openAgentChat(cwd?: string, refId?: string): void {
   let n = 1
   while (taken.has(`chat ${n}`)) n++
   const ref = refId ? api.getPanel(refId) : undefined
-  api.addPanel({ id: uid('chat'), component: 'chat', tabComponent: 'tab', title: `chat ${n}`, params: { kind: 'chat', cwd }, ...(ref ? { position: { referencePanel: ref } } : {}) })
+  api.addPanel({ id: uid('chat'), component: 'chat', tabComponent: 'tab', title: `chat ${n}`, params: { kind: 'chat', cwd: agentStartCwd(cwd, getSettingsSnapshot()?.agentStartDir) }, ...(ref ? { position: { referencePanel: ref } } : {}) })
 }
 
 // Teclas digitadas logo depois de pedir uma aba nova (Ctrl+Shift+N...), antes de ela existir na tela: o foco ainda

@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { menuKeyNav } from './modalStack'
 import type { AwakeMode, AwakeStatus } from '../../shared/types'
 import { useStore, isActive } from './store'
-import { updateSettings } from './appearance'
+import { updateSettings, useSettings } from './appearance'
 import { openHistory, useActiveAgentKey } from './layout'
-import { IconCoffee } from './icons'
+import { IconCoffee, IconFolder } from './icons'
+import { startFolderLabel } from '../../shared/agents'
+import { chooseStartFolder, resetStartFolderToHome, useStartFolderMissing } from './startFolder'
 import { useAgents, useAgentSessions, usageTone, usageWithReset } from './agentStore'
 import { openSettingsModal } from './SettingsModal'
 import { AWAKE_MODES } from './awake'
@@ -194,6 +196,69 @@ function AwakeSegment() {
   )
 }
 
+// Segmento "pasta inicial do agente": onde o Agent/Chat abre (o mesmo de Settings › Agents › Start folder).
+function StartFolderSegment() {
+  const s = useSettings()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const dir = s?.agentStartDir ?? ''
+  const missing = useStartFolderMissing(dir)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent): void => void (!ref.current?.contains(e.target as Node) && setOpen(false))
+    ref.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+    const esc = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') return void (setOpen(false), ref.current?.querySelector<HTMLElement>('.sb-item')?.focus())
+      menuKeyNav(e, ref.current?.querySelector('.sb-pop') ?? null)
+    }
+    window.addEventListener('mousedown', close)
+    window.addEventListener('keydown', esc)
+    return () => {
+      window.removeEventListener('mousedown', close)
+      window.removeEventListener('keydown', esc)
+    }
+  }, [open])
+  if (!s) return null
+  const pick = (fn: () => Promise<unknown>): void => {
+    setOpen(false)
+    ref.current?.querySelector<HTMLElement>('.sb-item')?.focus()
+    void fn()
+  }
+  return (
+    <div className="sb-awake" ref={ref}>
+      <button
+        className="sb-item"
+        onClick={() => setOpen(!open)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Agent start folder: ${dir || 'home folder'}`}
+        title={`New agents open in ${dir || 'your home folder'}${missing ? ' (not found: using home)' : ''}`}
+      >
+        <IconFolder size={13} />
+        <span className={missing ? 'tone-warn' : ''}>{startFolderLabel(dir)}</span>
+      </button>
+      {open && (
+        <div className="sb-pop" role="menu">
+          <div className="sb-pop-title">New agents open in</div>
+          <div className="sb-pop-note mono" title={dir}>{dir || 'Your home folder'}</div>
+          <button role="menuitem" onClick={() => pick(chooseStartFolder)}>
+            <span className="sb-opt">
+              <span>Choose folder…</span>
+            </span>
+          </button>
+          {dir && (
+            <button role="menuitem" onClick={() => pick(resetStartFolderToHome)}>
+              <span className="sb-opt">
+                <span>Use home folder</span>
+              </span>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function StatusBar() {
   const runs = useStore((s) => s.runs)
   const routines = useStore((s) => s.routines)
@@ -210,6 +275,7 @@ export function StatusBar() {
       </span>
       <ActiveAccountSegment />
       <ClaudeUsageSegment />
+      <StartFolderSegment />
       <span className="sb-spacer" />
       <AwakeSegment />
     </footer>

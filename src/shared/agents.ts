@@ -222,3 +222,9 @@ export function parseReset(text: string, now = Date.now()): string | undefined {
   }
   return undefined
 }
+
+// Pasta onde um agente abre: a que a origem pediu (Tasks, pasta da barra lateral) vence; senao a pasta inicial de
+// Settings › Agents (e do rodape); vazia = home do usuario (o pty cai nela, como antes).
+export const agentStartCwd = (explicit?: string, startDir?: string): string | undefined => explicit || startDir?.trim() || undefined
+// Nome curto da pasta inicial para o rodape ("home" quando nao ha uma)
+export const startFolderLabel = (p: string): string => p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || 'home'

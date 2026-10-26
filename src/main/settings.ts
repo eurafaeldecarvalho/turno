@@ -32,6 +32,7 @@ export const TERMINAL_DEFAULTS: Settings['terminal'] = {
 const defaults = (): Settings => ({
   keepAwake: 'auto',
   routinesDir: join(app.getPath('home'), 'rotinas'),
+  agentStartDir: '',
   openAtLogin: false,
   ntfyTopic: '',
   ntfyServer: 'https://ntfy.sh',

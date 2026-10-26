@@ -59,6 +59,7 @@ export const ITEMS: SettingItem[] = [
   { label: 'MCP servers', page: 'mcp', anchor: 'settings-mcp', keywords: 'tools sentry atlassian bitbucket github playwright secrets' },
   { label: 'Jira', page: 'integrations', card: 'Jira Cloud', anchor: 'settings-jira', keywords: 'atlassian tasks token issues' },
   { label: 'GitHub issues', page: 'integrations', card: 'GitHub', anchor: 'settings-github', keywords: 'gh tasks issues' },
+  { label: 'Agent start folder', page: 'agents', card: 'Start folder', anchor: 'settings-agent-start', keywords: 'folder directory cwd path where agent opens initial working' },
   { label: 'Routines folder', page: 'routines', card: 'Routines folder', anchor: 'settings-routines-folder', keywords: 'path directory routine.md' },
   { label: "What's new", page: 'about', anchor: 'settings-about', keywords: 'release notes changelog version' },
   { label: 'Setup tour', page: 'about', anchor: 'settings-about', keywords: 'onboarding intro welcome' },

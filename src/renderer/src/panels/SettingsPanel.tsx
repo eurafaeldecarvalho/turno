@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { AgentsSection } from './AgentsSection'
+import { StartFolderCard } from '../startFolder'
 import { McpSection } from './McpSection'
 import { openOnboarding, openWhatsNew } from '../Onboarding'
 import { toast } from '../Toast'
@@ -586,7 +587,12 @@ export function SettingsPanel() {
         ))}
       </section>
     ),
-    agents: () => <AgentsSection />,
+    agents: () => (
+      <>
+        <StartFolderCard />
+        <AgentsSection />
+      </>
+    ),
     connections: () => <ConnectionsSection />,
     mcp: () => <McpSection />,
     integrations: () => <IntegrationsSection />,

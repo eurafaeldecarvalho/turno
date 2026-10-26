@@ -208,6 +208,7 @@ export interface DetectedAgent {
 export interface Settings {
   keepAwake: AwakeMode
   routinesDir: string
+  agentStartDir: string // pasta onde o agente abre quando a origem nao pede uma ('' = home do usuario)
   openAtLogin: boolean
   ntfyTopic: string
   ntfyServer: string
