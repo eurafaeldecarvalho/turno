@@ -205,7 +205,11 @@ function FontSelect({ value, options, onChange, system = [], fallback }: {
     window.addEventListener('mousedown', down, true)
     return () => window.removeEventListener('mousedown', down, true)
   }, [open])
-  useEffect(() => document.getElementById(`${uid}-opt-${hi}`)?.scrollIntoView({ block: 'nearest' }), [hi, open])
+  // corpo com chaves: o efeito nao pode devolver o retorno de scrollIntoView (no Chromium novo nao e undefined, e o React
+  // tentava usa-lo como limpeza: "destroy_ is not a function" derrubava o Settings ao passar o mouse na lista)
+  useEffect(() => {
+    document.getElementById(`${uid}-opt-${hi}`)?.scrollIntoView({ block: 'nearest' })
+  }, [hi, open])
 
   const onKey = (e: React.KeyboardEvent): void => {
     if (e.key === 'ArrowDown') (e.preventDefault(), open ? setHi((hi + 1) % Math.max(items.length, 1)) : setOpen(true))

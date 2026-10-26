@@ -609,6 +609,12 @@ async function runSmoke(): Promise<void> {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(el, 'mono')
       el.dispatchEvent(new Event('input', { bubbles: true }))
     }
+    // passa o mouse pelas opcoes (o hover muda o destaque): o Settings nao pode cair
+    await new Promise((r) => setTimeout(r, 300))
+    for (const li of [...document.querySelectorAll('.font-picker [role="option"]')].slice(0, 4)) {
+      li.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+      await new Promise((r) => setTimeout(r, 120))
+    }
   }
   if (window.turno.smoke.view === 'settings-picker') {
     // Abre o seletor de tema e passa o mouse no 4o tema: o app inteiro deve pre-visualizar.
