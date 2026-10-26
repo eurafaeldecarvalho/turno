@@ -90,3 +90,14 @@ export function runProvider(base: Connection, account: { connection?: string } |
   if (account?.connection) return { conn, model: conn.model, baseEnv: false }
   return { conn, model: effectiveModel(conn, reqModel), baseEnv: true }
 }
+
+// Env de uma conta de conexao no ranking (troca automatica, sem o usuario olhando): nada pode cair na assinatura dele.
+// Tradutor ainda sem porta (abrindo o app) daria ANTHROPIC_BASE_URL vazio = API da Anthropic na assinatura: falha.
+// Conexao sem modelo: zera os ANTHROPIC_*_MODEL que viriam do ambiente do usuario (nome da Anthropic no provedor).
+const MODEL_VARS = ['ANTHROPIC_MODEL', 'ANTHROPIC_DEFAULT_OPUS_MODEL', 'ANTHROPIC_DEFAULT_SONNET_MODEL', 'ANTHROPIC_DEFAULT_HAIKU_MODEL', 'CLAUDE_CODE_SUBAGENT_MODEL']
+export function connectionAccountEnv(conn: Connection, token?: string): Record<string, string> {
+  const env = resolveProviderEnv(conn, token)
+  if (!env.ANTHROPIC_BASE_URL) throw new Error(`${conn.name} isn't reachable yet (Turno's translator is still starting); try again in a moment`)
+  if (!conn.model) for (const k of MODEL_VARS) env[k] ??= ''
+  return env
+}

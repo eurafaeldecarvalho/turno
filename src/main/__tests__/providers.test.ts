@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveProviderEnv, effectiveModel, getConnection, findConnection, requireConnection, runConnection, runProvider, DEFAULT_CONNECTIONS } from '../providers'
+import { resolveProviderEnv, effectiveModel, getConnection, findConnection, requireConnection, runConnection, runProvider, connectionAccountEnv, DEFAULT_CONNECTIONS } from '../providers'
 import type { Connection } from '../../shared/types'
 
 const endpoint: Connection = {
@@ -128,5 +128,20 @@ describe('runProvider (provedor, modelo e env base de uma run)', () => {
   })
   it('naoDeveHerdarEnvDoPerfilBaseNaContaDeConexao', () => {
     expect(runProvider(max, { connection: 'or' }, [max, semModelo], 'opus').baseEnv).toBe(false)
+  })
+})
+
+describe('connectionAccountEnv (env de conta de conexao no ranking)', () => {
+  it('deveFalharEmVezDeCairNaAssinaturaQuandoTradutorAindaNaoSubiu', () => {
+    // tradutor nao iniciado neste teste: porta 0 -> base vazia faria o CLI usar a assinatura do usuario
+    expect(() => connectionAccountEnv({ ...endpoint, via: 'translate' }, 'k')).toThrow(/translator/)
+  })
+  it('deveZerarModelosHerdadosDoAmbienteQuandoConexaoNaoTemModelo', () => {
+    const env = connectionAccountEnv({ ...endpoint, model: undefined }, 'tok')
+    for (const k of ['ANTHROPIC_MODEL', 'ANTHROPIC_DEFAULT_OPUS_MODEL', 'ANTHROPIC_DEFAULT_SONNET_MODEL', 'ANTHROPIC_DEFAULT_HAIKU_MODEL', 'CLAUDE_CODE_SUBAGENT_MODEL']) expect(env[k]).toBe('')
+    expect(env.ANTHROPIC_BASE_URL).toBe('http://host:1234')
+  })
+  it('deveManterOModeloDaConexao', () => {
+    expect(connectionAccountEnv(endpoint, 'tok').ANTHROPIC_MODEL).toBe('my-model')
   })
 })

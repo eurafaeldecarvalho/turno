@@ -391,15 +391,20 @@ export function pickAccount(opts: { exclude?: string[]; agent?: string; excludeA
     if (installed && !installed.has(a.agent)) return false
     return signedIn(a)
   }
-  const ranked = [...s.accounts].sort(byStrategy(s.thresholds.strategy ?? 'rank')).filter(usable)
+  const sorted = [...s.accounts].sort(byStrategy(s.thresholds.strategy ?? 'rank'))
+  const ranked = sorted.filter(usable)
   const st = (a: AgentAccount): string => effectiveUsage(a.id).state
   // conexao de API (paga por uso) so assume quando as assinaturas ACIMA dela batem no limite: uma assinatura so perto do
-  // limite (aviso) ainda tem cota e segura as conexoes abaixo dela
+  // limite (aviso) ainda tem cota e segura as conexoes abaixo dela. Vale tambem para a conta excluida (a atual, na troca
+  // no aviso): sair dela para uma API paga enquanto ela ainda tem cota seria gastar sem precisar.
+  const holds = (a: AgentAccount): boolean => !a.connection && a.enabled && signedIn(a) && (!opts.agent || a.agent === opts.agent) && st(a) === 'warning'
   let warnedAbove = false
-  for (const a of ranked) {
-    const state = st(a)
-    if ((state === 'ok' || state === 'unknown') && !(a.connection && warnedAbove)) return a
-    if (state === 'warning' && !a.connection) warnedAbove = true
+  for (const a of sorted) {
+    if (usable(a)) {
+      const state = st(a)
+      if ((state === 'ok' || state === 'unknown') && !(a.connection && warnedAbove)) return a
+    }
+    if (holds(a)) warnedAbove = true
   }
   return opts.allowWarning ? ranked.find((a) => st(a) === 'warning') : undefined
 }
@@ -555,8 +560,9 @@ export function syncConnectionAccounts(opts: { edited?: boolean } = {}): void {
   const conns = list.filter((c) => c.kind === 'endpoint')
   let changed = false
   const before = s.accounts.length
+  for (const a of s.accounts) if (a.connection && !conns.some((c) => c.id === a.connection)) delete usage[a.id] // limite/bloqueio antigo nao volta junto
   s.accounts = s.accounts.filter((a) => !a.connection || conns.some((c) => c.id === a.connection))
-  if (s.accounts.length !== before) changed = true
+  if (s.accounts.length !== before) (changed = true), saveUsageSoon()
   for (const c of conns) {
     const cur = s.accounts.find((a) => a.connection === c.id)
     if (cur) {

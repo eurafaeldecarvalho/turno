@@ -268,6 +268,8 @@ export function startRun(o: StartOptions): string {
   const account = req.accountId && conn.kind === 'claude' ? getAccount(req.accountId) : undefined
   // conta do ranking que e conexao de API: a run roda nesse provedor (modelo, env e cobranca dele)
   const { conn: runConn, model, baseEnv } = runProvider(conn, account, getSettings().connections, req.model)
+  // calculado ANTES de gravar a run: env indisponivel (ex. tradutor ainda subindo) falha sem deixar run "running" orfa
+  const accEnv = account ? accountEnv(account) : {}
   // Isolation por worktree (opt-in): roda a run num git worktree isolado, NUNCA no diretorio principal (sob o editor).
   // So canonicaliza/mexe no cwd quando a rotina pede isolamento — run normal fica com o cwd configurado, intacto.
   const wantsWorktree = (o.isolation ?? 'none') === 'worktree'
@@ -341,7 +343,7 @@ export function startRun(o: StartOptions): string {
   }
   const providerEnv: Record<string, string> = {
     ...(baseEnv ? resolveProviderEnv(conn, connectionToken(conn)) : {}),
-    ...(account ? accountEnv(account) : {}),
+    ...accEnv,
     ...mcp.env,
     TURNO_RUN_ID: runId,
     TURNO_RUN_DIR: dir,

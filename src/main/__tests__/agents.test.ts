@@ -331,6 +331,29 @@ describe('conexoes (API) no ranking de contas', () => {
     expect(m.effectiveUsage('conn-ollama').state).toBe('exhausted')
   })
 
+  it('naoDeveSairDaAssinaturaAtualPertoDoLimiteParaConexaoPaga (troca no aviso)', async () => {
+    seed([acc('a', 1)])
+    const { m } = await load([cohere])
+    m.syncConnectionAccounts()
+    m.recordUsage('a', { fiveHour: { pct: 92, resetsAt: new Date(Date.now() + 3600_000).toISOString() } })
+    // swap no aviso / followUp: exclui a conta atual e nao aceita warning
+    expect(m.pickAccount({ agent: 'claude', exclude: ['a'] })).toBeUndefined()
+    m.markAccount('a', 'exhausted', 'usage limit reached', new Date(Date.now() + 3600_000).toISOString())
+    expect(m.pickAccount({ agent: 'claude', exclude: ['a'] })?.id).toBe('conn-cohere')
+  })
+
+  it('deveRecomecarSemLimiteAntigoQuandoConexaoERemovidaECriadaDeNovo', async () => {
+    seed([])
+    const { m, setList } = await load([cohere])
+    m.syncConnectionAccounts()
+    m.markAccount('conn-cohere', 'exhausted', 'usage limit reached', new Date(Date.now() + 3600_000).toISOString())
+    setList([])
+    m.syncConnectionAccounts()
+    setList([cohere])
+    m.syncConnectionAccounts()
+    expect(m.effectiveUsage('conn-cohere').state).toBe('unknown')
+  })
+
   it('deveRecusarRemoverContaDeConexaoPeloRanking', async () => {
     seed([])
     const { m } = await load([cohere])

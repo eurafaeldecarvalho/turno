@@ -26,7 +26,7 @@ import { detectShells, listFonts } from './shells'
 import { prepareClaude } from './claudeprep'
 import { claudeLogin, claudeLogout, claudeStatus } from './provider-auth'
 import { setSecret, deleteSecret, connectionToken } from './secrets'
-import { findConnection, getConnection, resolveProviderEnv } from './providers'
+import { connectionAccountEnv, findConnection, getConnection } from './providers'
 import { startTranslator } from './translator'
 import { checkConnection } from './doctor'
 import { suggestCommand } from './ai'
@@ -240,7 +240,7 @@ registerPty(liveWc)
 
 // ---- botao Agent: contas, broker de troca, hub de MCP ----
 // conexoes de API (Settings › Connections) entram no ranking como contas do Claude Code apontadas para o provedor
-setConnectionSource({ list: () => (settingsReadable() ? getSettings().connections : undefined), env: (c) => resolveProviderEnv(c, connectionToken(c)) })
+setConnectionSource({ list: () => (settingsReadable() ? getSettings().connections : undefined), env: (c) => connectionAccountEnv(c, connectionToken(c)) })
 initAccounts((s) => send('agents:state', s))
 syncConnectionAccounts()
 const brokerReady = initBroker(send, () => showWindow())
