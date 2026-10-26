@@ -7,6 +7,10 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.14',
+    items: [{ title: 'Search for a font', text: 'In Settings, type in the font field to filter the suggested and installed fonts, each shown in its own style. Installed fonts now show up on Linux too.' }],
+  },
+  {
     version: '0.9.13',
     items: [{ title: 'Choose where agents open', text: 'Pick a start folder for new agents and chats in Settings › Agents & accounts, or click the folder in the status bar.' }],
   },

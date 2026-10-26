@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.14 (2026-10-26)
+
+### Settings
+- Font fields (interface and terminal) are a searchable list: type to filter Suggested and Installed fonts, use the arrows and Enter or click, each font shown in its own style, or pick 'Use "<what you typed>"' for a font that isn't listed.
+- Installed fonts are now listed on Linux and macOS too (Windows as before).
+
 ## 0.9.13 (2026-10-26)
 
 ### Agents
