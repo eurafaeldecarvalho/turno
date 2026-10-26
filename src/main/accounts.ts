@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { execFile } from 'node:child_process'
-import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -465,8 +465,7 @@ export function provisionClaude(home: string): void {
       /* sem junction (FS sem suporte): a conta fica com historico proprio */
     }
   }
-  const settings = join(src, 'settings.json')
-  if (existsSync(settings) && !existsSync(join(home, 'settings.json'))) copyFileSync(settings, join(home, 'settings.json'))
+  syncClaudeSettings(home)
   if (existsSync(join(src, 'CLAUDE.md')) && !existsSync(join(home, 'CLAUDE.md'))) writeFileSync(join(home, 'CLAUDE.md'), `@${join(src, 'CLAUDE.md').replace(/\\/g, '/')}\n`)
   // .claude.json: pastas confiaveis, onboarding concluido e MCPs do usuario, SEM o login (oauthAccount)
   try {
@@ -479,6 +478,21 @@ export function provisionClaude(home: string): void {
     writeFileSync(target, JSON.stringify(merged, null, 2))
   } catch {
     writeFileSync(join(home, '.claude.json'), JSON.stringify({ hasCompletedOnboarding: true }, null, 2))
+  }
+}
+
+// settings.json do usuario -> conta isolada sempre que o do usuario for mais novo: preferencia mudada depois de criar a
+// conta (ex.: "tui": "fullscreen", que liga o clique do mouse nos menus) passa a valer nela tambem.
+// Copia da conta mais nova (mudada de dentro dela) fica como esta.
+export function syncClaudeSettings(home: string): void {
+  const src = join(claudeDefaultHome(), 'settings.json')
+  const dst = join(home, 'settings.json')
+  try {
+    if (!existsSync(src)) return
+    if (existsSync(dst) && statSync(dst).mtimeMs >= statSync(src).mtimeMs) return
+    copyFileSync(src, dst)
+  } catch {
+    /* arquivo ocupado: tenta na proxima abertura */
   }
 }
 

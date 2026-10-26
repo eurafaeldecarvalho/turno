@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { AGENTS, agentCommand, agentDef, isWallText, quoteArg, unavailableText, wallKind, parseReset } from '../../shared/agents'
@@ -309,5 +309,39 @@ describe('nome da conta padrao (sem "default sign-in")', () => {
     const m2 = await import('../accounts')
     m2.refreshLogin('default-claude')
     expect(m2.getAccount('default-claude')?.label).toBe('Pessoal')
+  })
+})
+
+describe('settings.json da conta isolada acompanha o do usuario', () => {
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'turno-acc-'))
+    vi.resetModules()
+    process.env.CLAUDE_CONFIG_DIR = join(dir, 'user-claude')
+    mkdirSync(process.env.CLAUDE_CONFIG_DIR)
+    mkdirSync(join(dir, 'acc-home'))
+  })
+  afterEach(() => {
+    delete process.env.CLAUDE_CONFIG_DIR
+    rmSync(dir, { recursive: true, force: true })
+  })
+  const write = (p: string, obj: object, mtimeSec: number): void => {
+    writeFileSync(p, JSON.stringify(obj))
+    utimesSync(p, mtimeSec, mtimeSec)
+  }
+
+  it('deveLevarOFullscreenDoUsuarioParaAContaCriadaAntesDaMudanca', async () => {
+    write(join(dir, 'acc-home', 'settings.json'), { theme: 'dark' }, 1_000)
+    write(join(process.env.CLAUDE_CONFIG_DIR!, 'settings.json'), { theme: 'dark', tui: 'fullscreen' }, 2_000)
+    const m = await import('../accounts')
+    m.syncClaudeSettings(join(dir, 'acc-home'))
+    expect(JSON.parse(readFileSync(join(dir, 'acc-home', 'settings.json'), 'utf8')).tui).toBe('fullscreen')
+  })
+
+  it('naoDeveSobrescreverQuandoACopiaDaContaEMaisNova', async () => {
+    write(join(process.env.CLAUDE_CONFIG_DIR!, 'settings.json'), { tui: 'fullscreen' }, 1_000)
+    write(join(dir, 'acc-home', 'settings.json'), { tui: 'default' }, 2_000)
+    const m = await import('../accounts')
+    m.syncClaudeSettings(join(dir, 'acc-home'))
+    expect(JSON.parse(readFileSync(join(dir, 'acc-home', 'settings.json'), 'utf8')).tui).toBe('default')
   })
 })

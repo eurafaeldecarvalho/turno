@@ -15,7 +15,7 @@ import { wrapForSandbox } from './sandbox'
 import { canCleanup, createWorktree, deleteBranch, isManagedWorktreePath, removeWorktree, resolveRepoRoot, worktreeBase, worktreeBranch, worktreeCwd, worktreeDecision, worktreeHead, worktreeMainRoot, worktreeStatus, worktreeTeardown } from './worktree'
 import { connectionToken } from './secrets'
 import { IS_WIN, homeDir } from './platform'
-import { accountEnv, getAccount, markAccount, pickAccount, recordUsage } from './accounts'
+import { accountEnv, getAccount, markAccount, pickAccount, recordUsage, syncClaudeSettings } from './accounts'
 import { listMcp, routineMcpArgs } from './mcphub'
 import { prepareClaude } from './claudeprep'
 
@@ -333,6 +333,7 @@ export function startRun(o: StartOptions): string {
   const mcp = routineMcpArgs(runId, req.mcp ?? [], !!req.strictMcp, req.contextCard)
   args.push(...mcp.args)
   if (account?.home) {
+    syncClaudeSettings(account.home)
     try {
       prepareClaude(effectiveCwd, !!req.chrome, account.home) // pasta confiavel na conta isolada
     } catch {

@@ -6,7 +6,7 @@ import { execFile } from 'node:child_process'
 import { join } from 'node:path'
 import type { AgentLaunch, AgentSessionInfo, AgentTabStatus, UsageWindow } from '../shared/types'
 import { SESSION_ID, agentCommand, agentDef, backText, parseReset, unavailableText, wallKind } from '../shared/agents'
-import { accountEnv, agentsState, whenText, effectiveUsage, getAccount, markAccount, nextAvailableAt, pickAccount, recordUsage, clearBlock } from './accounts'
+import { accountEnv, agentsState, syncClaudeSettings, whenText, effectiveUsage, getAccount, markAccount, nextAvailableAt, pickAccount, recordUsage, clearBlock } from './accounts'
 import { notify } from './notify'
 import { claudeLaunchExtras } from './mcphub'
 import { prepareClaude } from './claudeprep'
@@ -170,6 +170,7 @@ export function prepareLaunch(o: PrepareOpts): AgentLaunch {
   }
   let extra = ''
   if (def.id === 'claude') {
+    if (account.home) syncClaudeSettings(account.home) // preferencias do usuario (ex.: tui fullscreen = clique do mouse)
     try {
       prepareClaude(o.cwd ?? prev?.cwd, !!(o.chrome ?? prev?.chrome), account.home ?? undefined, agentsState().accounts.filter((a) => a.home).map((a) => join(a.home!, '.claude.json'))) // pasta confiavel: sem o dialogo no meio da troca
     } catch {
