@@ -255,7 +255,8 @@ describe('conexoes (API) no ranking de contas', () => {
       process.env.Path = prev.Path
     }
     expect(m.getAccount('default-claude')).toBeDefined()
-  })
+    // detectInstalled de verdade: no Windows le o PATH do registro (reg query) e roda o where, bem mais lento que 5 s no CI
+  }, 30_000)
 
   it('naoDeveMexerNoRankingQuandoSettingsNaoPodeSerLido', async () => {
     seed([acc('conn-cohere', 1, { connection: 'cohere', label: 'Cohere', enabled: false })])
@@ -318,7 +319,8 @@ describe('conexoes (API) no ranking de contas', () => {
       process.env.Path = prev.Path
     }
     expect(m.agentsState().accounts.filter((a) => a.agent === 'claude').map((a) => a.id)).toEqual(['default-claude', 'conn-cohere'])
-  })
+    // detectInstalled de verdade: no Windows le o PATH do registro (reg query) e roda o where, bem mais lento que 5 s no CI
+  }, 30_000)
 
   it('devePularConexaoLocalQueNaoSobeEUsarAProxima', async () => {
     const ollama = { id: 'ollama', name: 'Ollama', kind: 'endpoint' as const, baseUrl: 'http://localhost:11434', model: 'qwen', bootCommand: 'ollama serve' }
