@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.9.11 (2026-10-26)
+
+### API connections in the account ranking
+- Every API connection (Settings › Connections, e.g. Cohere or OpenRouter) now shows up in Settings › Agents & accounts as an account you can rank, turn on/off and reorder. Each row has a **Subscription** or **API** badge.
+- When the accounts above hit their limit, the conversation continues on the next one, including an API connection (routines with the account pool and agent tabs). A subscription that is only near its limit still holds the connections below it: a pay-per-use provider takes over only once the subscription really hits the limit.
+- Provider errors move on to the next account: limit or quota reached (429) and no credits (402) take the connection out for 1 hour, an unreachable server for 20 minutes, a rejected key until you edit the connection.
+- Local-server connections (like the built-in Ollama) join the ranking switched off; providers you add join on. New subscription sign-ins rank above API connections.
+- Runs on a connection use only that connection's model and settings, and never fall back to your subscription (e.g. while Turno is still starting).
+
+### Accounts
+- The default Claude sign-in is shown as "Claude · <your subscription e-mail>" instead of "Claude Code · default sign-in". Names you gave yourself stay.
+- Isolated Claude accounts follow your `~/.claude/settings.json` when it changes. With `"tui": "fullscreen"`, options in Claude Code menus can be clicked with the mouse in those accounts too.
+
+### Terminal
+- New terminals start with the system's default shell (your `$SHELL` on Linux/macOS); pick another in Settings if you want. A saved shell that doesn't exist on this machine (e.g. `pwsh.exe` on Linux) no longer breaks every terminal with `execvp(3) failed`.
+
 ## 0.9.10 (2026-10-25)
 
 Review, red-team and QA pass over 0.9.7–0.9.9.

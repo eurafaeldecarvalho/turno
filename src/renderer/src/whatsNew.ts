@@ -7,6 +7,15 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.11',
+    items: [
+      { title: 'API connections in the ranking', text: 'Cohere, OpenRouter and other API connections now appear in Agents & accounts with an API badge. When your subscriptions hit their limit, the conversation continues on the next connection in the ranking.' },
+      { title: 'Your e-mail on the Claude account', text: 'The default sign-in now reads "Claude · your e-mail" instead of "default sign-in".' },
+      { title: 'Click Claude Code menus', text: 'Separate Claude accounts follow your ~/.claude/settings.json, so with "tui": "fullscreen" you can click menu options with the mouse.' },
+      { title: 'Terminals open with your shell', text: 'New terminals use the system default shell, and a shell saved from another computer no longer stops terminals from opening.' },
+    ],
+  },
+  {
     version: '0.9.10',
     items: [
       { title: 'Nothing you type gets lost', text: 'Keys typed right after opening a tab or asking to switch accounts now reach the new agent, and the text in Claude\'s input box moves with you to the new account.' },
