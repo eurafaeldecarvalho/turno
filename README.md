@@ -1,6 +1,6 @@
-# Turno — schedule & run AI coding agents on your own PC
+# Turno — your coding agent keeps working after Claude hits its limit
 
-**Schedule and run AI coding agents unattended on a cron schedule** — the official Claude Code CLI on your Claude subscription, or local models via Ollama. Turno is a free, open-source desktop app for Windows and Linux that runs autonomous coding agents on a schedule, so Claude Code (or a local model) can work overnight and while you sleep. Every routine is a folder with a `ROUTINE.md`; Turno handles the cron, catches up after sleep or reboot, and auto-switches between agent accounts when one hits its usage limit. Open any run as a live chat with the agent, approve its tool calls from a card, and keep working next to it in split terminals. No API keys required — it uses your existing Claude subscription or local models. Local, free, MIT.
+**Run Claude Code unattended on your own PC — on a schedule, overnight, for hours. When one account hits its usage limit, the run continues the same conversation on your next account, or on any model you rank below it: a local Ollama, a gateway you already run ([OmniRoute](https://github.com/cheaper-inference/OmniRoute), [9router](https://github.com/decolua/9router), [Claude Code Router](https://github.com/musistudio/claude-code-router)) or one of 190+ API providers.** Free, open source (MIT), Windows and Linux. No API key needed for your Claude subscription.
 
 [![release](https://img.shields.io/github/v/release/eurafaeldecarvalho/turno)](https://github.com/eurafaeldecarvalho/turno/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-0078D4)](https://github.com/eurafaeldecarvalho/turno/releases/latest)
@@ -26,10 +26,17 @@ permission_mode: manual  # ask me: approval card in the app + phone push
 Read the project folder and write standup.md with a three-line summary.
 ```
 
+### Never stop at the limit
+
+1. Settings › Connections: add your gateway — OmniRoute or 9router at `http://localhost:20128/v1` (OpenAI format, through Turno's translator) or Claude Code Router at `http://127.0.0.1:3456` (Anthropic format) — or pick a local model or API provider from the catalog.
+2. Settings › Agents and accounts: add your Claude sign-ins, then that connection **below** them. A paid or gateway connection only takes over when every subscription above it is at its limit.
+3. In the routine, set `account_pool: true`. At the limit, Turno stops the run cleanly and continues the same conversation on the next account in the list.
+
 Turno does not implement an agent. It schedules and supervises the CLIs you already use: every run is `claude -p` speaking stream-json in both directions. That keeps the full Claude Code feature set (tools, skills, MCP servers, subagents, Claude in Chrome) and lets the same routine run on a local model by swapping the profile.
 
 **Why this one:**
 
+- **Survives the usage limit.** Accounts are ranked (by your order, the most quota left, or the soonest reset). At the 5-hour or weekly limit a routine with `account_pool: true` moves to the next one and resumes the conversation; a provider that runs out of credits or goes down leaves the list for a while.
 - **Runs when you are not looking.** Cron schedules with time zones, catch-up after sleep or reboot, timeouts, an idle watchdog, a clean `interrupt` before any kill, and named locks so two routines never fight over the same Chrome or GPU.
 - **Talk to a routine while it runs.** Clicking a routine opens its run as a chat with thinking, grouped tool calls ("Read 3 files, ran 2 commands") and results. While the run is alive, a message goes straight into its stdin. Once it has finished, the message continues the same session with `--resume`.
 - **You decide what it may do.** Five permission modes per routine, from *Ask* (an inline Allow / Allow for session / Deny card plus a phone notification) to *Bypass everything*.
@@ -84,6 +91,7 @@ schedule:
   # cron: "15 9,12,15,18 * * *"     # advanced: replaces days/times
 timezone: America/Sao_Paulo
 profile: claude-max          # claude-max | qwen-local
+account_pool: true           # continue on the next ranked account (or connection) at the usage limit
 model: sonnet                # fable | opus | sonnet | haiku | full id | "" = account default
 effort: medium               # low | medium | high | xhigh | max
 permission_mode: dontAsk     # manual | dontAsk | auto | acceptEdits | bypassPermissions
