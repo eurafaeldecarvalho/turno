@@ -8,6 +8,10 @@
 [![typescript](https://img.shields.io/badge/TypeScript-5.9-3178C6)](https://www.typescriptlang.org)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
+![A scheduled Claude Code run hits the usage limit, continues on a second account, then on a local OmniRoute gateway, and finishes the same conversation](screenshots/demo.gif)
+
+<sub>Dramatized: the usage limits are simulated; the notices are Turno's own text.</sub>
+
 ![Turno scheduling a Claude Code agent run, shown as a live chat with split terminals](screenshots/session.png)
 
 ```yaml
