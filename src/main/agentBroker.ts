@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { renderStatusline } from '../shared/statusline'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -102,10 +103,9 @@ function writeScripts(): void {
       guard,
       'p=$(cat)',
       's="${TMPDIR:-/tmp}/turno-sl-$TURNO_AGENT_KEY"',
-      // sem rate_limits (antes da 1a resposta): mostra o ultimo texto
-      'case "$p" in *\'"rate_limits"\'*) ;; *) cat "$s.out" 2>/dev/null; exit 0;; esac',
       'now=$(date +%s); last=$(cat "$s" 2>/dev/null || echo 0)',
-      'if [ $((now-last)) -lt 10 ] && [ -f "$s.out" ]; then cat "$s.out"; exit 0; fi',
+      // o Claude chama varias vezes por segundo enquanto responde: no maximo uma consulta ao Turno a cada 2 s
+      'if [ $((now-last)) -lt 2 ] && [ -f "$s.out" ]; then cat "$s.out"; exit 0; fi',
       'echo "$now" > "$s"',
       'printf \'%s\' "$p" | curl -s -m 2 -H "x-turno-token: $TURNO_HOOK_TOKEN" --data-binary @- "http://127.0.0.1:$TURNO_HOOK_PORT/statusline/$TURNO_AGENT_KEY/$TURNO_ACCOUNT_ID" > "$s.out" 2>/dev/null',
       'cat "$s.out" 2>/dev/null',
@@ -301,15 +301,18 @@ function onStatusline(key: string, accountId: string, p: Record<string, unknown>
   const s = sessions.get(key)
   // so a aba viva dona desta conta mexe no estado dela (igual ao onHook): um statusline forjado ou atrasado
   // (key inexistente, ou de uma conta ja trocada) ressuscitaria uma conta recem-esgotada, zerando o 'until'
-  if (!rl || !getAccount(accountId) || !s || s.accountId !== accountId) return ''
-  const u = recordUsage(accountId, { fiveHour: windowOf(rl.five_hour), weekly: windowOf(rl.seven_day) })
-  if (u.state === 'warning' && !s.pendingSwap) {
-    s.pendingSwap = 'warning'
-    // so troca ja se estiver parado entre turnos; pedindo permissao/entrada o turno ainda esta vivo: espera o Stop
-    if (s.status === 'idle') void swap(key, 'warning')
+  const acc = getAccount(accountId)
+  if (!acc || !s || s.accountId !== accountId) return ''
+  if (rl) {
+    const u = recordUsage(accountId, { fiveHour: windowOf(rl.five_hour), weekly: windowOf(rl.seven_day) })
+    if (u.state === 'warning' && !s.pendingSwap) {
+      s.pendingSwap = 'warning'
+      // so troca ja se estiver parado entre turnos; pedindo permissao/entrada o turno ainda esta vivo: espera o Stop
+      if (s.status === 'idle') void swap(key, 'warning')
+    }
   }
-  const part = (label: string, w?: UsageWindow): string => (w ? `${label} ${w.pct}%` : '')
-  return ['Turno', part('5h', u.fiveHour), part('7d', u.weekly)].filter(Boolean).join(' · ')
+  // rodape no estilo do Orca, desenhado pelo Turno: conta = parte local do e-mail, ou o nome da conexao de API
+  return renderStatusline(p, acc.connection ? acc.label : acc.email ? acc.email.split('@')[0] : acc.label)
 }
 
 // motivos de conta bloqueada pelo fornecedor, em texto que o usuario entende (o codigo cru nao aparece na UI)
