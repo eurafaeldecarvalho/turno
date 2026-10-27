@@ -17,7 +17,8 @@ const REPLY = '╭ Opus 5  HIGH  ·  eu\n╰ 5h   ━━━━  13%   ↺ 3h54m\
 
 beforeAll(async () => {
   // no Linux/macOS "\\" e caractere valido de nome de pasta (no Windows e o separador)
-  dir = join(mkdtempSync(join(tmpdir(), 'turno-scripts-')), win ? "José $x O'Brien [1]" : "José $x O'Brien [1] a\\b")
+  // apostrofo curvo (’) tambem: o PowerShell trata ‘ ’ ‚ ‛ como aspas simples
+  dir = join(mkdtempSync(join(tmpdir(), 'turno-scripts-')), win ? "José $x O'Brien O’Neil [1]" : "José $x O'Brien O’Neil [1] a\\b")
   mkdirSync(dir)
   for (const [name, text] of Object.entries(scriptFiles())) writeFileSync(join(dir, name), text)
   server = createServer((req, res) => {
@@ -113,6 +114,13 @@ describe('configuracao dos scripts por sistema', () => {
   it('deveManterABarraInvertidaDoCaminhoNoLinuxEMac (so o Windows troca \\ por /)', () => {
     expect(claudeSessionWiring('linux', '/home/eu/a\\b').statusLine.command).toBe("sh '/home/eu/a\\b/turno-statusline.sh'")
     expect(claudeSessionWiring('win32', 'C:\\Users\\eu').statusLine.command).toContain('-EncodedCommand')
+  })
+  it('deveDobrarTambemOsApostrofosCurvosNoPowerShell (‘ ’ ‚ ‛ fecham a string)', () => {
+    const w = claudeSessionWiring('win32', 'C:/Users/x’;calc;’')
+    const enc = /-EncodedCommand ([A-Za-z0-9+/=]+)$/.exec(w.hook('Stop').command)!
+    expect(Buffer.from(enc[1], 'base64').toString('utf16le')).toBe("& 'C:/Users/x’’;calc;’’/turno-hook.ps1' 'Stop'")
+    const all = /-EncodedCommand ([A-Za-z0-9+/=]+)$/.exec(claudeSessionWiring('win32', 'C:/a‘b’c‚d‛e').statusLine.command)!
+    expect(Buffer.from(all[1], 'base64').toString('utf16le')).toBe("& 'C:/a‘‘b’’c‚‚d‛‛e/turno-statusline.ps1'")
   })
   it('deveUsarShComAspasSimplesNoLinuxEMac', () => {
     const w = claudeSessionWiring('linux', "/home/eu $x/O'Brien")

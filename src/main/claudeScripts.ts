@@ -67,8 +67,9 @@ export const scriptFiles = (): Record<string, string> => ({
 
 // Aspas simples do sh: nada dentro e interpretado ($, `, espaco); o apostrofo vira '\''
 const shQuote = (v: string): string => `'${v.replace(/'/g, "'\\''")}'`
-// Aspas simples do PowerShell: o apostrofo vira ''
-const psQuote = (v: string): string => `'${v.replace(/'/g, "''")}'`
+// Aspas simples do PowerShell: o apostrofo vira ''. O PowerShell tambem trata ‘ ’ ‚ ‛ (U+2018-U+201B) como aspas
+// simples (um nome de usuario como O’Brien fecharia a string): cada um e dobrado do mesmo jeito.
+const psQuote = (v: string): string => `'${v.replace(/['\u2018-\u201B]/g, '$&$&')}'`
 // -EncodedCommand: o comando vai em base64 (UTF-16LE), que so tem letras, numeros e +/=, entao nem o Git Bash nem o
 // PowerShell (o Claude usa um ou outro) mexem no caminho, por mais estranho que seja o nome do usuario ($, ', [ ]).
 const psEncoded = (cmd: string): string => `powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${Buffer.from(cmd, 'utf16le').toString('base64')}`
