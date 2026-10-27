@@ -105,6 +105,36 @@
    "authNotes": "API key optional. Configure the local XInference OpenAI-compatible base URL (default: http://localhost:9997/v1)."
   },
   {
+   "id": "omniroute",
+   "name": "OmniRoute (local gateway)",
+   "kind": "local",
+   "style": "openai",
+   "baseUrl": "http://localhost:20128/v1",
+   "free": true,
+   "docsUrl": "https://github.com/cheaper-inference/OmniRoute",
+   "authNotes": "Start OmniRoute first (dashboard at http://localhost:20128) and connect your providers there. Use an OmniRoute API key if you enabled one, and a model or combo name from its dashboard."
+  },
+  {
+   "id": "9router",
+   "name": "9router (local gateway)",
+   "kind": "local",
+   "style": "openai",
+   "baseUrl": "http://localhost:20128/v1",
+   "free": true,
+   "docsUrl": "https://github.com/decolua/9router",
+   "authNotes": "Start 9router first (dashboard at http://localhost:20128) and connect your providers there. Use a model name from its dashboard; the API key is the one 9router shows, if any."
+  },
+  {
+   "id": "claude-code-router",
+   "name": "Claude Code Router (local gateway)",
+   "kind": "local",
+   "style": "anthropic",
+   "baseUrl": "http://127.0.0.1:3456/v1",
+   "free": true,
+   "docsUrl": "https://github.com/musistudio/claude-code-router",
+   "authNotes": "Start the Claude Code Router server first (gateway at http://127.0.0.1:3456). It speaks the Anthropic API, so Claude Code talks to it directly; use the model or route name you set up there."
+  },
+  {
    "id": "agentrouter",
    "name": "AgentRouter",
    "kind": "api-key",
