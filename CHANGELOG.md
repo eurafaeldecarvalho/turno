@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.20 (2026-10-27)
+
+### Features
+- Connections catalog: OmniRoute, 9router and Claude Code Router as local gateways. Rank one below your Claude accounts and a routine with `account_pool: true` continues on it when every subscription is at its limit.
+
 ## 0.9.19 (2026-10-27)
 
 ### Fixes

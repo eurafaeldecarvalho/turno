@@ -7,6 +7,12 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.20',
+    items: [
+      { title: 'Keep going after the limit', text: 'Add OmniRoute, 9router or Claude Code Router from the connections catalog and rank it below your Claude accounts: a routine with account pool on continues there when every subscription is at its limit.' },
+    ],
+  },
+  {
     version: '0.9.19',
     items: [{ title: 'Windows names with apostrophes', text: 'The Claude footer and agent status work for Windows user names with a curly apostrophe, like O’Brien.' }],
   },
