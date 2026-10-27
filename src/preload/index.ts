@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
-import { release } from 'node:os'
+import { homedir, release } from 'node:os'
 import type { TurnoApi, RunEvent, RunRecord, Routine, Settings, AwakeStatus, TermSession, AgentsState, AgentSessionInfo, AgentLaunch } from '../shared/types'
 
 function listen<T extends unknown[]>(channel: string, cb: (...args: T) => void): () => void {
@@ -13,6 +13,7 @@ const winBuild = process.platform === 'win32' ? Number(release().split('.')[2]) 
 
 const api: TurnoApi = {
   winBuild,
+  homeDir: homedir(),
   pty: {
     create: (opts) => ipcRenderer.invoke('pty:create', opts),
     write: (id, data) => ipcRenderer.send('pty:write', id, data),

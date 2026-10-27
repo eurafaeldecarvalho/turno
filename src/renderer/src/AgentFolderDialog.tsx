@@ -1,8 +1,8 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useModalLayer } from './modalStack'
 import { getSettingsSnapshot } from './appearance'
 import { openAgent } from './layout'
-import { pushRecentDir, recentWithoutDefault, startFolderLabel } from '../../shared/agents'
+import { existingRecents, pushRecentDir, recentWithoutDefault, startFolderLabel } from '../../shared/agents'
 import { IconFolder } from './icons'
 
 // Popup do New agent: em qual pasta abrir. A pasta padrao (Settings › Agents & accounts › Start folder, ou a home)
@@ -63,9 +63,17 @@ export function AgentFolderHost() {
     if (ask) first.current?.focus()
   }, [ask])
   const z = useModalLayer(!!ask, close, box)
+  // recentes: so as que ainda existem, sem repetir a padrao (que pode ser a propria home)
+  const [recent, setRecent] = useState<string[]>([])
+  useEffect(() => {
+    if (!ask) return setRecent([])
+    const start = getSettingsSnapshot()?.agentStartDir ?? ''
+    let alive = true
+    void existingRecents(recentWithoutDefault(readRecent(), start || window.turno.homeDir), (p) => window.turno.ui.pathExists(p)).then((r) => alive && setRecent(r))
+    return () => void (alive = false)
+  }, [ask])
   if (!ask) return null
   const start = getSettingsSnapshot()?.agentStartDir ?? ''
-  const recent = recentWithoutDefault(readRecent(), start)
   const choose = async (): Promise<void> => {
     const asked = current
     const dir = await window.turno.ui.pickFolder()

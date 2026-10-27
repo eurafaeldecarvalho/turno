@@ -55,8 +55,10 @@ describe('rodape: texto de fora nao vira comando de terminal', () => {
 })
 
 describe('rodape: casos de borda achados no QA', () => {
-  it('naoDeveMostrar100PorCentoAntesDeBaterNoLimite', () => {
-    expect(plain(renderStatusline({ rate_limits: { five_hour: { used_percentage: 99.6 } } }, '', now))).toContain(' 99%')
+  it('deveArredondarOUsoIgualAoRestoDoApp (barra de status, Settings e a troca de conta)', () => {
+    // o Turno grava o uso com Math.round (99,6 -> 100, ja conta como no limite): o rodape mostra o mesmo numero
+    expect(plain(renderStatusline({ rate_limits: { five_hour: { used_percentage: 99.6 } } }, '', now))).toContain('100%')
+    expect(plain(renderStatusline({ rate_limits: { five_hour: { used_percentage: 99.4 } } }, '', now))).toContain(' 99%')
   })
   it('deveManterO1MDoModeloMesmoComNomeLongo', () => {
     const out = plain(renderStatusline({ model: { display_name: 'anthropic.claude-opus-5-5-20261001-v1:0 (1M context)' } }, '', now))

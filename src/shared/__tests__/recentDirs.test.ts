@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { pushRecentDir, recentWithoutDefault } from '../agents'
+import { existingRecents, pushRecentDir, recentWithoutDefault, startFolderLabel } from '../agents'
 
 describe('pastas recentes do popup do New agent', () => {
   it('deveColocarAMaisRecentePrimeiroSemRepetir', () => {
@@ -19,5 +19,16 @@ describe('recentes sem repetir a pasta padrao', () => {
   it('deveTirarAPastaPadraoDasRecentesMesmoComBarraNoFinal', () => {
     expect(recentWithoutDefault(['/home/eu/cnm', '/x'], '/home/eu/cnm/')).toEqual(['/x'])
     expect(recentWithoutDefault(['C:\\\\proj', 'C:\\\\y'], 'C:\\\\proj\\\\')).toEqual(['C:\\\\y'])
+  })
+})
+
+describe('recentes que sumiram e rotulos', () => {
+  it('deveTirarDasRecentesAsPastasQueNaoExistemMais', async () => {
+    const ok = new Set(['/a', '/c'])
+    expect(await existingRecents(['/a', '/b', '/c'], async (p) => ok.has(p))).toEqual(['/a', '/c'])
+  })
+  it('deveMostrarARaizComoBarraEVazioComoHome', () => {
+    expect(startFolderLabel('/')).toBe('/')
+    expect(startFolderLabel('')).toBe('home')
   })
 })

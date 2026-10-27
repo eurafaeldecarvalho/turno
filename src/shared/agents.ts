@@ -227,7 +227,7 @@ export function parseReset(text: string, now = Date.now()): string | undefined {
 // Settings › Agents (e do rodape); vazia = home do usuario (o pty cai nela, como antes).
 export const agentStartCwd = (explicit?: string, startDir?: string): string | undefined => explicit || startDir?.trim() || undefined
 // Nome curto da pasta inicial para o rodape ("home" quando nao ha uma)
-export const startFolderLabel = (p: string): string => p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || 'home'
+export const startFolderLabel = (p: string): string => (!p ? 'home' : p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || p)
 // Pastas recentes do popup do New agent: a ultima primeiro, sem repetir (barra final nao conta), no maximo 5
 export function pushRecentDir(list: string[], dir: string): string[] {
   const norm = (p: string): string => (p.length > 1 ? p.replace(/[\\/]+$/, '') : p)
@@ -246,4 +246,9 @@ export const installCommandFor = (def: { id: string; install?: string }, isWindo
 export const recentWithoutDefault = (recent: string[], start: string): string[] => {
   const norm = (p: string): string => (p.length > 1 ? p.replace(/[\\/]+$/, '') : p)
   return recent.filter((d) => norm(d) !== norm(start))
+}
+// recentes cuja pasta ainda existe (apagada/renomeada abriria o agente na home sem aviso)
+export async function existingRecents(list: string[], exists: (p: string) => Promise<boolean>): Promise<string[]> {
+  const ok = await Promise.all(list.map((d) => exists(d).catch(() => false)))
+  return list.filter((_, i) => ok[i])
 }

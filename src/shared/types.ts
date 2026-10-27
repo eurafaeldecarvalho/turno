@@ -489,6 +489,7 @@ export interface TurnoApi {
     ptyMemory(): Promise<Array<{ ptyId: number; pid: number; memKb: number }>>
   }
   winBuild?: number // build do Windows (ConPTY); undefined fora do Windows
+  homeDir: string // pasta do usuario (a "Home folder" do popup do New agent)
   smoke: {
     enabled: boolean
     view?: string // abre um painel por nome (ex. 'fanout') p/ prova visual
