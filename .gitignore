@@ -6,3 +6,7 @@ dist
 # Blobs grandes de analise/evidencia (regeraveis): versiona so os resumos
 *.evidence.json
 *.evidence.json.gz
+
+# design tooling scratch
+.taste-skill/
+.impeccable/
