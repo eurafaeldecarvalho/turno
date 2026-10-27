@@ -13,6 +13,14 @@
 ### Setup
 - Claude Code installs with Anthropic's official native installer (no Node.js needed): from the setup tour with one click, or from Settings. Turno finds it right after installing, without logging out.
 
+### Windows
+- The Claude footer, the tab and sidebar status dots and the automatic account switch now work on Windows without Git for Windows (Turno uses PowerShell there). Footer characters show correctly on any console.
+
+### Fixes
+- The Start folder card no longer says an existing folder wasn't found.
+- Long account names end with "…" (full name on hover); the setup tour's step tabs no longer get cut off.
+- The Claude footer shows the same usage numbers and time to reset as the status bar.
+
 ### Interface
 - New terminal button above New agent; the Folders + lines up with the Routines +; the status bar no longer shows the runs dot or the start folder.
 

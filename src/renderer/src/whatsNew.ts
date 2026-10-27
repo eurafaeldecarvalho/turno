@@ -13,6 +13,7 @@ export const WHATS_NEW: ReleaseNotes[] = [
       { title: 'Claude footer like Orca', text: 'Agent tabs show the model, effort, account and the 5-hour and 7-day usage bars with the time to reset.' },
       { title: 'You choose every account', text: 'Accounts no longer appear on their own: add the sign-in on this PC, a separate sign-in or an API connection in Agents & accounts.' },
       { title: 'Claude Code in one click', text: 'The setup tour installs Claude Code with the official installer if it is missing. No Node.js needed.' },
+      { title: 'Works on any Windows', text: 'The Claude footer, status dots and account switching no longer need Git for Windows.' },
     ],
   },
   {
