@@ -58,7 +58,7 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.035em; text-wrap: b
 /* hero: the claim, then the product doing its job */
 .hero { padding: clamp(56px, 8vw, 120px) var(--margin) 0; display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 24px; }
 .hero-copy { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; text-align: center; }
-.hero h1 { font-size: var(--step-display); line-height: 0.98; letter-spacing: -0.045em; max-width: 12ch; }
+.hero h1 { font-size: var(--step-display); line-height: 0.98; letter-spacing: -0.045em; max-width: 17ch; }
 .lead { font-size: var(--step-lead); line-height: 1.4; color: var(--ink); max-width: 46ch; margin: 28px 0 0; }
 .hero-actions { margin-top: 36px; display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap; }
 .hero-media { grid-column: 2 / span 10; margin: clamp(56px, 7vw, 96px) 0 0; }
