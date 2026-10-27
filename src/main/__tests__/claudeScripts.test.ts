@@ -43,9 +43,9 @@ function run(kind: 'statusline' | 'hook', input: string, withTurno = true): Prom
       ? win
         ? ['powershell.exe', ['-NoProfile', '-Command', w.statusLine.command]]
         : ['sh', ['-c', w.statusLine.command]]
-      : w.hook('Stop').args
-        ? [w.hook('Stop').command, w.hook('Stop').args!] // forma exec (Windows): sem shell
-        : ['sh', ['-c', w.hook('Stop').command]] // forma shell (Linux/macOS): sh -c
+      : win
+        ? ['powershell.exe', ['-NoProfile', '-Command', w.hook('Stop').command]] // Windows sem Git Bash: o Claude usa o PowerShell
+        : ['sh', ['-c', w.hook('Stop').command]]
   return new Promise((res, rej) => {
     const p = execFile(file, args as string[], { env, encoding: 'buffer', timeout: 20000 }, (err, out) => (err ? rej(err) : res((out as Buffer).toString('utf8'))))
     p.stdin?.end(input)
@@ -83,9 +83,11 @@ describe('scripts do Claude Code (statusline e hooks) em qualquer computador', (
 })
 
 describe('configuracao dos scripts por sistema', () => {
-  it('deveUsarPowerShellSemShellNoWindows (Git Bash e opcional)', () => {
+  it('deveUsarPowerShellNoWindows (Git Bash e opcional)', () => {
     const w = claudeSessionWiring('win32', 'C:/Users/eu/AppData/turno')
-    expect(w.hook('Stop')).toMatchObject({ type: 'command', command: 'powershell.exe', args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'C:/Users/eu/AppData/turno/turno-hook.ps1', 'Stop'] })
+    // forma shell (powershell -File), igual ao statusline: um Claude antigo que ignore "args" rodaria powershell.exe puro
+    // lendo o JSON do hook como comando; -File funciona pelo Git Bash e pelo PowerShell
+    expect(w.hook('Stop')).toEqual({ type: 'command', command: 'powershell -NoProfile -ExecutionPolicy Bypass -File "C:/Users/eu/AppData/turno/turno-hook.ps1" Stop', timeout: 10 })
     expect(w.statusLine.command).toBe('powershell -NoProfile -ExecutionPolicy Bypass -File "C:/Users/eu/AppData/turno/turno-statusline.ps1"')
   })
   it('deveUsarShNoLinuxEMac', () => {

@@ -22,14 +22,14 @@ const STATUSLINE_SH = [
   '',
 ].join('\n')
 
-// PowerShell 5.1: entrada e saida em UTF-8 (senao as barras e a moldura saem embaralhadas na pagina de codigo do
-// console); a resposta e lida em bytes (o .Content adivinha a codificacao); erro de rede nunca quebra o Claude.
+// PowerShell 5.1: entrada e saida em BYTES UTF-8 pelos fluxos padrao (nao depende da pagina de codigo nem de haver um
+// console anexado: senao as barras e a moldura saem embaralhadas); a resposta tambem e lida em bytes (o .Content adivinha
+// a codificacao); erro de rede nunca quebra o Claude.
 const PS_PRELUDE = [
   '$ErrorActionPreference = "SilentlyContinue"',
   '$utf8 = New-Object System.Text.UTF8Encoding $false',
-  '[Console]::InputEncoding = $utf8',
-  '[Console]::OutputEncoding = $utf8',
-  '$p = [Console]::In.ReadToEnd()',
+  '$p = (New-Object System.IO.StreamReader([Console]::OpenStandardInput(), $utf8)).ReadToEnd()',
+  'function Out-Utf8($text) { $o = [Console]::OpenStandardOutput(); $b = $utf8.GetBytes([string]$text); $o.Write($b, 0, $b.Length); $o.Flush() }',
   'if (-not $env:TURNO_HOOK_PORT) { exit 0 }',
   'function Send($path, $timeout) {',
   '  $r = Invoke-WebRequest -UseBasicParsing -Method Post -Uri ("http://127.0.0.1:" + $env:TURNO_HOOK_PORT + $path) -Headers @{ "x-turno-token" = $env:TURNO_HOOK_TOKEN } -ContentType "application/json; charset=utf-8" -Body $utf8.GetBytes($p) -TimeoutSec $timeout',
@@ -46,11 +46,11 @@ const STATUSLINE_PS1 = [
   '$last = 0',
   'if (Test-Path $s) { $last = [int64](Get-Content $s -Raw) }',
   // no maximo uma consulta ao Turno a cada 2 s; no intervalo, o ultimo rodape
-  'if (($now - $last) -lt 2 -and (Test-Path ($s + ".out"))) { [Console]::Out.Write([IO.File]::ReadAllText($s + ".out", $utf8)); exit 0 }',
+  'if (($now - $last) -lt 2 -and (Test-Path ($s + ".out"))) { Out-Utf8 ([IO.File]::ReadAllText($s + ".out", $utf8)); exit 0 }',
   'Set-Content -Path $s -Value $now -NoNewline',
   '$out = Send ("/statusline/" + $env:TURNO_AGENT_KEY + "/" + $env:TURNO_ACCOUNT_ID) 2',
   'if ($out -ne $null) { [IO.File]::WriteAllText($s + ".out", $out, $utf8) }',
-  'if (Test-Path ($s + ".out")) { [Console]::Out.Write([IO.File]::ReadAllText($s + ".out", $utf8)) }',
+  'if (Test-Path ($s + ".out")) { Out-Utf8 ([IO.File]::ReadAllText($s + ".out", $utf8)) }',
   'exit 0',
   '',
 ].join('\r\n')
@@ -64,18 +64,19 @@ export const scriptFiles = (): Record<string, string> => ({
 })
 
 // Como o settings da sessao (--settings) chama os scripts. dir com barras normais ("/"), tambem no Windows.
-// Windows: hook na forma exec (powershell.exe + args, sem shell nenhum); statusline via "powershell -File", que a
-// documentacao garante tanto pelo Git Bash quanto pelo PowerShell.
+// Windows: statusline e hooks via "powershell -File", que a documentacao garante tanto pelo Git Bash quanto pelo
+// PowerShell. Nao usa a forma exec (args): um Claude antigo que ignore "args" rodaria powershell.exe puro lendo o JSON do
+// hook como comando.
 export function claudeSessionWiring(platform: NodeJS.Platform, dir: string) {
   const at = (name: string): string => `${dir.replace(/\\/g, '/').replace(/\/+$/, '')}/${name}`
   if (platform === 'win32') {
     return {
       statusLine: { type: 'command', command: `powershell -NoProfile -ExecutionPolicy Bypass -File "${at('turno-statusline.ps1')}"`, padding: 0 },
-      hook: (ev: string) => ({ type: 'command', command: 'powershell.exe', args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', at('turno-hook.ps1'), ev] as string[] | undefined, timeout: 10 }),
+      hook: (ev: string) => ({ type: 'command', command: `powershell -NoProfile -ExecutionPolicy Bypass -File "${at('turno-hook.ps1')}" ${ev}`, timeout: 10 }),
     }
   }
   return {
     statusLine: { type: 'command', command: `sh "${at('turno-statusline.sh')}"`, padding: 0 },
-    hook: (ev: string) => ({ type: 'command', command: `sh "${at('turno-hook.sh')}" ${ev}`, args: undefined as string[] | undefined, timeout: 10 }),
+    hook: (ev: string) => ({ type: 'command', command: `sh "${at('turno-hook.sh')}" ${ev}`, timeout: 10 }),
   }
 }
