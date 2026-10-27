@@ -7,6 +7,15 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.17',
+    items: [
+      { title: 'Pick the folder for each agent', text: 'New agent asks where to open: your default folder (just press Enter), a recent one, or any folder.' },
+      { title: 'Claude footer like Orca', text: 'Agent tabs show the model, effort, account and the 5-hour and 7-day usage bars with the time to reset.' },
+      { title: 'You choose every account', text: 'Accounts no longer appear on their own: add the sign-in on this PC, a separate sign-in or an API connection in Agents & accounts.' },
+      { title: 'Claude Code in one click', text: 'The setup tour installs Claude Code with the official installer if it is missing. No Node.js needed.' },
+    ],
+  },
+  {
     version: '0.9.16',
     items: [{ title: 'Font list fixed', text: 'Moving the mouse over the font list no longer closes Settings.' }],
   },

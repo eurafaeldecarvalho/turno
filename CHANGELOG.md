@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.9.17 (2026-10-27)
+
+### Agents
+- New agent asks which folder to open in: the default folder first (Enter), recent folders, or Choose folder….
+- The Claude footer inside agent tabs is drawn by Turno in the Orca style: model, effort and account, then the 5-hour and 7-day bars with the time to reset.
+- Folder items in the sidebar show the same status dot as the agent's tab (pulsing while it works).
+
+### Accounts
+- Nothing joins the account list on its own anymore. Add each one in Settings › Agents & accounts: the sign-in already on this PC, a separate sign-in, or an API connection. Any account can be removed; removing this PC's sign-in or a connection only takes it off the list.
+
+### Setup
+- Claude Code installs with Anthropic's official native installer (no Node.js needed): from the setup tour with one click, or from Settings. Turno finds it right after installing, without logging out.
+
+### Interface
+- New terminal button above New agent; the Folders + lines up with the Routines +; the status bar no longer shows the runs dot or the start folder.
+
 ## 0.9.16 (2026-10-26)
 
 ### Fixes
