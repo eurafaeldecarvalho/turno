@@ -22,15 +22,16 @@ function bar(p: number): string {
   return `${band(p)}${'━'.repeat(n)}${fg(C.track)}${'━'.repeat(WIDTH - n)}${X}`
 }
 
-// tempo ate o reset: 2h39m ou 5d17h ("?" sem horario)
+// tempo ate o reset: 2h39m ou 5d17h ("?" sem horario). Mesma conta do resto do app (agentStore timeLeft): minutos
+// para cima e "now" quando ja passou, para o rodape e a barra de status nunca divergirem
 function resetIn(epochSec: number | undefined, now: number): string {
   if (!epochSec) return '?'
   const sec = epochSec > 1e11 ? epochSec / 1000 : epochSec // o Claude manda segundos; milissegundos tambem funcionam
-  const diff = Math.max(0, Math.floor(sec - now / 1000))
-  const h = Math.floor(diff / 3600)
-  const m = Math.floor((diff % 3600) / 60)
+  const min = Math.ceil((sec * 1000 - now) / 60_000)
+  if (!Number.isFinite(min) || min <= 0) return 'now'
   const two = (v: number): string => String(v).padStart(2, '0')
-  return h >= 24 ? `${Math.floor(h / 24)}d${two(h % 24)}h` : `${h}h${two(m)}m`
+  const h = Math.floor(min / 60)
+  return h >= 24 ? `${Math.floor(min / 1440)}d${two(Math.floor((min % 1440) / 60))}h` : `${h}h${two(min % 60)}m`
 }
 
 // o esforco e o unico ajuste que custa dinheiro: e a unica pilula preenchida, e esquenta conforme sobe

@@ -68,3 +68,12 @@ describe('rodape: casos de borda achados no QA', () => {
     expect(plain(renderStatusline({ rate_limits: { five_hour: { used_percentage: 50 } } }, 'eu', now))).toContain('eu')
   })
 })
+
+describe('rodape: tempo ate o reset igual ao resto do app (minuto para cima, "now" quando passou)', () => {
+  it('deveArredondarOMinutoParaCimaComoABarraDeStatus', () => {
+    const at = (ms: number) => plain(renderStatusline({ rate_limits: { five_hour: { used_percentage: 5, resets_at: (now + ms) / 1000 } } }, '', now))
+    expect(at((3 * 3600 + 30 * 60 + 30) * 1000)).toContain('↺ 3h31m')
+    expect(at(((4 * 24 + 18) * 3600 + 30) * 1000)).toContain('↺ 4d18h')
+    expect(at(-60_000)).toContain('↺ now')
+  })
+})
