@@ -595,6 +595,12 @@ async function runSmoke(): Promise<void> {
   }
   if (window.turno.smoke.view === 'onboarding') openOnboarding()
   if (window.turno.smoke.view === 'agent-folder') newAgentAsk() // popup "Open agent in" do New agent
+  if (window.turno.smoke.view === 'settings-agents-add') {
+    // fim da lista de contas: o "Add an account…" e o texto de ajuda (o modal tem altura limitada)
+    openSettingsModal('agents')
+    await new Promise((r) => setTimeout(r, 800))
+    document.getElementById('acct-add')?.scrollIntoView({ block: 'center' })
+  }
   if (window.turno.smoke.view === 'whatsnew') void openWhatsNew(true)
   if (window.turno.smoke.view === 'run') {
     const [last] = await window.turno.run.list(undefined, 1)

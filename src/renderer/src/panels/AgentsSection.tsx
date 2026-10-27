@@ -181,7 +181,7 @@ export function AgentsSection() {
                   defaultValue={a.label}
                   // conta de conexao: o nome vem de Settings › Connections (renomear aqui seria desfeito na proxima sincronia)
                   readOnly={!!a.connection}
-                  title={a.connection ? 'Rename it in Settings › Connections' : undefined}
+                  title={a.connection ? `${a.label} (rename it in Settings › Connections)` : a.label}
                   // com edicao pendente, Esc so desfaz o nome (data-esc-local); sem edicao, Esc fecha o Settings como sempre
                   onInput={(e) => e.currentTarget.toggleAttribute('data-esc-local', e.currentTarget.value !== a.label)}
                   onBlur={(e) => commitLabel(a, e.currentTarget, false)}
