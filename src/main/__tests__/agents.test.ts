@@ -185,13 +185,21 @@ describe('conexoes (API) no ranking de contas', () => {
     return { m, setList: (l: unknown[]) => (list = l) }
   }
 
-  it('deveEntrarNoFimDoRankingLigadaQuandoConexaoEndpointExiste', async () => {
-    seed([acc('a', 1), acc('b', 2)])
+  it('naoDeveEntrarSozinhaNoRankingQuandoConexaoExiste', async () => {
+    seed([acc('a', 1)])
     const { m } = await load([claudeMax, cohere])
     m.syncConnectionAccounts()
-    const ids = m.agentsState().accounts.map((a) => a.id)
-    expect(ids).toEqual(['a', 'b', 'conn-cohere'])
+    expect(m.agentsState().accounts.map((a) => a.id)).toEqual(['a'])
+  })
+
+  it('deveEntrarNoFimLigadaQuandoUsuarioAdicionaAConexao', async () => {
+    seed([acc('a', 1), acc('b', 2)])
+    const { m } = await load([claudeMax, cohere])
+    m.addConnectionAccount('cohere')
+    expect(m.agentsState().accounts.map((a) => a.id)).toEqual(['a', 'b', 'conn-cohere'])
     expect(m.getAccount('conn-cohere')).toMatchObject({ agent: 'claude', connection: 'cohere', label: 'Cohere', enabled: true, home: null })
+    expect(() => m.addConnectionAccount('cohere')).toThrow(/already/)
+    expect(() => m.addConnectionAccount('claude-max')).toThrow()
   })
 
   it('naoDeveDuplicarNemPerderRankOuDesligadoAoSincronizarDeNovo', async () => {
@@ -205,7 +213,7 @@ describe('conexoes (API) no ranking de contas', () => {
   it('deveSeguirNomeDaConexaoESairDoRankingQuandoConexaoSome', async () => {
     seed([acc('a', 1)])
     const { m, setList } = await load([cohere])
-    m.syncConnectionAccounts()
+    m.addConnectionAccount('cohere')
     setList([{ ...cohere, name: 'Cohere trial' }])
     m.syncConnectionAccounts()
     expect(m.getAccount('conn-cohere')?.label).toBe('Cohere trial')
@@ -217,7 +225,7 @@ describe('conexoes (API) no ranking de contas', () => {
   it('deveTrocarParaConexaoQuandoAssinaturaDeRankSuperiorBateNoLimite', async () => {
     seed([acc('a', 1)])
     const { m } = await load([cohere])
-    m.syncConnectionAccounts()
+    m.addConnectionAccount('cohere')
     expect(m.pickAccount({ agent: 'claude' })?.id).toBe('a')
     m.markAccount('a', 'exhausted', 'usage limit reached', new Date(Date.now() + 3600_000).toISOString())
     expect(m.pickAccount({ agent: 'claude' })?.id).toBe('conn-cohere')
@@ -226,7 +234,7 @@ describe('conexoes (API) no ranking de contas', () => {
   it('deveApontarOAgenteParaOProvedorNoEnvDaContaDeConexao', async () => {
     seed([])
     const { m } = await load([cohere])
-    m.syncConnectionAccounts()
+    m.addConnectionAccount('cohere')
     expect(m.accountEnv(m.getAccount('conn-cohere')!)).toEqual({ ANTHROPIC_BASE_URL: 'env-of-cohere' })
   })
 
@@ -237,11 +245,9 @@ describe('conexoes (API) no ranking de contas', () => {
     expect(m.pickAccount()?.id).toBe('a')
   })
 
-  it('naoDeveImpedirOLoginPadraoDoClaudeQuandoSoHaContaDeConexao', async () => {
+  it('naoDeveCriarContaDeLoginPadraoSozinhoAoDetectarOClaude', async () => {
     seed([])
     const { m } = await load([cohere])
-    m.syncConnectionAccounts()
-    // claude "instalado": executavel falso num PATH so dele (o CI nao tem o Claude Code)
     const bin = join(dir, 'bin')
     mkdirSync(bin)
     writeFileSync(join(bin, 'claude'), '#!/bin/sh\n', { mode: 0o755 })
@@ -254,17 +260,17 @@ describe('conexoes (API) no ranking de contas', () => {
       process.env.PATH = prev.PATH
       process.env.Path = prev.Path
     }
-    expect(m.getAccount('default-claude')).toBeDefined()
+    expect(m.agentsState().installed).toContain('claude') // detectado, mas so entra no ranking quando o usuario adiciona
+    expect(m.agentsState().accounts).toEqual([])
     // detectInstalled de verdade: no Windows le o PATH do registro (reg query) e roda o where, bem mais lento que 5 s no CI
   }, 30_000)
 
-  it('naoDeveMexerNoRankingQuandoSettingsNaoPodeSerLido', async () => {
-    seed([acc('conn-cohere', 1, { connection: 'cohere', label: 'Cohere', enabled: false })])
+  it('deveAdicionarOLoginDestePcQuandoUsuarioPede', async () => {
+    seed([])
     const { m } = await load([])
-    m.setConnectionSource({ list: () => undefined, env: () => ({}) })
-    m.syncConnectionAccounts()
-    expect(m.getAccount('conn-cohere')).toMatchObject({ enabled: false, rank: 1 })
-    expect(m.pickAccount()).toBeUndefined()
+    m.addDefaultAccount('claude')
+    expect(m.getAccount('default-claude')).toMatchObject({ agent: 'claude', home: null, enabled: true })
+    expect(() => m.addDefaultAccount('claude')).toThrow(/already/)
   })
 
   it('deveFalharEmVezDeRodarNaAssinaturaQuandoConexaoDaContaSumiu', async () => {
@@ -276,7 +282,7 @@ describe('conexoes (API) no ranking de contas', () => {
   it('deveDesbloquearContaDeConexaoQuandoUsuarioEditaAsConexoes', async () => {
     seed([])
     const { m } = await load([cohere])
-    m.syncConnectionAccounts()
+    m.addConnectionAccount('cohere')
     m.markAccount('conn-cohere', 'blocked', 'the provider rejected the API key')
     m.syncConnectionAccounts()
     expect(m.effectiveUsage('conn-cohere').state).toBe('blocked')
@@ -287,7 +293,7 @@ describe('conexoes (API) no ranking de contas', () => {
   it('naoDeveTrocarAssinaturaPertoDoLimitePorConexaoAbaixoDelaNoRanking', async () => {
     seed([acc('a', 1)])
     const { m } = await load([cohere])
-    m.syncConnectionAccounts()
+    m.addConnectionAccount('cohere')
     m.recordUsage('a', { fiveHour: { pct: 92, resetsAt: new Date(Date.now() + 3600_000).toISOString() } })
     expect(m.effectiveUsage('a').state).toBe('warning')
     expect(m.pickAccount({ agent: 'claude' })).toBeUndefined() // troca no aviso: fica na assinatura
@@ -305,38 +311,15 @@ describe('conexoes (API) no ranking de contas', () => {
   it('deveColocarALoginNovaDeAssinaturaAcimaDasConexoes', async () => {
     seed([])
     const { m } = await load([cohere])
-    m.syncConnectionAccounts() // instalacao nova: a conexao entra antes de detectar o Claude
-    const bin = join(dir, 'bin')
-    mkdirSync(bin)
-    writeFileSync(join(bin, 'claude'), '#!/bin/sh\n', { mode: 0o755 })
-    writeFileSync(join(bin, 'claude.cmd'), '@echo off\r\n')
-    const prev = { PATH: process.env.PATH, Path: process.env.Path }
-    process.env.PATH = process.env.Path = [bin, prev.PATH ?? prev.Path].filter(Boolean).join(delimiter)
-    try {
-      await m.detectInstalled()
-    } finally {
-      process.env.PATH = prev.PATH
-      process.env.Path = prev.Path
-    }
-    expect(m.agentsState().accounts.filter((a) => a.agent === 'claude').map((a) => a.id)).toEqual(['default-claude', 'conn-cohere'])
-    // detectInstalled de verdade: no Windows le o PATH do registro (reg query) e roda o where, bem mais lento que 5 s no CI
-  }, 30_000)
-
-  it('devePularConexaoLocalQueNaoSobeEUsarAProxima', async () => {
-    const ollama = { id: 'ollama', name: 'Ollama', kind: 'endpoint' as const, baseUrl: 'http://localhost:11434', model: 'qwen', bootCommand: 'ollama serve' }
-    seed([acc('conn-ollama', 1, { connection: 'ollama', label: 'Ollama' }), acc('conn-cohere', 2, { connection: 'cohere', label: 'Cohere' })])
-    const { m } = await load([ollama, cohere])
-    const tried: string[] = []
-    const pick = await m.pickReadyAccount({ agent: 'claude', allowWarning: true }, async (c) => (tried.push(c.id), c.id !== 'ollama'))
-    expect(pick?.id).toBe('conn-cohere')
-    expect(tried).toEqual(['ollama']) // so sobe quem tem bootCommand
-    expect(m.effectiveUsage('conn-ollama').state).toBe('exhausted')
+    m.addConnectionAccount('cohere')
+    m.addDefaultAccount('claude')
+    expect(m.agentsState().accounts.map((a) => a.id)).toEqual(['default-claude', 'conn-cohere'])
   })
 
   it('naoDeveSairDaAssinaturaAtualPertoDoLimiteParaConexaoPaga (troca no aviso)', async () => {
     seed([acc('a', 1)])
     const { m } = await load([cohere])
-    m.syncConnectionAccounts()
+    m.addConnectionAccount('cohere')
     m.recordUsage('a', { fiveHour: { pct: 92, resetsAt: new Date(Date.now() + 3600_000).toISOString() } })
     // swap no aviso / followUp: exclui a conta atual e nao aceita warning
     expect(m.pickAccount({ agent: 'claude', exclude: ['a'] })).toBeUndefined()
@@ -347,12 +330,12 @@ describe('conexoes (API) no ranking de contas', () => {
   it('deveRecomecarSemLimiteAntigoQuandoConexaoERemovidaECriadaDeNovo', async () => {
     seed([])
     const { m, setList } = await load([cohere])
-    m.syncConnectionAccounts()
+    m.addConnectionAccount('cohere')
     m.markAccount('conn-cohere', 'exhausted', 'usage limit reached', new Date(Date.now() + 3600_000).toISOString())
     setList([])
     m.syncConnectionAccounts()
     setList([cohere])
-    m.syncConnectionAccounts()
+    m.addConnectionAccount('cohere')
     expect(m.effectiveUsage('conn-cohere').state).toBe('unknown')
   })
 
@@ -361,16 +344,26 @@ describe('conexoes (API) no ranking de contas', () => {
     seed([acc('a', 1)])
     const { m } = await load(DEFAULT_CONNECTIONS)
     m.syncConnectionAccounts()
-    expect(m.getAccount('conn-qwen-local')?.enabled).toBe(false) // aparece, mas desligada: o usuario liga se quiser
+    expect(m.getAccount('conn-qwen-local')).toBeUndefined() // so entra se o usuario adicionar
     m.markAccount('a', 'exhausted', 'usage limit reached', new Date(Date.now() + 3600_000).toISOString())
     expect(m.pickAccount({ agent: 'claude', exclude: ['a'] })).toBeUndefined()
   })
 
-  it('deveRecusarRemoverContaDeConexaoPeloRanking', async () => {
+  it('deveRemoverContaDeConexaoDoRankingSemApagarAConexao', async () => {
     seed([])
     const { m } = await load([cohere])
+    m.addConnectionAccount('cohere')
+    m.removeAccount('conn-cohere')
+    expect(m.getAccount('conn-cohere')).toBeUndefined()
     m.syncConnectionAccounts()
-    expect(() => m.removeAccount('conn-cohere')).toThrow(/Connections/)
+    expect(m.getAccount('conn-cohere')).toBeUndefined() // nao volta sozinha
+  })
+
+  it('deveRemoverOLoginPadraoSemApagarAPastaDoUsuario', async () => {
+    seed([acc('default-claude', 1)])
+    const { m } = await load([])
+    m.removeAccount('default-claude')
+    expect(m.getAccount('default-claude')).toBeUndefined()
   })
 })
 

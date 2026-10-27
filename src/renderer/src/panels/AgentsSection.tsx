@@ -3,6 +3,7 @@ import { AGENTS, agentDef } from '../../../shared/agents'
 import { useAgents, usageText, usageTone, whenText } from '../agentStore'
 import { openTerminal } from '../layout'
 import { closeSettingsModal } from '../SettingsModal'
+import { useSettings } from '../appearance'
 import { askConfirm } from '../ConfirmDialog'
 import { toast } from '../Toast'
 import { NumInput } from '../NumInput'
@@ -27,6 +28,8 @@ function Bar({ w, label }: { w?: UsageWindow; label: string }) {
 export function AgentsSection() {
   const st = useAgents()
   const [adding, setAdding] = useState('')
+  const [addKind, addId] = adding.split(/:(.*)/) as [string, string]
+  const conns = useSettings()?.connections ?? []
   useEffect(() => void window.turno.agents.detect(), [])
   const accounts = st.accounts
   const multi = AGENTS.filter((a) => a.homeVar) // todos que suportam varias contas; os nao instalados ganham o botao Install
@@ -79,7 +82,13 @@ export function AgentsSection() {
   const add = async (): Promise<void> => {
     if (!adding) return
     try {
-      const r = await window.turno.agents.add(adding)
+      if (addKind === 'default' || addKind === 'conn') {
+        const acc = addKind === 'default' ? await window.turno.agents.addDefault(addId) : await window.turno.agents.addConnection(addId)
+        setAdding('')
+        toast(`${acc.label} added to the list.`, 'ok')
+        return
+      }
+      const r = await window.turno.agents.add(addId)
       setAdding('')
       toast(`Sign in to ${r.account.label} in the terminal that opened. Then come back here and click "Check sign-in".`, 'info', { sticky: true })
       loginTerminal(r.launchId, r.command, `sign in · ${r.account.label}`)
@@ -99,15 +108,21 @@ export function AgentsSection() {
     const ok = await window.turno.agents.refreshLogin(id)
     toast(ok ? 'Signed in.' : 'No sign-in found in this account yet.', ok ? 'ok' : 'warn')
   }
-  const remove = async (id: string, label: string): Promise<void> => {
-    const ok = await askConfirm({ title: 'Remove account', message: `Remove "${label}" from Turno? Its sign-in folder is deleted; your conversations stay (they're shared with your other accounts).`, confirmLabel: 'Remove' })
+  const remove = async (a: AgentAccount): Promise<void> => {
+    const { id, label } = a
+    const message = a.home
+      ? `Remove "${label}" from Turno? Its sign-in folder is deleted; your conversations stay (they're shared with your other accounts).`
+      : a.connection
+        ? `Remove "${label}" from the list? The connection stays in Settings › Connections; add it back here any time.`
+        : `Remove "${label}" from the list? Your sign-in on this PC isn't touched; add it back here any time.`
+    const ok = await askConfirm({ title: 'Remove account', message, confirmLabel: 'Remove' })
     if (!ok) return
     await window.turno.agents.remove(id).catch((e) => toast(errText(e), 'err'))
     document.getElementById('acct-add')?.focus() // a linha removida tinha o foco: nao deixa cair no body
   }
   // Agente escolhido no "Add account": se nao estiver no PATH, o botao vira "Install" (roda o CLI oficial num terminal)
-  const selDef = adding ? agentDef(adding) : undefined
-  const selInstalled = !adding || st.installed.includes(adding)
+  const selDef = addKind === 'iso' ? agentDef(addId) : undefined
+  const selInstalled = addKind !== 'iso' || st.installed.includes(addId)
   const install = (): void => {
     if (!selDef) return
     if (selDef.install) {
@@ -224,17 +239,32 @@ export function AgentsSection() {
                 <button className="icon-btn" data-dir="down" aria-label="Move down" title="Move down" disabled={i === accounts.length - 1} onClick={() => move(i, 1)}>↓</button>
                 {!a.connection && (a.home || loginExpired(u)) && <button className="btn small" onClick={() => void login(a.id, a.label)}>Sign in</button>}
                 {!a.connection && (a.home || loginExpired(u)) && <button className="btn ghost small" onClick={() => void check(a.id)}>Check sign-in</button>}
-                {a.home && <button className="btn ghost small danger" onClick={() => void remove(a.id, a.label)}>Remove</button>}
+                <button className="btn ghost small danger" onClick={() => void remove(a)}>Remove</button>
               </span>
             </li>
           )
         })}
-        {!accounts.length && <li className="muted small">No agent CLI found on this PC yet. Install one (Claude Code, Codex, Gemini, Copilot, Kiro…) and it shows up here.</li>}
+        {!accounts.length && <li className="muted small">No accounts yet. Add one below: the sign-in already on this PC, a separate sign-in, or an API connection.</li>}
       </ol>
       <div className="row">
         <select id="acct-add" aria-label="Agent for the new account" value={adding} onMouseDown={() => void window.turno.agents.detect()} onChange={(e) => setAdding(e.target.value)}>
-          <option value="">Add another account of…</option>
-          {multi.map((a) => <option key={a.id} value={a.id}>{a.name}{st.installed.includes(a.id) ? '' : ' (not installed)'}</option>)}
+          <option value="">Add an account…</option>
+          {/* nada entra sozinho: login deste PC, conta separada ou conexao de API, cada um adicionado aqui */}
+          <optgroup label="Sign-in already on this PC">
+            {AGENTS.filter((a) => st.installed.includes(a.id) && !accounts.some((x) => x.id === `default-${a.id}`)).map((a) => (
+              <option key={a.id} value={`default:${a.id}`}>{a.name}</option>
+            ))}
+          </optgroup>
+          <optgroup label="Separate sign-in (new account)">
+            {multi.map((a) => <option key={a.id} value={`iso:${a.id}`}>{a.name}{st.installed.includes(a.id) ? '' : ' (not installed)'}</option>)}
+          </optgroup>
+          {conns.some((c) => c.kind === 'endpoint' && !accounts.some((x) => x.connection === c.id)) && (
+            <optgroup label="API connection">
+              {conns.filter((c) => c.kind === 'endpoint' && !accounts.some((x) => x.connection === c.id)).map((c) => (
+                <option key={c.id} value={`conn:${c.id}`}>{c.name}</option>
+              ))}
+            </optgroup>
+          )}
         </select>
         {selInstalled ? (
           <button className="btn" disabled={!adding} onClick={() => void add()}>Add account</button>

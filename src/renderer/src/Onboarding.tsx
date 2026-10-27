@@ -11,6 +11,7 @@ import { IconCheck, IconClose, IconFolder } from './icons'
 import { AWAKE_MODES } from './awake'
 import { toast } from './Toast'
 import { unseenNotes, type ReleaseNotes } from './whatsNew'
+import { useAgents } from './agentStore'
 
 // ---------- abrir/fechar (introducao e novidades sao modais do mesmo modulo) ----------
 type View = { kind: 'tour' } | { kind: 'news'; notes: ReleaseNotes[]; version: string; all?: boolean } | null
@@ -185,6 +186,7 @@ export function OnboardingHost() {
 
 // ---------- 1. agentes ----------
 function AgentsStep({ s }: { s: Settings }) {
+  const agentsSt = useAgents()
   const [agents, setAgents] = useState<DetectedAgent[]>()
   const [claude, setClaude] = useState<'checking' | 'in' | 'out' | 'busy'>('checking')
   const [models, setModels] = useState<string[]>()
@@ -217,7 +219,16 @@ function AgentsStep({ s }: { s: Settings }) {
               <small className={`muted${a.path ? ' mono' : ''}`} title={a.path}>{a.path ?? 'Not installed'}</small>
             </span>
             {a.id === 'claude' && a.path ? (
-              claude === 'in' ? <span className="tone-ok small">Signed in</span>
+              claude === 'in' ? (
+                // nenhuma conta entra sozinha: o login deste PC vira conta quando a pessoa pede
+                agentsSt.accounts.some((x) => x.id === 'default-claude') ? (
+                  <span className="tone-ok small">Signed in · in Turno</span>
+                ) : (
+                  <button className="btn small" onClick={() => void window.turno.agents.addDefault('claude').then(() => toast('Claude added to your accounts.', 'ok'), (e) => toast(String((e as Error).message), 'err'))}>
+                    Add to Turno
+                  </button>
+                )
+              )
               : claude === 'out' ? <button className="btn small" onClick={() => void signIn()}>Sign in</button>
               : <span className="muted small">{claude === 'busy' ? 'Finish signing in in your browser…' : 'Checking…'}</span>
             ) : a.id === 'ollama' && a.path ? (

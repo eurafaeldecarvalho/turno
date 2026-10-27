@@ -905,7 +905,6 @@ fieldset.field > legend { font-size: calc(var(--ui-size, 13px) * 12 / 13); color
 .agent-menu-best { margin: 0; padding: 0 10px 2px; }
 
 /* Sidebar: grupo Folders com as pastas dentro, rodape com Settings + Help */
-.icon-btn.new-folder { display: inline-grid; place-items: center; margin: 0; padding: 0; width: auto; border: 0; border-radius: 6px; font-size: inherit; color: inherit; }
 .folder-list { padding-left: 6px; }
 .folder-list .side-section { margin-bottom: 0; }
 .side-empty { padding: 2px 16px 6px; margin: 0; line-height: 1.45; }

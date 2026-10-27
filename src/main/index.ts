@@ -11,7 +11,7 @@ import { activeCount, answerPermission, initRunner, repairRunCosts, readRunEvent
 import { openDb, getRun, listRuns, threadOf, renameRoutineRuns, allRunIds } from './db'
 import { getSettings, setSettings, settingsReadable } from './settings'
 import { takeNotices } from './jsonStore'
-import { accountEnv, addAccount, agentsState, setConnectionSource, syncConnectionAccounts, clearBlock, clearLimit, detectInstalled, getAccount, initAccounts, refreshLogin, removeAccount, reorderAccounts, setThresholds, updateAccount } from './accounts'
+import { accountEnv, addAccount, addConnectionAccount, addDefaultAccount, agentsState, setConnectionSource, syncConnectionAccounts, clearBlock, clearLimit, detectInstalled, getAccount, initAccounts, refreshLogin, removeAccount, reorderAccounts, setThresholds, updateAccount } from './accounts'
 import { closeSession, initBroker, listSessions, prepareLaunch, prepareRaw, swap, type PrepareOpts } from './agentBroker'
 import { listMcp, mcpStatus, removeMcp, saveMcp } from './mcphub'
 import { connectJira, disconnectJira, listTasks, startTask } from './tasks'
@@ -272,6 +272,8 @@ ipcMain.handle('agents:refreshLogin', (_e, id: string) => {
 ipcMain.handle('agents:update', (_e, id: string, patch: { label?: string; enabled?: boolean }) => updateAccount(id, patch))
 ipcMain.handle('agents:reorder', (_e, ids: string[]) => reorderAccounts(ids))
 ipcMain.handle('agents:remove', (_e, id: string) => removeAccount(id))
+ipcMain.handle('agents:addDefault', (_e, agent: string) => addDefaultAccount(agent))
+ipcMain.handle('agents:addConnection', (_e, connId: string) => addConnectionAccount(connId))
 ipcMain.handle('agents:thresholds', (_e, t: { fiveHour?: number; weekly?: number; strategy?: RankStrategy }) => setThresholds(t))
 ipcMain.handle('agents:swap', (_e, key: string, accountId?: string) => swap(key, 'manual', accountId))
 ipcMain.handle('agents:close', (_e, key: string) => closeSession(key))

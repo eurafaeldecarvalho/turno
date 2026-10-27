@@ -12,7 +12,8 @@ import { openSettingsModal } from './SettingsModal'
 import { openOnboarding, openWhatsNew } from './Onboarding'
 import { IconHelp, IconCheck, IconChat, IconChevron, IconClock, IconClose, IconFanout, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconRoutine, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
 import { addFolder, addTerminalItem, agentOf, closeItemTerminal, deleteFolder, deleteItem, getDragging, getItem, moveFolder, openItem, patchItem, renameFolder, saveItem, setDragging, toggleSection, useSidebar } from './sidebarStore'
-import { dockApi, paramsOf, type OpenTab } from './layout'
+import { dockApi, panelForItem, paramsOf, type OpenTab } from './layout'
+import { itemDot } from '../../shared/itemDot'
 import { setLive, useLive } from './liveTerms'
 import { askConfirm } from './ConfirmDialog'
 import { FolderDialog, ItemDialog } from './ItemDialog'
@@ -465,6 +466,9 @@ export function Sidebar() {
 
       {/* topo: um botao New (verbos) e os lugares do app (destinos, com contadores) */}
       <nav className="nav" aria-label="Workspace">
+        <button onClick={() => openTerminal()} title="New terminal (Ctrl+Shift+T)">
+          <IconTerminal /> New terminal
+        </button>
         <AgentButton />
         <button onClick={() => openTasks()}>
           <IconCheck /> Tasks
@@ -672,7 +676,15 @@ export function Sidebar() {
                 <ItemOpenButton item={it} onF2={() => setRenaming(`item:${it.id}`)} title={it.kind === 'link' ? it.url : `${it.kind === 'terminal' && !it.sessionId ? 'Terminal' : agentOf(it.agent).name}${it.cwd ? ` · ${it.cwd}` : ''}`}>
                   <span className="item-icon">
                     {it.kind === 'link' ? <IconLink size={14} /> : it.kind === 'terminal' && !it.sessionId ? <IconTerminal size={14} /> : <IconChat size={14} />}
-                    {state && <span className={`live-dot ${state}`} title={state === 'open' ? 'Open in a tab' : 'Running in the background (hidden)'} />}
+                    {(() => {
+                      // mesma bolinha da aba do agente (status ao vivo); sem agente, aberto / em segundo plano
+                      const panel = panelForItem(it.id)
+                      const key = panel ? (paramsOf(panel) as { agent?: { key: string } }).agent?.key : undefined
+                      const dot = itemDot(state, key ? agentSessions.find((x) => x.key === key)?.status : undefined)
+                      if (!dot) return null
+                      if (dot.kind === 'status') return <span className={`tab-status st-${dot.status}`} title={STATUS_TEXT[dot.status]} aria-hidden />
+                      return <span className={`live-dot ${dot.state}`} title={dot.state === 'open' ? 'Open in a tab' : 'Running in the background (hidden)'} />
+                    })()}
                   </span>
                   <span className="routine-text">
                     <InlineName className="routine-name" value={it.name} onRename={(v) => patchItem(it.id, { name: v })} {...renameProps(`item:${it.id}`)} />

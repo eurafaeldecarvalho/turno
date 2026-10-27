@@ -167,7 +167,8 @@ export async function detectInstalled(): Promise<string[]> {
   )
 }
 
-// Cada agente instalado ganha uma conta "login padrao" (a pasta normal dele), sempre no fim do ranking.
+// Arruma nomes antigos. Nenhuma conta entra sozinha: o usuario adiciona cada uma (login deste PC, conta separada ou
+// conexao de API) em Settings › Agents & accounts.
 function ensureDefaults(): void {
   const s = load()
   if (!installed || blocked) return
@@ -179,12 +180,6 @@ function ensureDefaults(): void {
       a.label = def.name
       changed = true
     }
-  }
-  for (const id of installed) {
-    if (s.accounts.some((a) => a.agent === id && !a.connection)) continue // conta de conexao nao e login do CLI
-    const def = agentDef(id)!
-    s.accounts.push({ id: `default-${id}`, agent: id, label: id === 'claude' ? 'Claude' : def.name, rank: subscriptionRank(), enabled: true, home: null, createdAt: new Date().toISOString() })
-    changed = true
   }
   if (changed) save()
   const claude = s.accounts.find((a) => a.id === 'default-claude')
@@ -216,6 +211,20 @@ export function addAccount(agent: string, label?: string): { account: AgentAccou
   s.accounts.push(account)
   save()
   return { account, login: def.login ?? def.launch ?? def.cmd, env: accountEnv(account) }
+}
+
+// Login que ja existe neste PC (a pasta normal do agente, ex. ~/.claude): adicionado pelo usuario, nunca sozinho.
+export function addDefaultAccount(agent: string): AgentAccount {
+  const def = agentDef(agent)
+  if (!def) throw new Error(`unknown agent "${agent}"`)
+  const s = load()
+  const id = `default-${agent}`
+  if (s.accounts.some((a) => a.id === id)) throw new Error(`${def.name} with this PC's sign-in is already in the list`)
+  const account: AgentAccount = { id, agent, label: agent === 'claude' ? 'Claude' : def.name, rank: subscriptionRank(), enabled: true, home: null, createdAt: new Date().toISOString() }
+  s.accounts.push(account)
+  save()
+  if (agent === 'claude') refreshLogin(id) // "Claude · <e-mail da assinatura>"
+  return account
 }
 
 export function updateAccount(id: string, patch: Partial<Pick<AgentAccount, 'label' | 'enabled'>>): void {
@@ -252,7 +261,6 @@ export function removeAccount(id: string): void {
   const s = load()
   const a = s.accounts.find((x) => x.id === id)
   if (!a) return
-  if (a.connection) throw new Error(`"${a.label}" is a connection: remove it in Settings › Connections, or turn it off here`)
   if (a.home) removeHome(a.home)
   s.accounts = s.accounts.filter((x) => x.id !== id)
   delete usage[id]
@@ -540,8 +548,8 @@ function removeHome(home: string): void {
 
 // ---------- conexoes de API no ranking ----------
 // Cada conexao endpoint (Cohere, OpenRouter, Ollama...) vira uma conta do Claude Code no ranking: o mesmo CLI, apontado
-// para o provedor pelo env. Entra no fim (ligada, menos servidor local); o usuario reordena/liga/desliga como as
-// assinaturas. Conexao removida sai.
+// para o provedor pelo env. So entra quando o usuario adiciona (addConnectionAccount); reordena/liga/desliga/remove como
+// as assinaturas. Conexao apagada em Connections sai do ranking.
 // A fonte vem de fora (settings + cofre) para este modulo nao depender do safeStorage do Electron.
 interface ConnectionSource {
   list: () => Connection[] | undefined // undefined = settings.json nao pode ser lido agora (nada muda no ranking)
@@ -554,6 +562,19 @@ export function setConnectionSource(src: ConnectionSource): void {
 export const connectionAccountId = (connId: string): string => `conn-${connId}`
 
 // edited: o usuario mexeu nas conexoes (ex.: trocou a chave): conta bloqueada por chave recusada volta a valer
+// Conexao de API no ranking: so quando o usuario adiciona (entra no fim, ligada).
+export function addConnectionAccount(connId: string): AgentAccount {
+  const s = load()
+  const c = connSource?.list()?.find((x) => x.id === connId && x.kind === 'endpoint')
+  if (!c) throw new Error(`connection "${connId}" isn't available; add it in Settings › Connections first`)
+  if (s.accounts.some((a) => a.connection === connId)) throw new Error(`${c.name} is already in the list`)
+  delete usage[connectionAccountId(connId)] // limite/bloqueio de quando estava na lista antes nao volta junto
+  const account: AgentAccount = { id: connectionAccountId(connId), agent: 'claude', connection: connId, label: c.name, rank: nextRank(), enabled: true, home: null, createdAt: new Date().toISOString() }
+  s.accounts.push(account)
+  save()
+  return account
+}
+
 export function syncConnectionAccounts(opts: { edited?: boolean } = {}): void {
   const s = load()
   const list = connSource?.list()
@@ -566,14 +587,7 @@ export function syncConnectionAccounts(opts: { edited?: boolean } = {}): void {
   if (s.accounts.length !== before) (changed = true), saveUsageSoon()
   for (const c of conns) {
     const cur = s.accounts.find((a) => a.connection === c.id)
-    if (cur) {
-      if (cur.label !== c.name) (cur.label = c.name), (changed = true)
-      continue
-    }
-    // servidor local (bootCommand, ex. o Ollama que ja vem de fabrica) entra DESLIGADO: sem ele instalado, cair nele no
-    // limite trocaria "esperar o reset" por um servidor morto. Provedor de API que o usuario adicionou entra ligado.
-    s.accounts.push({ id: connectionAccountId(c.id), agent: 'claude', connection: c.id, label: c.name, rank: nextRank(), enabled: !c.bootCommand, home: null, createdAt: new Date().toISOString() })
-    changed = true
+    if (cur && cur.label !== c.name) (cur.label = c.name), (changed = true)
   }
   if (opts.edited)
     for (const a of s.accounts)

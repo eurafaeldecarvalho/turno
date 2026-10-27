@@ -454,6 +454,8 @@ export interface TurnoApi {
     onSessions(cb: (s: AgentSessionInfo[]) => void): () => void
     prepare(o: { key?: string; agent?: string; accountId?: string; cwd?: string; resumeSessionId?: string; prompt?: string; chrome?: boolean; folderId?: string; model?: string; banner?: string }): Promise<AgentLaunch>
     add(agent: string, label?: string): Promise<{ account: AgentAccount; launchId: string; command: string }>
+    addDefault(agent: string): Promise<AgentAccount> // login que ja existe neste PC (pasta normal do agente)
+    addConnection(connId: string): Promise<AgentAccount> // conexao de API (Settings › Connections) no ranking
     login(id: string): Promise<{ launchId: string; command: string }>
     refreshLogin(id: string): Promise<boolean>
     update(id: string, patch: { label?: string; enabled?: boolean }): Promise<void>
