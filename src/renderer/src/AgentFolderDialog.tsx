@@ -2,7 +2,7 @@ import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { useModalLayer } from './modalStack'
 import { getSettingsSnapshot } from './appearance'
 import { openAgent } from './layout'
-import { pushRecentDir, startFolderLabel } from '../../shared/agents'
+import { pushRecentDir, recentWithoutDefault, startFolderLabel } from '../../shared/agents'
 import { IconFolder } from './icons'
 
 // Popup do New agent: em qual pasta abrir. A pasta padrao (Settings › Agents & accounts › Start folder, ou a home)
@@ -65,7 +65,7 @@ export function AgentFolderHost() {
   const z = useModalLayer(!!ask, close, box)
   if (!ask) return null
   const start = getSettingsSnapshot()?.agentStartDir ?? ''
-  const recent = readRecent().filter((d) => d !== start)
+  const recent = recentWithoutDefault(readRecent(), start)
   const choose = async (): Promise<void> => {
     const asked = current
     const dir = await window.turno.ui.pickFolder()

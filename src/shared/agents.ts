@@ -242,3 +242,8 @@ export const claudeInstallCommand = (platform: NodeJS.Platform): string =>
 // Comando de instalacao de um agente nesta maquina (o do Claude depende do sistema; os outros vem do catalogo)
 export const installCommandFor = (def: { id: string; install?: string }, isWindows: boolean): string | undefined =>
   def.id === 'claude' ? claudeInstallCommand(isWindows ? 'win32' : 'linux') : def.install
+// recentes do popup sem a pasta padrao (ela ja e a primeira opcao), comparando sem a barra final
+export const recentWithoutDefault = (recent: string[], start: string): string[] => {
+  const norm = (p: string): string => (p.length > 1 ? p.replace(/[\\/]+$/, '') : p)
+  return recent.filter((d) => norm(d) !== norm(start))
+}

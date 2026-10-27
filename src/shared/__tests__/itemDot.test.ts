@@ -7,6 +7,9 @@ describe('bolinha do item da pasta na sidebar = bolinha da aba', () => {
     expect(itemDot('open', 'idle')).toEqual({ kind: 'status', status: 'idle' })
     expect(itemDot('open', 'needs-permission')).toEqual({ kind: 'status', status: 'needs-permission' })
   })
+  it('deveMostrarOStatusDoAgenteRodandoEscondido (sem aba, em segundo plano)', () => {
+    expect(itemDot('hidden', 'working')).toEqual({ kind: 'status', status: 'working' })
+  })
   it('deveSeguirAAbaQuandoOAgenteAindaEstaAbrindo (a aba nao mostra bolinha)', () => {
     expect(itemDot('open', 'starting')).toBeNull()
   })

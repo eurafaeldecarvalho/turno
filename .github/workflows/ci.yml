@@ -1,0 +1,34 @@
+name: CI
+
+# Typecheck e testes em Linux e Windows a cada push no main (e sob demanda). Nao gera instalador nem publica nada:
+# a release continua so pela tag v* (release.yml). Os testes rodam de verdade os scripts que o Claude Code usa
+# (sh no Linux, PowerShell no Windows), entao e aqui que o caminho do Windows sem Git Bash e verificado.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - run: pnpm test

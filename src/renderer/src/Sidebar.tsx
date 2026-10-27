@@ -13,6 +13,7 @@ import { openOnboarding, openWhatsNew } from './Onboarding'
 import { IconHelp, IconCheck, IconChat, IconChevron, IconClock, IconClose, IconFanout, IconFolder, IconHistory, IconLink, IconMore, IconPlay, IconPlus, IconRoutine, IconSettings, IconSpark, IconStop, IconTerminal } from './icons'
 import { addFolder, addTerminalItem, agentOf, closeItemTerminal, deleteFolder, deleteItem, getDragging, getItem, moveFolder, openItem, patchItem, renameFolder, saveItem, setDragging, toggleSection, useSidebar } from './sidebarStore'
 import { dockApi, panelForItem, paramsOf, type OpenTab } from './layout'
+import { parkedAgent } from './liveTerms'
 import { itemDot } from '../../shared/itemDot'
 import { setLive, useLive } from './liveTerms'
 import { askConfirm } from './ConfirmDialog'
@@ -678,8 +679,9 @@ export function Sidebar() {
                     {it.kind === 'link' ? <IconLink size={14} /> : it.kind === 'terminal' && !it.sessionId ? <IconTerminal size={14} /> : <IconChat size={14} />}
                     {(() => {
                       // mesma bolinha da aba do agente (status ao vivo); sem agente, aberto / em segundo plano
+                      // aba aberta: a chave do agente vem dela; escondido (rodando sem aba): do terminal estacionado
                       const panel = panelForItem(it.id)
-                      const key = panel ? (paramsOf(panel) as { agent?: { key: string } }).agent?.key : undefined
+                      const key = panel ? (paramsOf(panel) as { agent?: { key: string } }).agent?.key : (parkedAgent(it.id) as { key?: string } | undefined)?.key
                       const dot = itemDot(state, key ? agentSessions.find((x) => x.key === key)?.status : undefined)
                       if (!dot) return null
                       if (dot.kind === 'status') return <span className={`tab-status st-${dot.status}`} title={STATUS_TEXT[dot.status]} aria-hidden />

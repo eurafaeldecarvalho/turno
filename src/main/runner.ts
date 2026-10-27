@@ -15,7 +15,7 @@ import { wrapForSandbox } from './sandbox'
 import { canCleanup, createWorktree, deleteBranch, isManagedWorktreePath, removeWorktree, resolveRepoRoot, worktreeBase, worktreeBranch, worktreeCwd, worktreeDecision, worktreeHead, worktreeMainRoot, worktreeStatus, worktreeTeardown } from './worktree'
 import { connectionToken } from './secrets'
 import { IS_WIN, homeDir } from './platform'
-import { accountEnv, getAccount, markAccount, pickAccount, recordUsage, syncClaudeSettings } from './accounts'
+import { accountEnv, getAccount, markAccount, noClaudeAccountText, pickAccount, recordUsage, syncClaudeSettings } from './accounts'
 import { listMcp, routineMcpArgs } from './mcphub'
 import { prepareClaude } from './claudeprep'
 
@@ -262,7 +262,7 @@ export function startRun(o: StartOptions): string {
   if (req.pool && conn.kind === 'claude') {
     const cur = req.accountId ? getAccount(req.accountId) : undefined
     const pick = cur && cur.enabled ? cur : pickAccount({ agent: 'claude', allowWarning: true })
-    if (!pick) throw new Error('no Claude account is available (every one is off, not signed in or at its usage limit)')
+    if (!pick) throw new Error(noClaudeAccountText())
     req.accountId = pick.id
   }
   const account = req.accountId && conn.kind === 'claude' ? getAccount(req.accountId) : undefined

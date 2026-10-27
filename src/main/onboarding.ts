@@ -38,7 +38,13 @@ export async function ollamaModels(baseUrl = 'http://localhost:11434'): Promise<
 
 // Instala o Claude Code sem terminal (introducao): o instalador oficial, nativo, sem Node e sem administrador.
 // Devolve o fim do log para mostrar se falhar. Linux/macOS: bash; Windows: PowerShell.
+// Um instalador por vez: pedido repetido enquanto um roda (clique duplo, outra janela) recebe o mesmo resultado.
+let installRun: Promise<{ ok: boolean; log: string }> | undefined
 export function installClaude(): Promise<{ ok: boolean; log: string }> {
+  installRun ??= runInstall().finally(() => (installRun = undefined))
+  return installRun
+}
+function runInstall(): Promise<{ ok: boolean; log: string }> {
   const cmd = claudeInstallCommand(process.platform)
   const [file, args] = process.platform === 'win32' ? ['powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', cmd]] : ['bash', ['-lc', cmd]]
   return new Promise((res) =>

@@ -610,3 +610,8 @@ export async function pickReadyAccount(opts: Parameters<typeof pickAccount>[0], 
     markAccount(a.id, 'exhausted', `${conn.name} is not running (tried to start it)`, new Date(Date.now() + 20 * 60_000).toISOString())
   }
 }
+// Por que nao ha conta para rodar: lista vazia (nada entra sozinho) pede para adicionar; senao estao desligadas/no limite
+export const noClaudeAccountText = (): string =>
+  load().accounts.some((a) => a.agent === 'claude')
+    ? 'no Claude account is available (every one is off, not signed in or at its usage limit)'
+    : 'No Claude account yet: add one in Settings › Agents & accounts'

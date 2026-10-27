@@ -471,3 +471,21 @@ describe('refreshLogin sem efeito colateral', () => {
   })
 
 })
+
+describe('mensagem quando nao ha conta para rodar', () => {
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'turno-acc-'))
+    vi.resetModules()
+  })
+  afterEach(() => rmSync(dir, { recursive: true, force: true }))
+  it('deveMandarAdicionarUmaContaQuandoAListaEstaVazia', async () => {
+    writeFileSync(join(dir, 'accounts.json'), JSON.stringify({ accounts: [] }))
+    const m = await import('../accounts')
+    expect(m.noClaudeAccountText()).toMatch(/No Claude account yet.*Settings › Agents & accounts/)
+  })
+  it('deveDizerQueEstaoDesligadasOuNoLimiteQuandoHaContas', async () => {
+    writeFileSync(join(dir, 'accounts.json'), JSON.stringify({ accounts: [{ id: 'a', agent: 'claude', label: 'a', rank: 1, enabled: false, home: null, createdAt: 'x' }] }))
+    const m = await import('../accounts')
+    expect(m.noClaudeAccountText()).toMatch(/every one is off, not signed in or at its usage limit/)
+  })
+})

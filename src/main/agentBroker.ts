@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { claudeSessionWiring, scriptFiles } from './claudeScripts'
 import { renderStatusline } from '../shared/statusline'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { randomBytes, randomUUID } from 'node:crypto'
@@ -80,7 +81,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   }
   const [, kind, key, accountId, event] = (req.url ?? '').split('/').map(decodeURIComponent)
   try {
-    if (kind === 'statusline') return void res.writeHead(200, { 'content-type': 'text/plain' }).end(onStatusline(key, accountId, payload))
+    if (kind === 'statusline') return void res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }).end(onStatusline(key, accountId, payload))
     if (kind === 'hook') onHook(key, accountId, event, payload)
   } catch (e) {
     console.warn('[agents] hook error', (e as Error).message)
@@ -88,38 +89,17 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   res.writeHead(200).end()
 }
 
-// Scripts chamados pelo Claude Code (no Windows ele roda hooks e statusline pelo Git Bash). Inertes fora do Turno.
-const shPath = (name: string): string => join(dataDir(), name).replace(/\\/g, '/')
+// Scripts chamados pelo Claude Code (statusline e hooks; sh no Linux/macOS, PowerShell no Windows): claudeScripts.ts
 function writeScripts(): void {
-  const guard = '[ -z "$TURNO_HOOK_PORT" ] && { cat >/dev/null; exit 0; }'
-  writeFileSync(
-    join(dataDir(), 'turno-hook.sh'),
-    ['#!/bin/sh', guard, 'p=$(cat)', 'printf \'%s\' "$p" | curl -s -m 3 -H "x-turno-token: $TURNO_HOOK_TOKEN" --data-binary @- "http://127.0.0.1:$TURNO_HOOK_PORT/hook/$TURNO_AGENT_KEY/$TURNO_ACCOUNT_ID/$1" >/dev/null 2>&1', 'exit 0', ''].join('\n'),
-  )
-  writeFileSync(
-    join(dataDir(), 'turno-statusline.sh'),
-    [
-      '#!/bin/sh',
-      guard,
-      'p=$(cat)',
-      's="${TMPDIR:-/tmp}/turno-sl-$TURNO_AGENT_KEY"',
-      'now=$(date +%s); last=$(cat "$s" 2>/dev/null || echo 0)',
-      // o Claude chama varias vezes por segundo enquanto responde: no maximo uma consulta ao Turno a cada 2 s
-      'if [ $((now-last)) -lt 2 ] && [ -f "$s.out" ]; then cat "$s.out"; exit 0; fi',
-      'echo "$now" > "$s"',
-      'printf \'%s\' "$p" | curl -s -m 2 -H "x-turno-token: $TURNO_HOOK_TOKEN" --data-binary @- "http://127.0.0.1:$TURNO_HOOK_PORT/statusline/$TURNO_AGENT_KEY/$TURNO_ACCOUNT_ID" > "$s.out" 2>/dev/null',
-      'cat "$s.out" 2>/dev/null',
-      'exit 0',
-      '',
-    ].join('\n'),
-  )
+  for (const [name, text] of Object.entries(scriptFiles())) writeFileSync(join(dataDir(), name), text)
 }
 
 // Settings da sessao (via --settings): statusline + hooks do Turno, sem tocar no ~/.claude do usuario.
 function sessionSettingsFile(key: string): string {
-  const hook = (ev: string): unknown => [{ hooks: [{ type: 'command', command: `sh "${shPath('turno-hook.sh')}" ${ev}`, timeout: 10 }] }]
+  const w = claudeSessionWiring(process.platform, dataDir())
+  const hook = (ev: string): unknown => [{ hooks: [w.hook(ev)] }]
   const settings = {
-    statusLine: { type: 'command', command: `sh "${shPath('turno-statusline.sh')}"`, padding: 0 },
+    statusLine: w.statusLine,
     hooks: Object.fromEntries(['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'Notification', 'Stop', 'StopFailure'].map((e) => [e, hook(e)])),
     // limite: a sessao nao fica parada esperando o reset; o Turno troca de conta
     autoContinueAtUsageLimit: false,

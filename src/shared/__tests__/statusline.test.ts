@@ -38,3 +38,18 @@ describe('rodape do Claude nas abas do Turno (estilo Orca)', () => {
     expect(plain(renderStatusline({ rate_limits: { five_hour: { used_percentage: 250 } } }, '', now))).toContain('100%')
   })
 })
+
+describe('rodape: texto de fora nao vira comando de terminal', () => {
+  it('deveTirarCaracteresDeControleDoModeloEsforcoEConta', () => {
+    const out = renderStatusline({ model: { display_name: 'Opus\x1b]0;PWN\x07\n\x1b[2J' }, effort: { level: 'hi\x1b[31m' } }, 'ac\x1b[H', now)
+    expect(out).not.toMatch(/\x1b\]|\x07|\x1b\[2J|\x1b\[H|\x1b\[31M/)
+    expect(plain(out).split('\n')).toHaveLength(3) // uma linha so + o fim: o \n do nome nao quebra a moldura
+  })
+  it('deveEncurtarNomesMuitoLongos', () => {
+    expect(plain(renderStatusline({ model: { display_name: 'x'.repeat(500) } }, '', now)).length).toBeLessThan(80)
+  })
+  it('deveEntenderResetEmMilissegundos', () => {
+    const ms = Date.parse('2026-10-27T15:54:00Z')
+    expect(plain(renderStatusline({ rate_limits: { five_hour: { used_percentage: 10, resets_at: ms } } }, '', now))).toContain('↺ 3h54m')
+  })
+})

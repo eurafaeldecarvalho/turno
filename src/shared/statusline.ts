@@ -7,6 +7,10 @@ const X = '\x1b[0m'
 const BOLD = '\x1b[1m'
 const WIDTH = 14
 
+// texto vindo de fora (nome do modelo de um provedor, nome da conta): sem caracteres de controle (ESC, OSC, quebra de
+// linha) e curto, para nao virar comando de terminal nem quebrar a moldura
+// eslint-disable-next-line no-control-regex
+const clean = (v: unknown, max = 40): string => String(v ?? '').replace(/[\x00-\x1f\x7f-\x9f]/g, '').trim().slice(0, max)
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {})
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
 
@@ -21,7 +25,8 @@ function bar(p: number): string {
 // tempo ate o reset: 2h39m ou 5d17h ("?" sem horario)
 function resetIn(epochSec: number | undefined, now: number): string {
   if (!epochSec) return '?'
-  const diff = Math.max(0, Math.floor(epochSec - now / 1000))
+  const sec = epochSec > 1e11 ? epochSec / 1000 : epochSec // o Claude manda segundos; milissegundos tambem funcionam
+  const diff = Math.max(0, Math.floor(sec - now / 1000))
   const h = Math.floor(diff / 3600)
   const m = Math.floor((diff % 3600) / 60)
   const two = (v: number): string => String(v).padStart(2, '0')
@@ -45,8 +50,9 @@ function windowRow(label: string, w: Record<string, unknown>, now: number): stri
 export function renderStatusline(p: Record<string, unknown>, account: string, now: number = Date.now()): string {
   const rows: string[] = []
   // "Opus 5 (1M context)" -> "Opus 5 1M"
-  const model = String(obj(p.model).display_name ?? '').replace(/\(([0-9]+[MK]) context\)/, '$1').trim()
-  const effort = String(obj(p.effort).level ?? '').toUpperCase()
+  const model = clean(obj(p.model).display_name).replace(/\(([0-9]+[MK]) context\)/, '$1').trim()
+  const effort = clean(obj(p.effort).level, 10).toUpperCase()
+  account = clean(account)
   if (model) {
     let row = `${fg(C.model)}${BOLD}${model}${X}`
     if (effort) row += `  ${effortPill(effort)}`
