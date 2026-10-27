@@ -240,11 +240,42 @@ export function setRoutineEnabled(root: string, id: string, enabled: boolean): v
 }
 
 // fs.watch recursivo funciona no Windows; debounce porque editores gravam em varias etapas.
-export function watchRoutines(root: string, onChange: () => void): FSWatcher {
+// Assinatura das rotinas para a verificacao periodica: pastas e mtime de cada ROUTINE.md.
+const routinesSignature = (root: string): string => {
+  try {
+    return readdirSync(root, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => {
+        const f = join(root, d.name, 'ROUTINE.md')
+        try { return `${d.name}:${statSync(f).mtimeMs}` } catch { return `${d.name}:-` }
+      })
+      .sort()
+      .join('|')
+  } catch {
+    return ''
+  }
+}
+
+export const ROUTINES_POLL_MS = 5000
+
+export function watchRoutines(root: string, onChange: () => void): { close(): void } {
   let t: ReturnType<typeof setTimeout> | undefined
-  return watch(root, { recursive: true }, (_ev, file) => {
-    if (file && /(^|[\\/])(runs|memory)[\\/]?/.test(String(file))) return
-    clearTimeout(t)
-    t = setTimeout(onChange, 300)
-  })
+  try {
+    const w: FSWatcher = watch(root, { recursive: true }, (_ev, file) => {
+      if (file && /(^|[\\/])(runs|memory)[\\/]?/.test(String(file))) return
+      clearTimeout(t)
+      t = setTimeout(onChange, 300)
+    })
+    w.on('error', () => {}) // um erro tardio do watcher nao derruba o app; a lista so deixa de se atualizar sozinha
+    return w
+  } catch {
+    // Sem file watchers (ENOSPC/EMFILE no Linux): o app tem que abrir mesmo assim, entao a pasta e conferida de tempos em tempos.
+    let last = routinesSignature(root)
+    const poll = setInterval(() => {
+      const now = routinesSignature(root)
+      if (now !== last) { last = now; onChange() }
+    }, ROUTINES_POLL_MS)
+    poll.unref?.()
+    return { close: () => clearInterval(poll) }
+  }
 }

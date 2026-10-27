@@ -28,7 +28,7 @@ const connOf = (profile: string): Connection => getConnection(getSettings(), pro
 // Agendador: carrega as pastas, cria um cron por horario e dispara rotinas com travas e prechecks.
 let routines: Routine[] = []
 let jobs: Cron[] = []
-let watcher: FSWatcher | undefined
+let watcher: { close(): void } | undefined
 let fileWatchers: FSWatcher[] = [] // watchers dos gatilhos file-watch das rotinas
 let root = ''
 let onRoutinesChanged: (rs: Routine[]) => void = () => {}
