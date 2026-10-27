@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.18 (2026-10-27)
+
+### Fixes
+- The Claude footer and the agent status keep working when your user or data folder has unusual characters in its name (spaces, accents, $, apostrophes, brackets; backslashes on Linux/macOS), on Windows and Linux.
+- Windows: the footer no longer keeps showing an old picture when Turno can't be reached.
+- Accented text sent by Claude to Turno is no longer garbled in rare cases.
+
 ## 0.9.17 (2026-10-27)
 
 ### Agents

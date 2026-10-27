@@ -7,6 +7,10 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.18',
+    items: [{ title: 'Sturdier Claude footer', text: 'The footer and agent status keep working with any folder or user name, on Windows and Linux.' }],
+  },
+  {
     version: '0.9.17',
     items: [
       { title: 'Pick the folder for each agent', text: 'New agent asks where to open: your default folder (just press Enter), a recent one, or any folder.' },
