@@ -44,13 +44,15 @@ const STATUSLINE_PS1 = [
   '$s = Join-Path $env:TEMP ("turno-sl-" + $env:TURNO_AGENT_KEY)',
   '$now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()',
   '$last = 0',
-  'if (Test-Path $s) { $last = [int64](Get-Content $s -Raw) }',
+  'if (Test-Path -LiteralPath $s) { $last = [int64](Get-Content -LiteralPath $s -Raw) }',
   // no maximo uma consulta ao Turno a cada 2 s; no intervalo, o ultimo rodape
-  'if (($now - $last) -lt 2 -and (Test-Path ($s + ".out"))) { Out-Utf8 ([IO.File]::ReadAllText($s + ".out", $utf8)); exit 0 }',
-  'Set-Content -Path $s -Value $now -NoNewline',
+  'if (($now - $last) -lt 2 -and (Test-Path -LiteralPath ($s + ".out"))) { Out-Utf8 ([IO.File]::ReadAllText($s + ".out", $utf8)); exit 0 }',
+  'Set-Content -LiteralPath $s -Value $now -NoNewline',
+  // Turno sem responder: rodape vazio (como o sh), nunca o ultimo desenho para sempre
   '$out = Send ("/statusline/" + $env:TURNO_AGENT_KEY + "/" + $env:TURNO_ACCOUNT_ID) 2',
-  'if ($out -ne $null) { [IO.File]::WriteAllText($s + ".out", $out, $utf8) }',
-  'if (Test-Path ($s + ".out")) { Out-Utf8 ([IO.File]::ReadAllText($s + ".out", $utf8)) }',
+  'if ($out -eq $null) { $out = "" }',
+  '[IO.File]::WriteAllText($s + ".out", $out, $utf8)',
+  'Out-Utf8 $out',
   'exit 0',
   '',
 ].join('\r\n')
@@ -63,20 +65,42 @@ export const scriptFiles = (): Record<string, string> => ({
   'turno-statusline.ps1': STATUSLINE_PS1,
 })
 
+// Aspas simples do sh: nada dentro e interpretado ($, `, espaco); o apostrofo vira '\''
+const shQuote = (v: string): string => `'${v.replace(/'/g, "'\\''")}'`
+// Aspas simples do PowerShell: o apostrofo vira ''
+const psQuote = (v: string): string => `'${v.replace(/'/g, "''")}'`
+// -EncodedCommand: o comando vai em base64 (UTF-16LE), que so tem letras, numeros e +/=, entao nem o Git Bash nem o
+// PowerShell (o Claude usa um ou outro) mexem no caminho, por mais estranho que seja o nome do usuario ($, ', [ ]).
+const psEncoded = (cmd: string): string => `powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${Buffer.from(cmd, 'utf16le').toString('base64')}`
+
 // Como o settings da sessao (--settings) chama os scripts. dir com barras normais ("/"), tambem no Windows.
-// Windows: statusline e hooks via "powershell -File", que a documentacao garante tanto pelo Git Bash quanto pelo
-// PowerShell. Nao usa a forma exec (args): um Claude antigo que ignore "args" rodaria powershell.exe puro lendo o JSON do
-// hook como comando.
+// Windows: PowerShell com o comando codificado (funciona pelo Git Bash e pelo PowerShell). Nao usa a forma exec (args):
+// um Claude antigo que ignore "args" rodaria powershell.exe puro lendo o JSON do hook como comando.
 export function claudeSessionWiring(platform: NodeJS.Platform, dir: string) {
   const at = (name: string): string => `${dir.replace(/\\/g, '/').replace(/\/+$/, '')}/${name}`
   if (platform === 'win32') {
     return {
-      statusLine: { type: 'command', command: `powershell -NoProfile -ExecutionPolicy Bypass -File "${at('turno-statusline.ps1')}"`, padding: 0 },
-      hook: (ev: string) => ({ type: 'command', command: `powershell -NoProfile -ExecutionPolicy Bypass -File "${at('turno-hook.ps1')}" ${ev}`, timeout: 10 }),
+      statusLine: { type: 'command', command: psEncoded(`& ${psQuote(at('turno-statusline.ps1'))}`), padding: 0 },
+      hook: (ev: string) => ({ type: 'command', command: psEncoded(`& ${psQuote(at('turno-hook.ps1'))} ${psQuote(ev)}`), timeout: 10 }),
     }
   }
   return {
-    statusLine: { type: 'command', command: `sh "${at('turno-statusline.sh')}"`, padding: 0 },
-    hook: (ev: string) => ({ type: 'command', command: `sh "${at('turno-hook.sh')}" ${ev}`, timeout: 10 }),
+    statusLine: { type: 'command', command: `sh ${shQuote(at('turno-statusline.sh'))}`, padding: 0 },
+    hook: (ev: string) => ({ type: 'command', command: `sh ${shQuote(at('turno-hook.sh'))} ${ev}`, timeout: 10 }),
   }
 }
+
+// Pedido ao servidor local: /statusline/<key>/<conta> ou /hook/<key>/<conta>/<evento>. URL malformada = null (antes o
+// decodeURIComponent lancava fora do try e o pedido ficava pendurado).
+export function parseHookUrl(url: string): { kind: string; key: string; accountId: string; event?: string } | null {
+  try {
+    const [, kind, key, accountId, event] = url.split('/').map(decodeURIComponent)
+    return { kind, key, accountId, event }
+  } catch {
+    return null
+  }
+}
+
+// Corpo do pedido: junta os pedacos ANTES de decodificar (um acento partido entre dois pedacos virava lixo)
+export const decodeBody = (chunks: Buffer[]): string => Buffer.concat(chunks).toString('utf8')
+

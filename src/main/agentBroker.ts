@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { claudeSessionWiring, scriptFiles } from './claudeScripts'
+import { claudeSessionWiring, decodeBody, parseHookUrl, scriptFiles } from './claudeScripts'
 import { renderStatusline } from '../shared/statusline'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { randomBytes, randomUUID } from 'node:crypto'
@@ -68,21 +68,26 @@ export function initBroker(send: (ch: string, ...args: unknown[]) => void, focus
 
 async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== 'POST' || req.headers['x-turno-token'] !== token) return void res.writeHead(403).end()
-  let body = ''
+  const chunks: Buffer[] = []
+  let size = 0
   for await (const chunk of req) {
-    body += chunk
-    if (body.length > 2_000_000) return void res.writeHead(413).end()
+    chunks.push(chunk as Buffer)
+    size += (chunk as Buffer).length
+    if (size > 2_000_000) return void res.writeHead(413).end()
   }
+  const body = decodeBody(chunks)
   let payload: Record<string, unknown> = {}
   try {
     payload = JSON.parse(body || '{}')
   } catch {
     /* corpo invalido: ignora */
   }
-  const [, kind, key, accountId, event] = (req.url ?? '').split('/').map(decodeURIComponent)
+  const parsed = parseHookUrl(req.url ?? '')
+  if (!parsed) return void res.writeHead(400).end()
+  const { kind, key, accountId, event } = parsed
   try {
     if (kind === 'statusline') return void res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }).end(onStatusline(key, accountId, payload))
-    if (kind === 'hook') onHook(key, accountId, event, payload)
+    if (kind === 'hook') onHook(key, accountId, event ?? '', payload)
   } catch (e) {
     console.warn('[agents] hook error', (e as Error).message)
   }

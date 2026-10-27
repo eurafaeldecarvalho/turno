@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createServer, type Server } from 'node:http'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { execFile } from 'node:child_process'
@@ -16,7 +16,8 @@ const got: Array<{ url: string; token: string; body: string }> = []
 const REPLY = '╭ Opus 5  HIGH  ·  eu\n╰ 5h   ━━━━  13%   ↺ 3h54m\n\n'
 
 beforeAll(async () => {
-  dir = mkdtempSync(join(tmpdir(), 'turno-scripts-'))
+  dir = join(mkdtempSync(join(tmpdir(), 'turno-scripts-')), "José $x O'Brien [1]")
+  mkdirSync(dir)
   for (const [name, text] of Object.entries(scriptFiles())) writeFileSync(join(dir, name), text)
   server = createServer((req, res) => {
     const chunks: Buffer[] = []
@@ -31,21 +32,18 @@ beforeAll(async () => {
 })
 afterAll(() => {
   server.close()
-  rmSync(dir, { recursive: true, force: true })
+  rmSync(join(dir, '..'), { recursive: true, force: true })
 })
+// Git Bash do Windows (o Claude usa ele quando existe; senao o PowerShell): os dois caminhos sao testados no CI
+const GIT_BASH = 'C:\\Program Files\\Git\\bin\\bash.exe'
 
 // roda o comando como o Claude Code roda: statusline pela string de comando num shell; hook na forma exec (sem shell)
-function run(kind: 'statusline' | 'hook', input: string, withTurno = true): Promise<string> {
+function run(kind: 'statusline' | 'hook', input: string, withTurno = true, shell: 'native' | 'gitbash' = 'native'): Promise<string> {
   const w = claudeSessionWiring(process.platform, dir)
   const env = { ...process.env, TMPDIR: dir, TEMP: dir, ...(withTurno ? { TURNO_HOOK_PORT: String(port), TURNO_HOOK_TOKEN: 'tok', TURNO_AGENT_KEY: 'k1', TURNO_ACCOUNT_ID: 'acc' } : { TURNO_HOOK_PORT: '' }) }
-  const [file, args] =
-    kind === 'statusline'
-      ? win
-        ? ['powershell.exe', ['-NoProfile', '-Command', w.statusLine.command]]
-        : ['sh', ['-c', w.statusLine.command]]
-      : win
-        ? ['powershell.exe', ['-NoProfile', '-Command', w.hook('Stop').command]] // Windows sem Git Bash: o Claude usa o PowerShell
-        : ['sh', ['-c', w.hook('Stop').command]]
+  const command = kind === 'statusline' ? w.statusLine.command : w.hook('Stop').command
+  // como o Claude roda: sh -c no Linux/macOS; no Windows pelo Git Bash (se houver) ou pelo PowerShell
+  const [file, args]: [string, string[]] = !win ? ['sh', ['-c', command]] : shell === 'gitbash' ? [GIT_BASH, ['-c', command]] : ['powershell.exe', ['-NoProfile', '-Command', command]]
   return new Promise((res, rej) => {
     const p = execFile(file, args as string[], { env, encoding: 'buffer', timeout: 20000 }, (err, out) => (err ? rej(err) : res((out as Buffer).toString('utf8'))))
     p.stdin?.end(input)
@@ -74,6 +72,25 @@ describe('scripts do Claude Code (statusline e hooks) em qualquer computador', (
     expect(req.token).toBe('tok')
     expect(JSON.parse(req.body).session_id).toBe('abc')
   }, 30_000)
+  it('deveFuncionarPeloGitBashNoWindowsTambem', async () => {
+    if (!win || !existsSync(GIT_BASH)) return // so no Windows com Git Bash (o CI tem)
+    const out = await run('statusline', '{"model":{"display_name":"Opus 5"}}', true, 'gitbash')
+    expect(out).toContain('╭ Opus 5')
+    const before = got.filter((g) => g.url === '/hook/k1/acc/Stop').length
+    await run('hook', '{"session_id":"gb"}', true, 'gitbash')
+    expect(got.filter((g) => g.url === '/hook/k1/acc/Stop').length).toBe(before + 1)
+  }, 30_000)
+  it('naoDeveMostrarRodapeVelhoQuandoOTurnoNaoResponde', async () => {
+    await new Promise((r) => setTimeout(r, 2200)) // passa o cache de 2 s
+    const env = { TURNO_HOOK_PORT: '1', TURNO_HOOK_TOKEN: 'tok', TURNO_AGENT_KEY: 'k1', TURNO_ACCOUNT_ID: 'acc' } // porta sem ninguem
+    const w = claudeSessionWiring(process.platform, dir)
+    const [file, args]: [string, string[]] = win ? ['powershell.exe', ['-NoProfile', '-Command', w.statusLine.command]] : ['sh', ['-c', w.statusLine.command]]
+    const out = await new Promise<string>((res, rej) => {
+      const p = execFile(file, args, { env: { ...process.env, TMPDIR: dir, TEMP: dir, ...env }, encoding: 'buffer', timeout: 20000 }, (err, o) => (err ? rej(err) : res((o as Buffer).toString('utf8'))))
+      p.stdin?.end('{}')
+    })
+    expect(out.trim()).toBe('')
+  }, 40_000)
   it('naoDeveFazerNadaForaDoTurno', async () => {
     const n = got.length
     expect((await run('statusline', '{}', false)).trim()).toBe('')
@@ -83,16 +100,18 @@ describe('scripts do Claude Code (statusline e hooks) em qualquer computador', (
 })
 
 describe('configuracao dos scripts por sistema', () => {
-  it('deveUsarPowerShellNoWindows (Git Bash e opcional)', () => {
-    const w = claudeSessionWiring('win32', 'C:/Users/eu/AppData/turno')
-    // forma shell (powershell -File), igual ao statusline: um Claude antigo que ignore "args" rodaria powershell.exe puro
-    // lendo o JSON do hook como comando; -File funciona pelo Git Bash e pelo PowerShell
-    expect(w.hook('Stop')).toEqual({ type: 'command', command: 'powershell -NoProfile -ExecutionPolicy Bypass -File "C:/Users/eu/AppData/turno/turno-hook.ps1" Stop', timeout: 10 })
-    expect(w.statusLine.command).toBe('powershell -NoProfile -ExecutionPolicy Bypass -File "C:/Users/eu/AppData/turno/turno-statusline.ps1"')
+  it('deveUsarPowerShellComOCaminhoCodificadoNoWindows (nenhum shell mexe em $, aspas ou colchetes)', () => {
+    const w = claudeSessionWiring('win32', "C:/Users/José $x O'Brien [1]/AppData/turno")
+    const enc = /^powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ([A-Za-z0-9+/=]+)$/.exec(w.statusLine.command)
+    expect(enc).not.toBeNull()
+    expect(Buffer.from(enc![1], 'base64').toString('utf16le')).toBe("& 'C:/Users/José $x O''Brien [1]/AppData/turno/turno-statusline.ps1'")
+    const h = /-EncodedCommand ([A-Za-z0-9+/=]+)$/.exec(w.hook('Stop').command)!
+    expect(Buffer.from(h[1], 'base64').toString('utf16le')).toBe("& 'C:/Users/José $x O''Brien [1]/AppData/turno/turno-hook.ps1' 'Stop'")
+    expect(w.hook('Stop')).toMatchObject({ type: 'command', timeout: 10 })
   })
-  it('deveUsarShNoLinuxEMac', () => {
-    const w = claudeSessionWiring('linux', '/home/eu/.config/turno')
-    expect(w.hook('Stop')).toMatchObject({ type: 'command', command: 'sh "/home/eu/.config/turno/turno-hook.sh" Stop' })
-    expect(w.statusLine.command).toBe('sh "/home/eu/.config/turno/turno-statusline.sh"')
+  it('deveUsarShComAspasSimplesNoLinuxEMac', () => {
+    const w = claudeSessionWiring('linux', "/home/eu $x/O'Brien")
+    expect(w.statusLine.command).toBe("sh '/home/eu $x/O'\\''Brien/turno-statusline.sh'")
+    expect(w.hook('Stop').command).toBe("sh '/home/eu $x/O'\\''Brien/turno-hook.sh' Stop")
   })
 })
