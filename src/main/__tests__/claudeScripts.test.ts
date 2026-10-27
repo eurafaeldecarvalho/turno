@@ -112,6 +112,6 @@ describe('configuracao dos scripts por sistema', () => {
   it('deveUsarShComAspasSimplesNoLinuxEMac', () => {
     const w = claudeSessionWiring('linux', "/home/eu $x/O'Brien")
     expect(w.statusLine.command).toBe("sh '/home/eu $x/O'\\''Brien/turno-statusline.sh'")
-    expect(w.hook('Stop').command).toBe("sh '/home/eu $x/O'\\''Brien/turno-hook.sh' Stop")
+    expect(w.hook('Stop').command).toBe("sh '/home/eu $x/O'\\''Brien/turno-hook.sh' 'Stop'") // evento tambem entre aspas
   })
 })

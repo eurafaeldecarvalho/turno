@@ -86,7 +86,7 @@ export function claudeSessionWiring(platform: NodeJS.Platform, dir: string) {
   }
   return {
     statusLine: { type: 'command', command: `sh ${shQuote(at('turno-statusline.sh'))}`, padding: 0 },
-    hook: (ev: string) => ({ type: 'command', command: `sh ${shQuote(at('turno-hook.sh'))} ${ev}`, timeout: 10 }),
+    hook: (ev: string) => ({ type: 'command', command: `sh ${shQuote(at('turno-hook.sh'))} ${shQuote(ev)}`, timeout: 10 }),
   }
 }
 
