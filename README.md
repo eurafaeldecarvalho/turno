@@ -45,7 +45,7 @@ Turno does not implement an agent. It schedules and supervises the CLIs you alre
 - **Talk to a routine while it runs.** Clicking a routine opens its run as a chat with thinking, grouped tool calls ("Read 3 files, ran 2 commands") and results. While the run is alive, a message goes straight into its stdin. Once it has finished, the message continues the same session with `--resume`.
 - **You decide what it may do.** Five permission modes per routine, from *Ask* (an inline Allow / Allow for session / Deny card plus a phone notification) to *Bypass everything*.
 - **Any model, one format.** Use your Claude subscription (Fable, Opus, Sonnet, Haiku), a local model on Ollama, or one of 190+ API providers (OpenRouter, Groq, DeepSeek, Mistral and more) through a built-in local translator — all with the same `ROUTINE.md`. Turno starts Ollama if it is down.
-- **A real workspace.** xterm.js + ConPTY terminals in dockview: drag a tab onto another pane and drop it on the compass to split right or down. There are 10 themes, configurable fonts, a shell picker, and sidebar folders that reopen any Claude Code, Codex, Gemini, Qwen Code or OpenCode session in one click.
+- **A real workspace.** xterm.js + ConPTY terminals in dockview: drag a tab onto another pane and drop it on the compass to split right or down. There are 26 themes, configurable fonts, a shell picker, and sidebar folders that reopen any Claude Code, Codex, Gemini, Qwen Code or OpenCode session in one click.
 - **Plain files.** Routines are folders you can version in git. History is SQLite and every run keeps its raw event stream.
 
 ## Contents
