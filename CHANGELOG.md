@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.21 (2026-10-27)
+
+### Fixes
+- Linux: Turno opens its window even when the system has no file watchers left (ENOSPC). It used to start with no window at all; the routines folder is now checked every few seconds instead.
+- The default Claude connection is called "Claude (subscription)" (it showed a Portuguese name). Existing installs are renamed on load; a name you chose stays.
+
 ## 0.9.20 (2026-10-27)
 
 ### Features

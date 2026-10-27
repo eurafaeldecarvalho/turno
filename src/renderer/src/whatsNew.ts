@@ -7,6 +7,13 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.21',
+    items: [
+      { title: 'Opens on busy Linux machines', text: 'Turno now opens its window even when Linux has no file watchers left; it checks the routines folder every few seconds instead.' },
+      { title: 'Connection name in English', text: 'The default Claude connection is now called "Claude (subscription)".' },
+    ],
+  },
+  {
     version: '0.9.20',
     items: [
       { title: 'Keep going after the limit', text: 'Add OmniRoute, 9router or Claude Code Router from the connections catalog and rank it below your Claude accounts: a routine with account pool on continues there when every subscription is at its limit.' },
