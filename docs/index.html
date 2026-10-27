@@ -4,214 +4,129 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Turno — Claude Code on the night shift</title>
-<meta name="description" content="Free, open-source desktop app for Windows and Linux that runs Claude Code on a schedule and keeps the run going when Claude hits its usage limit: it continues on your next account or a gateway like OmniRoute.">
+<meta name="description" content="Free, open-source desktop app for Windows and Linux that runs Claude Code on a schedule, shows every run as a live chat, asks before risky steps and keeps going when an account hits its usage limit.">
 <meta property="og:title" content="Turno — Claude Code on the night shift">
-<meta property="og:description" content="Your coding agent keeps working after Claude hits its limit. Free, open source, Windows and Linux.">
+<meta property="og:description" content="Schedule Claude Code on your own PC. It asks before risky steps and keeps going after the usage limit. Free, open source.">
 <meta property="og:image" content="https://eurafaeldecarvalho.github.io/turno/media/og.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Onest:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header class="bar">
-  <a class="bar-mark" href="#top" aria-label="Turno, back to the top">TURNO</a>
-  <nav class="bar-links" aria-label="Page">
-    <a href="#shift">Tonight's shift</a>
+<header class="nav">
+  <a class="nav-mark" href="#top">Turno</a>
+  <nav class="nav-links" aria-label="Page">
+    <a href="#features">Features</a>
     <a href="#questions">Questions</a>
     <a href="https://github.com/eurafaeldecarvalho/turno">GitHub</a>
   </nav>
+  <a class="nav-cta" data-download href="https://github.com/eurafaeldecarvalho/turno/releases/latest">Download</a>
 </header>
 
 <main id="top">
 
 <section class="hero" aria-labelledby="hero-title">
-  <div class="hero-video">
-    <video src="media/demo.mp4" poster="media/demo-poster.jpg" autoplay muted loop playsinline data-video width="1280" height="720" aria-label="A scheduled Claude Code run hits the usage limit, continues on a second account, then on a local OmniRoute gateway, and finishes the same conversation"></video>
-    <div class="video-bar"><span>Demo dramatized: the usage limits are simulated.</span><button type="button" class="video-pause" data-video-toggle>Pause demo</button></div>
+  <div class="hero-copy">
+    <h1 id="hero-title">Claude Code, on the night shift</h1>
+    <p class="lead">Turno runs Claude Code on a schedule on your own PC. You watch each run as a live chat, approve the risky steps, and when an account hits its usage limit the run carries on with the next one.</p>
+    <div class="hero-actions">
+      <a class="button" data-download href="https://github.com/eurafaeldecarvalho/turno/releases/latest">Download Turno</a>
+      <a class="link" href="https://github.com/eurafaeldecarvalho/turno">View on GitHub</a>
+    </div>
+    <p class="note">Free and open source (MIT). Windows and Linux. Needs the claude CLI, signed in.</p>
   </div>
-  <h1 id="hero-title" class="hero-title"><span class="wordmark">TURNO</span><span class="hero-line">Claude Code on the night shift</span></h1>
-  <p class="hero-statement">When Claude hits its usage limit at 3 a.m., the run moves to your next account and keeps going.</p>
-  <div class="hero-row">
-    <span>Windows and Linux</span>
-    <a class="button" data-download href="https://github.com/eurafaeldecarvalho/turno/releases/latest">Download Turno</a>
-    <span>Free and open source, MIT</span>
-  </div>
-  <p class="hero-needs">Needs the claude CLI, signed in. On Linux: AppImage here, .deb and .rpm on the <a href="https://github.com/eurafaeldecarvalho/turno/releases/latest">releases page</a>.</p>
+  <figure class="hero-media">
+    <div class="frame"><video src="media/f/run.mp4" poster="media/f/run.jpg" muted loop playsinline preload="metadata" data-auto width="1600" height="1000" aria-label="A Turno run: Claude Code writes a file, Turno shows the permission request, the run is allowed and finishes"></video></div>
+    <figcaption>A real run: the routine starts, asks before writing a file, and finishes. <button type="button" class="pause" data-pause>Pause</button></figcaption>
+  </figure>
 </section>
 
-<section class="showcase" aria-labelledby="showcase-title">
-  <div class="showcase-index">
-    <h2 id="showcase-title" class="head">What you wake up to</h2>
-    <div class="index-list" role="tablist" aria-label="Things Turno produces">
-      <button role="tab" aria-selected="true" aria-controls="sheet-report" id="tab-report">The shift report</button>
-      <button role="tab" aria-selected="false" aria-controls="sheet-card" id="tab-card">The approval card</button>
-      <button role="tab" aria-selected="false" aria-controls="sheet-roster" id="tab-roster">The roster</button>
-      <button role="tab" aria-selected="false" aria-controls="sheet-routine" id="tab-routine">The routine file</button>
+<section class="features" id="features" aria-labelledby="features-title">
+  <h2 id="features-title" class="h2">What it does, on screen</h2>
+  <div class="feat-split">
+    <div class="feat-stage" aria-hidden="true">
+      <div class="frame">
+        <video src="media/f/schedule.mp4" poster="media/f/schedule.jpg" muted loop playsinline preload="none" data-stage="0" class="is-on"></video>
+        <video src="media/f/pool.mp4" poster="media/f/pool.jpg" muted loop playsinline preload="none" data-stage="1"></video>
+        <video src="media/f/models.mp4" poster="media/f/models.jpg" muted loop playsinline preload="none" data-stage="2"></video>
+        <video src="media/f/workspace.mp4" poster="media/f/workspace.jpg" muted loop playsinline preload="none" data-stage="3"></video>
+      </div>
     </div>
-  </div>
-  <div class="stage">
-    <article class="sheet sheet-wide is-on" id="sheet-report" role="tabpanel" aria-labelledby="tab-report" data-ui>
-      <div class="ui-head"><span class="dot dot-on"></span><b>Nightly refactor</b><span class="ui-chip ui-ok">ok</span><span class="ui-time">02:00 → 06:30</span></div>
-      <p class="ui-line">Plan: split the auth module, update the callers, run the test suite until it is green.</p>
-      <p class="ui-group">Read 14 files, edited 9 files, ran 6 commands</p>
-      <p class="ui-warn">usage limit reached on this account; Turno continues the conversation on the next account</p>
-      <p class="ui-note">03:41 · resumed on Claude, account 2 · same session</p>
-      <p class="ui-group">Edited 11 files, ran the tests 3 times</p>
-      <p class="ui-warn">usage limit reached on this account; Turno continues the conversation on the next account</p>
-      <p class="ui-note">05:12 · resumed on OmniRoute, on this PC</p>
-      <p class="ui-done">turn completed · 214 tests passing</p>
-      <p class="ui-foot">Worked for 4 h 30 · 3 accounts · 1 conversation</p>
-    </article>
-    <article class="sheet sheet-mid" id="sheet-card" role="tabpanel" aria-labelledby="tab-card" data-ui hidden>
-      <div class="ui-head"><b>Permission request: Bash</b><span class="ui-chip ui-wait">waiting</span></div>
-      <p class="ui-line">Run the database migration on the staging copy</p>
-      <pre class="ui-code">npm run migrate -- --env staging</pre>
-      <div class="ui-buttons"><span class="ui-btn ui-btn-on">Allow</span><span class="ui-btn">Allow for session</span><span class="ui-btn">Deny</span></div>
-      <p class="ui-note">Also sent to your phone. Without an answer the run stays paused.</p>
-    </article>
-    <article class="sheet sheet-mid" id="sheet-roster" role="tabpanel" aria-labelledby="tab-roster" data-ui hidden>
-      <div class="ui-head"><b>Agents and accounts</b><span class="ui-time">by your order</span></div>
-      <ol class="ui-roster">
-        <li><span>Claude · personal</span><span class="ui-chip ui-bad">at limit · back 07:41</span></li>
-        <li class="is-sel"><span>Claude · work</span><span class="ui-chip ui-ok">5 h 38%</span></li>
-        <li><span>OmniRoute · this PC</span><span class="ui-chip">takes over last</span></li>
-        <li><span>Ollama · qwen3</span><span class="ui-chip">off</span></li>
-      </ol>
-      <p class="ui-note">An API or gateway connection only takes over when every subscription above it is at its limit.</p>
-    </article>
-    <article class="sheet sheet-narrow" id="sheet-routine" role="tabpanel" aria-labelledby="tab-routine" data-ui hidden>
-      <div class="ui-head"><b>~/rotinas/nightly/ROUTINE.md</b></div>
-<pre class="ui-code ui-file">---
-name: Nightly refactor
-schedule:
-  times: ["02:00"]
-model: sonnet
-permission_mode: manual
-account_pool: true
-catchup: true
----
-Split the auth module and keep
-the tests green.</pre>
-    </article>
-  </div>
-</section>
-
-<section class="shift" id="shift" aria-labelledby="shift-title">
-  <div class="shift-text">
-    <h2 id="shift-title" class="head">Tonight's shift</h2>
-    <p>Set a time, put your accounts in order and add a gateway at the end. Turno starts the run, and at every usage limit it hands the same conversation to the next one in line.</p>
-    <button class="toggle" type="button" aria-pressed="true" data-pool><span class="toggle-knob" aria-hidden="true"></span><span>Account pool</span></button>
-    <p class="small" data-countdown>Your next 02:00 is tonight.</p>
-  </div>
-  <div class="slip" data-slip aria-live="polite">
-    <p class="slip-title" data-slip-date>Night shift</p>
-    <div data-slip-on>
-      <h3>02:00 · start</h3>
-      <p class="slip-row"><span>Claude, account 1 picks up the routine</span><i></i><span>02:00</span></p>
-      <h3>03:41 · handover</h3>
-      <p class="slip-row"><span>Usage limit on account 1</span><i></i><span>03:41</span></p>
-      <p class="slip-row"><span>Account 2 resumes the same conversation</span><i></i><span>03:41</span></p>
-      <h3>05:12 · handover</h3>
-      <p class="slip-row"><span>Every subscription at its limit</span><i></i><span>05:12</span></p>
-      <p class="slip-row"><span>OmniRoute on this PC takes over</span><i></i><span>05:12</span></p>
-      <h3>06:30 · done</h3>
-      <p class="slip-row"><span>Tests green, run closed</span><i></i><span>06:30</span></p>
-      <p class="slip-total"><span>Refactor done · 3 shifts</span><span>4 h 30</span></p>
+    <div class="feat-list">
+      <article class="feat" data-feat="0">
+        <div class="frame feat-media"><video src="media/f/schedule.mp4" poster="media/f/schedule.jpg" muted loop playsinline preload="none" aria-label="Creating a routine in Turno: folder, account, Ask mode, 02:00 on weekdays and the prompt"></video></div>
+        <h3>Write the routine once</h3>
+        <p>A routine is a folder with a ROUTINE.md: a prompt, the days and times, the model and what it may do. Fill the form or edit the file; Turno runs it on time and catches up after the PC sleeps.</p>
+        <p class="small">In the clip: a weekday 02:00 routine in Ask mode, typed in the editor. Sped up 1.8×.</p>
+      </article>
+      <article class="feat" data-feat="1">
+        <div class="frame feat-media"><video src="media/f/pool.mp4" poster="media/f/pool.jpg" muted loop playsinline preload="none" aria-label="Adding a gateway below the Claude sign-in in Turno's account list"></video></div>
+        <h3>Keep going after the usage limit</h3>
+        <p>Put your accounts in order and add a gateway or API provider at the end. With account pool on, a run that hits the 5-hour or weekly limit continues the same conversation on the next one in line.</p>
+        <p class="small">In the clip: OmniRoute added as the second entry, under the Claude subscription.</p>
+      </article>
+      <article class="feat" data-feat="2">
+        <div class="frame feat-media"><video src="media/f/models.mp4" poster="media/f/models.jpg" muted loop playsinline preload="none" aria-label="Picking OmniRoute from Turno's catalog of connections"></video></div>
+        <h3>Run it on any model</h3>
+        <p>The same routine runs on your Claude subscription, a local Ollama model, a gateway you already run (OmniRoute, 9router, Claude Code Router) or one of 190+ API providers through a local translator.</p>
+        <p class="small">In the clip: OmniRoute picked from the catalog, its address filled in for you.</p>
+      </article>
+      <article class="feat" data-feat="3">
+        <div class="frame feat-media"><video src="media/f/workspace.mp4" poster="media/f/workspace.jpg" muted loop playsinline preload="none" aria-label="Splitting terminals right and down and switching the theme in Turno"></video></div>
+        <h3>Work next to it</h3>
+        <p>Split terminals, drag tabs into place, reopen any Claude Code, Codex or Gemini session from the sidebar, and pick from ten themes. Turno stays in the tray; closing the window keeps routines running.</p>
+        <p class="small">In the clip: two splits and a theme change. Sped up 1.6×.</p>
+      </article>
     </div>
-    <div data-slip-off hidden>
-      <h3>02:00 · start</h3>
-      <p class="slip-row"><span>Claude, account 1 picks up the routine</span><i></i><span>02:00</span></p>
-      <h3>03:41 · limit</h3>
-      <p class="slip-row"><span>Usage limit on account 1</span><i></i><span>03:41</span></p>
-      <p class="slip-row"><span>Run paused until the window resets</span><i></i><span>08:41</span></p>
-      <p class="slip-total slip-total-off"><span>Half done when you wake up</span><span>1 h 41</span></p>
-    </div>
-  </div>
-</section>
-
-<section class="board" aria-labelledby="board-title">
-  <div class="tile t-head"><h2 id="board-title" class="head">Built for nights</h2></div>
-  <div class="tile t-a" data-ui>
-    <span class="big-word">catch-up</span>
-    <p class="cap"><b>Catches up after sleep</b>Missed 02:00? It runs once when the PC wakes.</p>
-  </div>
-  <div class="tile t-b">
-    <span class="big-figure">190+</span>
-    <p class="cap"><b>Any model, one file</b>API providers in the catalog, plus Claude, Ollama and local gateways.</p>
-  </div>
-  <div class="tile t-c tile-shot">
-    <div class="fade-stack" data-crossfade>
-      <img src="media/crop-chat.png" alt="A Turno run open as a chat, with grouped tool calls and the result" width="560" height="460" class="is-on">
-      <img src="media/crop-routines.png" alt="Turno's sidebar with routines, their next run and project folders" width="560" height="490" loading="lazy">
-      <img src="media/crop-general.png" alt="A routine's general settings in Turno: folder, connection, account and model" width="460" height="500" loading="lazy">
-    </div>
-    <p class="cap cap-dark"><b>Talk to a run while it runs</b>A message goes straight into the live session, or continues it after it ends.</p>
-  </div>
-  <div class="tile t-d tile-shot">
-    <img src="media/crop-permissions.png" alt="Turno's five permission modes for a routine" width="458" height="340" loading="lazy">
-    <p class="cap cap-dark"><b>You decide what it may do</b>Five modes, from Ask to Bypass.</p>
-  </div>
-  <div class="tile t-e tile-shot">
-    <img src="media/crop-themes.png" alt="Turno's theme list: Kanagawa Wave, Monokai Pro, Night Owl, Nord and more" width="765" height="360" loading="lazy">
-    <p class="cap cap-dark"><b>A real workspace</b>Split terminals, ten themes, every agent session one click away.</p>
-  </div>
-  <div class="tile t-f" data-ui>
-    <span class="lock-pill">chrome</span><span class="lock-pill lock-pill-2">gpu</span>
-    <p class="cap"><b>Named locks</b>Two routines never fight over one Chrome or one GPU.</p>
-  </div>
-  <div class="tile t-g tile-shot">
-    <img src="media/crop-routine.png" alt="A routine open in Turno's editor, with its schedule and run buttons" width="980" height="270" loading="lazy">
-    <p class="cap cap-dark"><b>Plain files</b>Every routine is a folder with a ROUTINE.md you can keep in git.</p>
   </div>
 </section>
 
 <section class="questions" id="questions" aria-labelledby="questions-title">
-  <h2 id="questions-title" class="head">Questions at handover</h2>
-  <div class="drawer">
-    <details class="card c1" open name="faq"><summary><span class="tab">Cron</span><span class="q">Why not just cron and claude&nbsp;‑p?</span></summary>
-      <p>For one fire-and-forget job it is enough. Cron skips runs while the machine sleeps, a headless claude&nbsp;‑p cannot stop and ask before a risky tool call, and nothing lets you open a run that is still going and talk to it. Turno adds those, plus locks, account switching and the raw log of every run.</p></details>
-    <details class="card c2" name="faq"><summary><span class="tab">Desktop</span><span class="q">Why not Claude Desktop's scheduled tasks?</span></summary>
-      <p>Use them if they cover you. Turno keeps each routine as a plain folder, runs the same file on Claude, a local Ollama model or a gateway, and adds locks, approval cards and account switching. It can import your Desktop tasks.</p></details>
-    <details class="card c3" name="faq"><summary><span class="tab">Billing</span><span class="q">Does it use my subscription or API credits?</span></summary>
-      <p>It runs the official claude CLI you are signed into, so it uses whatever that sign-in uses. It never handles your sign-in token. API connections are paid by use and only take over when every subscription above them is at its limit.</p></details>
-    <details class="card c1" name="faq"><summary><span class="tab">Models</span><span class="q">Can it run on something other than Claude?</span></summary>
-      <p>Yes. The same ROUTINE.md runs on a local Ollama model, on a gateway you already run (OmniRoute, 9router, Claude Code Router) or on one of 190+ API providers through a local translator.</p></details>
-    <details class="card c2" name="faq"><summary><span class="tab">Accounts</span><span class="q">How do I add a second account to the pool?</span></summary>
-      <p>Settings › Agents and accounts: add a separate Claude sign-in (each keeps its own folder) or an API or gateway connection, and put them in order. Turno only uses accounts you sign into yourself; whether running several of your own subscriptions fits your plan's terms is yours to check. Details in the <a href="https://github.com/eurafaeldecarvalho/turno#agents-accounts-tasks-and-mcp">README</a>.</p></details>
-    <details class="card c3" name="faq"><summary><span class="tab">Systems</span><span class="q">Windows, Linux, macOS?</span></summary>
-      <p>Windows and Linux have installers (.exe, AppImage, .deb and .rpm). macOS should work from source but is not packaged yet.</p></details>
-    <details class="card c1" name="faq"><summary><span class="tab">Safety</span><span class="q">What stops it from doing something risky overnight?</span></summary>
-      <p>Each routine has a permission mode. In Ask mode a risky step waits for your Allow or Deny, in the app or on your phone, and the run stays paused until you answer.</p></details>
+  <div class="q-index">
+    <h2 id="questions-title" class="q-head">Common questions</h2>
+    <ul class="q-list" role="tablist" aria-label="Questions" aria-orientation="vertical">
+      <li><button role="tab" aria-selected="true" aria-controls="ans" data-q="0">Why not just cron and claude&nbsp;‑p?</button></li>
+      <li><button role="tab" aria-selected="false" aria-controls="ans" data-q="1">Why not Claude Desktop's scheduled tasks?</button></li>
+      <li><button role="tab" aria-selected="false" aria-controls="ans" data-q="2">Does it use my subscription or API credits?</button></li>
+      <li><button role="tab" aria-selected="false" aria-controls="ans" data-q="3">How do I add a second account?</button></li>
+      <li><button role="tab" aria-selected="false" aria-controls="ans" data-q="4">What stops it from doing something risky overnight?</button></li>
+      <li><button role="tab" aria-selected="false" aria-controls="ans" data-q="5">Windows, Linux, macOS?</button></li>
+    </ul>
+  </div>
+  <div class="q-pane" id="ans" role="tabpanel" aria-live="polite">
+    <p data-a="0">For one fire-and-forget job it is enough. Cron skips runs while the machine sleeps, a headless claude&nbsp;‑p can't stop and ask before a risky tool call, and you can't open a run that is still going and talk to it. Turno adds those, plus locks, account switching and a full log of every run.</p>
+    <p data-a="1" hidden>Use them if they cover you. Turno keeps each routine as a plain folder you can keep in git, runs the same file on Claude, a local model or a gateway, and adds locks, approval cards and account switching. It can import your Desktop tasks.</p>
+    <p data-a="2" hidden>It runs the official claude CLI you are signed into, so it uses whatever that sign-in uses, and never handles your token. API or gateway connections only take over when every subscription above them is at its limit.</p>
+    <p data-a="3" hidden>Settings, Agents and accounts: add a separate Claude sign-in or an API connection and put them in order. Turno only uses accounts you sign into yourself; whether several of your own subscriptions fit your plan's terms is yours to check.</p>
+    <p data-a="4" hidden>Each routine has a permission mode. In Ask mode a risky step waits for your Allow or Deny, in the app or on your phone, and the run stays paused until you answer. You can also cap steps and time.</p>
+    <p data-a="5" hidden>Windows and Linux have installers: .exe, AppImage, .deb and .rpm. macOS should work from source but isn't packaged yet.</p>
   </div>
 </section>
 
-<a class="cta" data-download href="https://github.com/eurafaeldecarvalho/turno/releases/latest">
-  <span class="cta-note" data-cta-note>Download the latest release for your system.</span>
-  <svg class="cta-arrow" viewBox="0 0 48 48" aria-hidden="true"><path d="M12 36 36 12M16 12h20v20" fill="none" stroke="currentColor" stroke-width="4"/></svg>
-  <span class="cta-word">INSTALL</span>
-</a>
+<section class="close" aria-labelledby="close-title">
+  <div class="close-copy">
+    <h2 id="close-title">Give it tonight's shift</h2>
+    <p>Install it, add your first routine and let it run at 02:00. Routines, runs and settings stay on your PC.</p>
+  </div>
+  <div class="dl" data-ui>
+    <p class="dl-head">Latest release <span data-tag></span></p>
+    <a class="dl-row" data-asset="exe" href="https://github.com/eurafaeldecarvalho/turno/releases/latest"><span>Windows</span><span>Installer .exe</span></a>
+    <a class="dl-row" data-asset="AppImage" href="https://github.com/eurafaeldecarvalho/turno/releases/latest"><span>Linux</span><span>AppImage</span></a>
+    <a class="dl-row" data-asset="deb" href="https://github.com/eurafaeldecarvalho/turno/releases/latest"><span>Debian, Ubuntu</span><span>.deb</span></a>
+    <a class="dl-row" data-asset="rpm" href="https://github.com/eurafaeldecarvalho/turno/releases/latest"><span>Fedora, openSUSE</span><span>.rpm</span></a>
+  </div>
+</section>
 
 </main>
 
 <footer class="foot">
-  <div class="foot-top">
-    <div>
-      <p class="foot-invite">Hand it the night.</p>
-      <a class="button" href="https://github.com/eurafaeldecarvalho/turno">Open on GitHub</a>
-    </div>
-    <ul class="foot-links">
-      <li><a href="https://github.com/eurafaeldecarvalho/turno/releases">Releases</a></li>
-      <li><a href="https://github.com/eurafaeldecarvalho/turno#readme">Documentation</a></li>
-      <li><a href="https://github.com/eurafaeldecarvalho/turno/blob/main/CHANGELOG.md">Changelog</a></li>
-      <li><a href="https://github.com/eurafaeldecarvalho/turno/issues">Report an issue</a></li>
-    </ul>
-  </div>
-  <div class="foot-legal"><span>MIT licence · made by Rafael de Carvalho</span><span>Screens from the app; demo limits simulated</span></div>
-  <p class="foot-name" aria-hidden="true">TURNO</p>
+  <span>Turno · MIT · made by Rafael de Carvalho</span>
+  <span class="foot-links"><a href="https://github.com/eurafaeldecarvalho/turno">GitHub</a><a href="https://github.com/eurafaeldecarvalho/turno/releases">Releases</a><a href="https://github.com/eurafaeldecarvalho/turno/blob/main/CHANGELOG.md">Changelog</a><a href="https://github.com/eurafaeldecarvalho/turno/issues">Issues</a></span>
+  <span>Clips recorded in the app with a demo profile</span>
 </footer>
 
 <script src="main.js"></script>

@@ -1,109 +1,81 @@
-// Turno landing: download by OS, the output index, the account-pool toggle, tonight's countdown, motion.
+// Turno landing: downloads for this system, clips that play only while seen, the pinned feature screen, the questions.
 (() => {
   const REPO = 'eurafaeldecarvalho/turno'
-
-  // download: pick the latest release asset for this system; every link falls back to the releases page
-  const ua = navigator.userAgent
-  const os = /Windows/i.test(ua) ? 'windows' : /Mac OS X|Macintosh/i.test(ua) ? 'mac' : /Linux|X11/i.test(ua) && !/Android/i.test(ua) ? 'linux' : 'other'
-  const links = document.querySelectorAll('[data-download]')
-  const note = document.querySelector('[data-cta-note]')
-  const label = (text) => links.forEach((a) => { if (a.classList.contains('button')) a.textContent = text })
-  if (os === 'mac') {
-    label('macOS: build from source')
-    if (note) note.textContent = 'macOS is not packaged yet: the releases page has the source.'
-  } else if (os === 'windows' || os === 'linux') {
-    fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((rel) => {
-        const want = os === 'windows' ? /Setup-.*\.exe$/ : /\.AppImage$/
-        const asset = (rel.assets || []).find((x) => want.test(x.name))
-        if (!asset) return
-        links.forEach((a) => { a.href = asset.browser_download_url })
-        label(`Download for ${os === 'windows' ? 'Windows' : 'Linux'}`)
-        if (note) note.textContent = `${asset.name} · ${rel.tag_name}. Other formats are on the releases page.`
-      })
-      .catch(() => {})
-  }
-
-  // output index: one sheet at a time, crossfaded
-  const tabs = [...document.querySelectorAll('.index-list [role="tab"]')]
-  const show = (tab) => {
-    tabs.forEach((t) => {
-      const on = t === tab
-      t.setAttribute('aria-selected', String(on))
-      t.tabIndex = on ? 0 : -1
-      const panel = document.getElementById(t.getAttribute('aria-controls'))
-      if (on) { panel.hidden = false; requestAnimationFrame(() => panel.classList.add('is-on')) }
-      else { panel.classList.remove('is-on'); panel.hidden = true }
-    })
-  }
-  tabs.forEach((t, i) => {
-    t.addEventListener('click', () => show(t))
-    t.addEventListener('keydown', (e) => {
-      const d = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0
-      if (!d) return
-      e.preventDefault()
-      const next = tabs[(i + d + tabs.length) % tabs.length]
-      show(next); next.focus()
-    })
-  })
-  tabs.forEach((t, i) => { t.tabIndex = i === 0 ? 0 : -1 })
-
-  // the account-pool toggle: with it the run continues, without it the run waits for the reset
-  const pool = document.querySelector('[data-pool]')
-  const on = document.querySelector('[data-slip-on]')
-  const off = document.querySelector('[data-slip-off]')
-  pool?.addEventListener('click', () => {
-    const now = pool.getAttribute('aria-pressed') !== 'true'
-    pool.setAttribute('aria-pressed', String(now))
-    on.hidden = !now; off.hidden = now
-  })
-
-  // tonight, in the visitor's own time: the date on the slip and the time to the next 02:00
-  const next = new Date(); next.setHours(2, 0, 0, 0)
-  if (next <= new Date()) next.setDate(next.getDate() + 1)
-  const dateEl = document.querySelector('[data-slip-date]')
-  if (dateEl) dateEl.textContent = 'Night shift · ' + next.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
-  const cd = document.querySelector('[data-countdown]')
-  const tick = () => {
-    const ms = next - new Date()
-    const h = Math.floor(ms / 3.6e6), m = Math.floor((ms % 3.6e6) / 6e4)
-    if (cd) cd.textContent = `Your next 02:00 starts in ${h} h ${String(m).padStart(2, '0') /* taste-skill-ignore: a clock */} min, your time.`
-  }
-  tick(); setInterval(tick, 30000)
-
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  // the hero demo: pausable, and still under reduced motion
-  const video = document.querySelector('[data-video]')
-  const vbtn = document.querySelector('[data-video-toggle]')
-  const setPlaying = (play) => { if (!video) return; play ? video.play().catch(() => {}) : video.pause(); if (vbtn) vbtn.textContent = play ? 'Pause demo' : 'Play demo' }
-  if (reduce) setPlaying(false)
-  vbtn?.addEventListener('click', () => setPlaying(video.paused))
-
-  // signature move: the close-up slowly crossfades between three screens of the app
-  const stack = document.querySelector('[data-crossfade]')
-  if (stack && !reduce) {
-    const imgs = [...stack.querySelectorAll('img')]
-    let i = 0
-    setInterval(() => {
-      if (document.hidden) return
-      imgs[i].classList.remove('is-on'); i = (i + 1) % imgs.length; imgs[i].classList.add('is-on')
-    }, 5600)
-  }
-
-  // entrances: heading, then text, then picture, once per section
-  if (!reduce && 'IntersectionObserver' in window) {
-    const groups = document.querySelectorAll('.showcase, .shift, .board, .questions, .foot-top')
-    groups.forEach((g) => {
-      const parts = g.querySelectorAll('.head, p, .index-list button, .stage, .slip, .tile, .toggle, .card, .foot-invite, .button, .foot-links li')
-      parts.forEach((p, k) => { p.classList.add('reveal'); p.style.transitionDelay = `${Math.min(k, 8) * 70}ms` })
+  // downloads: the latest release, the row for this system marked; every link falls back to the releases page
+  const ua = navigator.userAgent
+  const os = /Windows/i.test(ua) ? 'exe' : /Linux|X11/i.test(ua) && !/Android/i.test(ua) ? 'AppImage' : null
+  fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((rel) => {
+      const tag = document.querySelector('[data-tag]')
+      if (tag) tag.textContent = rel.tag_name
+      const find = (kind) => (rel.assets || []).find((a) => (kind === 'exe' ? /Setup-.*\.exe$/ : new RegExp(`\\.${kind}$`)).test(a.name))
+      document.querySelectorAll('[data-asset]').forEach((row) => {
+        const a = find(row.dataset.asset)
+        if (a) row.href = a.browser_download_url
+        if (row.dataset.asset === os) row.classList.add('is-you')
+      })
+      const mine = os && find(os)
+      if (mine) document.querySelectorAll('[data-download]').forEach((a) => {
+        a.href = mine.browser_download_url
+        if (a.classList.contains('button')) a.textContent = `Download for ${os === 'exe' ? 'Windows' : 'Linux'}`
+      })
     })
-    const io = new IntersectionObserver((entries) => entries.forEach((e) => {
-      if (!e.isIntersecting) return
-      e.target.querySelectorAll('.reveal').forEach((p) => p.classList.add('is-in'))
-      io.unobserve(e.target)
-    }), { threshold: 0.12 })
-    groups.forEach((g) => io.observe(g))
+    .catch(() => {})
+
+  // clips play only while on screen, never under reduced motion
+  const play = (v, on) => { if (reduce) return; if (on) { v.preload = 'auto'; v.play().catch(() => {}) } else v.pause() }
+  const seen = new IntersectionObserver((es) => es.forEach((e) => play(e.target, e.isIntersecting)), { threshold: 0.35 })
+  document.querySelectorAll('[data-auto], .feat-media video').forEach((v) => seen.observe(v))
+
+  const hero = document.querySelector('[data-auto]')
+  const pause = document.querySelector('[data-pause]')
+  pause?.addEventListener('click', () => {
+    if (hero.paused) { hero.play(); pause.textContent = 'Pause' } else { hero.pause(); pause.textContent = 'Play' }
+  })
+  if (reduce && pause) pause.textContent = 'Play'
+
+  // pinned stage: the description in the middle of the screen picks the clip
+  const stage = [...document.querySelectorAll('[data-stage]')]
+  const feats = [...document.querySelectorAll('[data-feat]')]
+  let current = -1
+  const pick = (i) => {
+    if (i === current) return
+    current = i
+    feats.forEach((f, k) => f.classList.toggle('is-on', k === i))
+    stage.forEach((v, k) => { v.classList.toggle('is-on', k === i); if (k === i) { v.currentTime = 0; play(v, true) } else v.pause() })
+  }
+  const midline = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) pick(Number(e.target.dataset.feat)) }), { rootMargin: '-45% 0px -45% 0px' })
+  feats.forEach((f) => midline.observe(f))
+  pick(0)
+  const stageBox = document.querySelector('.feat-stage')
+  if (stageBox) new IntersectionObserver((es) => es.forEach((e) => { const v = stage[current]; if (v) play(v, e.isIntersecting) }), { threshold: 0.2 }).observe(stageBox)
+
+  // questions: one answer at a time, by click, hover or the arrow keys
+  const qs = [...document.querySelectorAll('[data-q]')]
+  const as = [...document.querySelectorAll('[data-a]')]
+  const ask = (i, focus) => {
+    qs.forEach((q, k) => { q.setAttribute('aria-selected', String(k === i)); q.tabIndex = k === i ? 0 : -1 })
+    as.forEach((a, k) => { a.hidden = k !== i })
+    if (focus) qs[i].focus()
+  }
+  qs.forEach((q, i) => {
+    q.addEventListener('click', () => ask(i))
+    q.addEventListener('mouseenter', () => ask(i))
+    q.addEventListener('keydown', (e) => {
+      const d = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0
+      if (d) { e.preventDefault(); ask((i + d + qs.length) % qs.length, true) }
+    })
+  })
+  ask(0)
+
+  // entrances: heading, text, then picture, once
+  if (!reduce && 'IntersectionObserver' in window) {
+    const parts = document.querySelectorAll('.hero-copy > *, .hero-media, .features .h2, .feat, .q-head, .q-list li, .close-copy > *, .dl')
+    parts.forEach((p, k) => { p.classList.add('rise'); p.style.transitionDelay = `${(k % 5) * 70}ms` })
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target) } }), { threshold: 0.12 })
+    parts.forEach((p) => io.observe(p))
   }
 })()
