@@ -7,6 +7,10 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.19',
+    items: [{ title: 'Windows names with apostrophes', text: 'The Claude footer and agent status work for Windows user names with a curly apostrophe, like O’Brien.' }],
+  },
+  {
     version: '0.9.18',
     items: [{ title: 'Sturdier Claude footer', text: 'The footer and agent status keep working with any folder or user name, on Windows and Linux.' }],
   },

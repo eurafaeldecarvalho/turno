@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.19 (2026-10-27)
+
+### Fixes
+- Windows: the Claude footer and agent status also work when the user name has a curly apostrophe (like O’Brien).
+
 ## 0.9.18 (2026-10-27)
 
 ### Fixes
