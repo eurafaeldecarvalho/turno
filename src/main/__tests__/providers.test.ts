@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveProviderEnv, effectiveModel, getConnection, findConnection, requireConnection, runConnection, runProvider, connectionAccountEnv, DEFAULT_CONNECTIONS } from '../providers'
+import { resolveProviderEnv, effectiveModel, getConnection, findConnection, requireConnection, runConnection, runProvider, connectionAccountEnv, DEFAULT_CONNECTIONS, renameLegacyDefaults } from '../providers'
 import type { Connection } from '../../shared/types'
 
 const endpoint: Connection = {
@@ -143,5 +143,20 @@ describe('connectionAccountEnv (env de conta de conexao no ranking)', () => {
   })
   it('deveManterOModeloDaConexao', () => {
     expect(connectionAccountEnv(endpoint, 'tok').ANTHROPIC_MODEL).toBe('my-model')
+  })
+})
+
+describe('nome da conexao padrao do Claude (app em ingles)', () => {
+  it('instalacao nova ja nasce com o nome em ingles', () => {
+    expect(DEFAULT_CONNECTIONS.find((c) => c.id === 'claude-max')?.name).toBe('Claude (subscription)')
+  })
+
+  it('settings antigos com o nome padrao em portugues sao renomeados; nome escolhido pelo usuario fica', () => {
+    const out = renameLegacyDefaults([
+      { id: 'claude-max', name: 'Claude (assinatura)', kind: 'claude' },
+      { id: 'outra', name: 'Claude (assinatura)', kind: 'claude' },
+    ])
+    expect(out.map((c) => c.name)).toEqual(['Claude (subscription)', 'Claude (assinatura)'])
+    expect(renameLegacyDefaults([{ id: 'claude-max', name: 'Minha conta', kind: 'claude' }])[0].name).toBe('Minha conta')
   })
 })

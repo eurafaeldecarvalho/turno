@@ -2,8 +2,8 @@ import { app } from 'electron'
 import { join } from 'node:path'
 import { readJson, reportBadShape, writeJsonAtomic } from './jsonStore'
 import { THEMES } from '../shared/themes'
-import type { Settings } from '../shared/types'
-import { DEFAULT_CONNECTIONS } from './providers'
+import type { Connection, Settings } from '../shared/types'
+import { DEFAULT_CONNECTIONS, renameLegacyDefaults } from './providers'
 import { savedShell } from './platform'
 import { existsSync } from 'node:fs'
 
@@ -56,7 +56,7 @@ function sameShape(v: unknown, def: unknown): boolean {
   return typeof v === typeof def
 }
 const nonEmpty = (v: unknown): boolean => typeof v === 'string' && !!v.trim()
-const validConn = (c: unknown): boolean =>
+const validConn = (c: unknown): c is Connection =>
   isObj(c) && nonEmpty(c.id) && nonEmpty(c.name) && (c.kind === 'claude' || (c.kind === 'endpoint' && nonEmpty(c.baseUrl) && nonEmpty(c.model)))
 const oneOf = (...xs: unknown[]) => (v: unknown): boolean => xs.includes(v)
 const range = (min: number, max: number) => (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max
@@ -99,7 +99,7 @@ function clean(saved: Record<string, unknown>): { s: Partial<Settings>; bad: str
     } else if (k === 'connections') {
       const list = (v as unknown[]).filter(validConn)
       if (list.length !== (v as unknown[]).length) bad.push('connections')
-      out[k] = list.length ? list : DEFAULT_CONNECTIONS
+      out[k] = list.length ? renameLegacyDefaults(list) : DEFAULT_CONNECTIONS
     } else out[k] = v
   }
   return { s: out as Partial<Settings>, bad }

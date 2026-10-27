@@ -4,7 +4,7 @@ import { translatorBase, translatorInfo } from './translator'
 // Provedores semeados por padrao. Viram dados editaveis em settings.json; nada aqui e hardcode de codigo.
 // 'claude-max' = login do CLI. 'qwen-local' = preset de endpoint Ollama (editavel/removivel pelo usuario).
 export const DEFAULT_CONNECTIONS: Connection[] = [
-  { id: 'claude-max', name: 'Claude (assinatura)', kind: 'claude' },
+  { id: 'claude-max', name: 'Claude (subscription)', kind: 'claude' },
   {
     id: 'qwen-local',
     name: 'Ollama (local)',
@@ -17,6 +17,11 @@ export const DEFAULT_CONNECTIONS: Connection[] = [
     extraEnv: { CLAUDE_CODE_MAX_CONTEXT_TOKENS: '131072' },
   },
 ]
+
+// Nome padrao antigo (em portugues) gravado no settings.json de instalacoes anteriores: vira o nome em ingles.
+// So o nome que o proprio Turno semeou; um nome escolhido pelo usuario fica como esta.
+export const renameLegacyDefaults = (list: Connection[]): Connection[] =>
+  list.map((c) => (c.id === 'claude-max' && c.name === 'Claude (assinatura)' ? { ...c, name: 'Claude (subscription)' } : c))
 
 // Endpoint que e a API da propria Anthropic (chave de API, cobrada por uso), nao um provedor compativel.
 export const isAnthropicApi = (conn: Connection, token?: string): boolean =>
