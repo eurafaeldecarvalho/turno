@@ -16,7 +16,8 @@ const got: Array<{ url: string; token: string; body: string }> = []
 const REPLY = '╭ Opus 5  HIGH  ·  eu\n╰ 5h   ━━━━  13%   ↺ 3h54m\n\n'
 
 beforeAll(async () => {
-  dir = join(mkdtempSync(join(tmpdir(), 'turno-scripts-')), "José $x O'Brien [1]")
+  // no Linux/macOS "\\" e caractere valido de nome de pasta (no Windows e o separador)
+  dir = join(mkdtempSync(join(tmpdir(), 'turno-scripts-')), win ? "José $x O'Brien [1]" : "José $x O'Brien [1] a\\b")
   mkdirSync(dir)
   for (const [name, text] of Object.entries(scriptFiles())) writeFileSync(join(dir, name), text)
   server = createServer((req, res) => {
@@ -37,7 +38,7 @@ afterAll(() => {
 // Git Bash do Windows (o Claude usa ele quando existe; senao o PowerShell): os dois caminhos sao testados no CI
 const GIT_BASH = 'C:\\Program Files\\Git\\bin\\bash.exe'
 
-// roda o comando como o Claude Code roda: statusline pela string de comando num shell; hook na forma exec (sem shell)
+// roda o comando como o Claude Code roda: statusline e hook sempre por um shell (sh no Linux/macOS; Git Bash ou PowerShell no Windows)
 function run(kind: 'statusline' | 'hook', input: string, withTurno = true, shell: 'native' | 'gitbash' = 'native'): Promise<string> {
   const w = claudeSessionWiring(process.platform, dir)
   const env = { ...process.env, TMPDIR: dir, TEMP: dir, ...(withTurno ? { TURNO_HOOK_PORT: String(port), TURNO_HOOK_TOKEN: 'tok', TURNO_AGENT_KEY: 'k1', TURNO_ACCOUNT_ID: 'acc' } : { TURNO_HOOK_PORT: '' }) }
@@ -108,6 +109,10 @@ describe('configuracao dos scripts por sistema', () => {
     const h = /-EncodedCommand ([A-Za-z0-9+/=]+)$/.exec(w.hook('Stop').command)!
     expect(Buffer.from(h[1], 'base64').toString('utf16le')).toBe("& 'C:/Users/José $x O''Brien [1]/AppData/turno/turno-hook.ps1' 'Stop'")
     expect(w.hook('Stop')).toMatchObject({ type: 'command', timeout: 10 })
+  })
+  it('deveManterABarraInvertidaDoCaminhoNoLinuxEMac (so o Windows troca \\ por /)', () => {
+    expect(claudeSessionWiring('linux', '/home/eu/a\\b').statusLine.command).toBe("sh '/home/eu/a\\b/turno-statusline.sh'")
+    expect(claudeSessionWiring('win32', 'C:\\Users\\eu').statusLine.command).toContain('-EncodedCommand')
   })
   it('deveUsarShComAspasSimplesNoLinuxEMac', () => {
     const w = claudeSessionWiring('linux', "/home/eu $x/O'Brien")

@@ -73,11 +73,13 @@ const psQuote = (v: string): string => `'${v.replace(/'/g, "''")}'`
 // PowerShell (o Claude usa um ou outro) mexem no caminho, por mais estranho que seja o nome do usuario ($, ', [ ]).
 const psEncoded = (cmd: string): string => `powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${Buffer.from(cmd, 'utf16le').toString('base64')}`
 
-// Como o settings da sessao (--settings) chama os scripts. dir com barras normais ("/"), tambem no Windows.
+// Como o settings da sessao (--settings) chama os scripts. No Windows o caminho vai com barras normais ("/").
 // Windows: PowerShell com o comando codificado (funciona pelo Git Bash e pelo PowerShell). Nao usa a forma exec (args):
 // um Claude antigo que ignore "args" rodaria powershell.exe puro lendo o JSON do hook como comando.
 export function claudeSessionWiring(platform: NodeJS.Platform, dir: string) {
-  const at = (name: string): string => `${dir.replace(/\\/g, '/').replace(/\/+$/, '')}/${name}`
+  // so no Windows "\\" e separador (vira "/"); no Linux/macOS e um caractere valido do nome da pasta
+  const base = platform === 'win32' ? dir.replace(/\\/g, '/') : dir
+  const at = (name: string): string => `${base.replace(/\/+$/, '')}/${name}`
   if (platform === 'win32') {
     return {
       statusLine: { type: 'command', command: psEncoded(`& ${psQuote(at('turno-statusline.ps1'))}`), padding: 0 },
