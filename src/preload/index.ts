@@ -65,6 +65,7 @@ const api: TurnoApi = {
     notices: (): Promise<Array<{ file: string; message: string }>> => ipcRenderer.invoke('ui:notices'),
     setModalOpen: (open: boolean): Promise<void> => ipcRenderer.invoke('ui:setModalOpen', open),
     detectAgents: () => ipcRenderer.invoke('ui:detectAgents'),
+    installClaude: () => ipcRenderer.invoke('ui:installClaude'),
     ollamaModels: (baseUrl?: string) => ipcRenderer.invoke('ui:ollamaModels', baseUrl),
     version: () => ipcRenderer.invoke('ui:version'),
   },

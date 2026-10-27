@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { agentDef, agentStartCwd } from '../../shared/agents'
+import { agentDef, agentStartCwd, installCommandFor } from '../../shared/agents'
 import { getSettingsSnapshot } from './appearance'
 import { askConfirm } from './ConfirmDialog'
 import type { DockviewApi, Direction } from 'dockview-react'
@@ -398,4 +398,15 @@ export function restoreLayout(): boolean {
     api.clear()
     return false
   }
+}
+
+// Instala um agente num terminal com o instalador oficial dele (Claude: nativo, sem Node). No Windows o do Claude e
+// PowerShell (irm | iex): o terminal abre no PowerShell qualquer que seja o shell padrao. false = sem comando conhecido.
+export function installAgent(id: string): boolean {
+  const def = agentDef(id)
+  const win = !!window.turno.winBuild
+  const cmd = def && installCommandFor(def, win)
+  if (!def || !cmd) return false
+  openTerminal('right', { initialCommand: cmd, ...(win && id === 'claude' ? { shell: 'powershell.exe' } : {}) }, `install · ${def.name}`)
+  return true
 }

@@ -429,6 +429,7 @@ export interface TurnoApi {
     notices(): Promise<Array<{ file: string; message: string }>> // avisos do main (arquivo de dados ilegivel etc.)
     setModalOpen(open: boolean): Promise<void> // modal aberto: janela opaca (window opacity so na tela principal)
     detectAgents(): Promise<DetectedAgent[]> // CLIs de agentes encontrados no PATH (onboarding)
+    installClaude(): Promise<{ ok: boolean; log: string }> // instalador oficial do Claude Code, sem terminal (introducao)
     ollamaModels(baseUrl?: string): Promise<string[]> // modelos instalados no Ollama
     version(): Promise<string>
   }

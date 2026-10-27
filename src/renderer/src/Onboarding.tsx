@@ -198,6 +198,19 @@ function AgentsStep({ s }: { s: Settings }) {
       if (a.find((x) => x.id === 'ollama')?.path) void window.turno.ui.ollamaModels(local?.baseUrl).then(setModels)
     })
   }, [])
+  const [installing, setInstalling] = useState(false)
+  const installClaudeHere = async (): Promise<void> => {
+    setInstalling(true)
+    const r = await window.turno.ui.installClaude().catch((e) => ({ ok: false, log: String((e as Error).message) }))
+    const found = await window.turno.ui.detectAgents()
+    setAgents(found)
+    setInstalling(false)
+    if (r.ok && found.find((x) => x.id === 'claude')?.path) {
+      toast('Claude Code installed. Sign in to start using it.', 'ok')
+      setClaude('checking')
+      void window.turno.provider.claudeStatus().then((ok) => setClaude(ok ? 'in' : 'out'))
+    } else toast(`Claude Code didn't install.${r.log ? ` ${r.log.split('\n').slice(-2).join(' ')}` : ''} Try Settings › Agents & accounts › Install, which runs it in a terminal.`, 'warn', { sticky: true })
+  }
   const signIn = async (): Promise<void> => {
     setClaude('busy')
     const ok = await window.turno.provider.claudeLogin().catch(() => false)
@@ -238,6 +251,13 @@ function AgentsStep({ s }: { s: Settings }) {
                   {models.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>
               ) : <span className="muted small">{models && !models.length ? 'Ollama is not running or has no models' : local ? 'Reading models…' : 'Add it in Settings › Connections'}</span>
+            ) : !a.path && a.id === 'claude' ? (
+              // Claude Code e o que o Turno usa: instala aqui mesmo, com o instalador oficial (sem Node)
+              installing ? (
+                <span className="muted small">Installing Claude Code… (about a minute)</span>
+              ) : (
+                <button className="btn small primary" onClick={() => void installClaudeHere()}>Install Claude Code</button>
+              )
             ) : !a.path ? (
               <button className="btn ghost small" onClick={() => void window.turno.ui.openExternal(a.url)}>How to install</button>
             ) : (

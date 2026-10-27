@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
+import { claudeInstallCommand } from '../../../shared/agents'
 import { toast } from '../Toast'
 import { plural } from '../fmt'
 import type { Connection, PreflightResult } from '../../../shared/types'
 import { updateSettings, useSettings } from '../appearance'
 import { connectionsReducer, newConnectionId, validateConnectionForm } from '../connectionsStore'
-import { openTerminal } from '../layout'
+import { installAgent } from '../layout'
 import { useStore } from '../store'
 import { askConfirm } from '../ConfirmDialog'
 import { CATALOG, CatalogPicker, type CatalogEntry } from './CatalogPicker'
 import { setSettingsCloseGuard } from '../SettingsModal'
 
 // Comando de bootstrap do Claude Code (quando o binario nao existe). Editavel; confirme em docs.claude.com.
-const CLAUDE_INSTALL_CMD = 'npm install -g @anthropic-ai/claude-code'
+const CLAUDE_INSTALL_CMD = claudeInstallCommand(window.turno.winBuild ? 'win32' : 'linux') // instalador oficial, sem Node
 
 // Aba Conexoes: gerencia os provedores de IA. Claude = login OAuth do CLI (sem segredo guardado aqui).
 // Endpoint = Anthropic-compativel (Ollama, OpenAI-compat via shim): baseUrl + model + token (cofre).
@@ -196,7 +197,7 @@ export function ConnectionsSection() {
                 {res?.state === 'missing_binary' && (
                   <div className="row small wrap">
                     <code className="mono">{CLAUDE_INSTALL_CMD}</code>
-                    <button className="btn ghost small" onClick={() => openTerminal('right', { initialCommand: CLAUDE_INSTALL_CMD }, 'Install Claude Code')}>Install in terminal</button>
+                    <button className="btn ghost small" onClick={() => installAgent('claude')}>Install in terminal</button>
                     <button className="btn ghost small" onClick={() => void navigator.clipboard.writeText(CLAUDE_INSTALL_CMD)}>Copy</button>
                   </div>
                 )}

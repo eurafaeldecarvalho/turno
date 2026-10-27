@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto'
 import type { AccountUsage, AgentAccount, AgentsState, Connection, RankStrategy, UsageWindow } from '../shared/types'
 import { AGENTS, agentDef } from '../shared/agents'
 import { readJson, writeJsonAtomic } from './jsonStore'
-import { childEnv } from './env'
+import { childEnv, withUserBin } from './env'
 
 // Registro de contas de agentes (botao Agent). Uma conta = um agente CLI + uma pasta de config isolada
 // (CLAUDE_CONFIG_DIR, CODEX_HOME...). O login e feito pelo proprio CLI, num terminal visivel: o Turno nunca le,
@@ -135,7 +135,7 @@ function scheduleExpiry(): void {
 // PATH ATUAL do sistema (do registro, no Windows), nao o que foi capturado quando o Turno abriu: assim um
 // CLI instalado DEPOIS de abrir o Turno aparece ao reverificar, sem precisar reiniciar o app.
 function currentPath(): Promise<string> {
-  const base = process.env.Path ?? process.env.PATH ?? ''
+  const base = withUserBin(process.env.Path ?? process.env.PATH ?? '', homedir(), process.platform)
   if (process.platform !== 'win32') return Promise.resolve(base)
   const expand = (s: string): string => s.replace(/%([^%]+)%/g, (m, n) => process.env[n] ?? process.env[String(n).toUpperCase()] ?? m)
   const read = (key: string): Promise<string> =>
@@ -569,6 +569,7 @@ export function addConnectionAccount(connId: string): AgentAccount {
   if (!c) throw new Error(`connection "${connId}" isn't available; add it in Settings › Connections first`)
   if (s.accounts.some((a) => a.connection === connId)) throw new Error(`${c.name} is already in the list`)
   delete usage[connectionAccountId(connId)] // limite/bloqueio de quando estava na lista antes nao volta junto
+  saveUsageSoon()
   const account: AgentAccount = { id: connectionAccountId(connId), agent: 'claude', connection: connId, label: c.name, rank: nextRank(), enabled: true, home: null, createdAt: new Date().toISOString() }
   s.accounts.push(account)
   save()

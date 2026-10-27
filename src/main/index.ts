@@ -16,7 +16,7 @@ import { closeSession, initBroker, listSessions, prepareLaunch, prepareRaw, swap
 import { listMcp, mcpStatus, removeMcp, saveMcp } from './mcphub'
 import { connectJira, disconnectJira, listTasks, startTask } from './tasks'
 import { agentDef } from '../shared/agents'
-import { detectAgents, ollamaModels } from './onboarding'
+import { detectAgents, installClaude, ollamaModels } from './onboarding'
 import { saveRoutine, setRoutineEnabled, defaultConfig } from './routines'
 import { catchUp, findRoutine, followUp, getRoutines, reload, routineOf, runRoutine, setRoot, startEngine } from './engine'
 import { notify } from './notify'
@@ -381,6 +381,7 @@ ipcMain.handle('ui:openExternal', (_e, url: string) => {
 })
 ipcMain.handle('ui:notices', () => takeNotices())
 ipcMain.handle('ui:detectAgents', () => detectAgents())
+ipcMain.handle('ui:installClaude', () => installClaude())
 ipcMain.handle('ui:ollamaModels', (_e, baseUrl?: string) => ollamaModels(baseUrl))
 ipcMain.handle('ui:version', () => app.getVersion())
 // Window opacity vale so para a tela principal: com um modal aberto a janela fica opaca.

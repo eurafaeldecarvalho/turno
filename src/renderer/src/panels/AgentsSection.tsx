@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { AGENTS, agentDef } from '../../../shared/agents'
+import { AGENTS, agentDef, installCommandFor } from '../../../shared/agents'
 import { useAgents, usageText, usageTone, whenText } from '../agentStore'
-import { openTerminal } from '../layout'
+import { installAgent, openTerminal } from '../layout'
 import { closeSettingsModal } from '../SettingsModal'
 import { useSettings } from '../appearance'
 import { askConfirm } from '../ConfirmDialog'
@@ -125,9 +125,9 @@ export function AgentsSection() {
   const selInstalled = addKind !== 'iso' || st.installed.includes(addId)
   const install = (): void => {
     if (!selDef) return
-    if (selDef.install) {
+    if (installCommandFor(selDef, !!window.turno.winBuild)) {
       closeSettingsModal()
-      openTerminal(undefined, { initialCommand: selDef.install }, `install · ${selDef.name}`)
+      installAgent(selDef.id)
       toast(`Installing ${selDef.name} in a terminal. When it finishes, reopen Agents & accounts and add the account.`, 'info', { sticky: true })
       void window.turno.agents.detect()
     } else if (selDef.url) {
@@ -275,8 +275,8 @@ export function AgentsSection() {
       {adding && !selInstalled && (
         <small className="tone-warn">
           {selDef?.name} isn't installed on this PC.{' '}
-          {selDef?.install
-            ? `"Install ${selDef.name}" runs ${selDef.install} in a terminal; reopen this page when it finishes to add the account.`
+          {selDef && installCommandFor(selDef, !!window.turno.winBuild)
+            ? `"Install ${selDef.name}" runs ${installCommandFor(selDef, !!window.turno.winBuild)} in a terminal; reopen this page when it finishes to add the account.`
             : 'Install its CLI from its site, then it shows up here.'}
         </small>
       )}

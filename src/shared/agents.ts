@@ -235,3 +235,10 @@ export function pushRecentDir(list: string[], dir: string): string[] {
   const rest = list.map(norm).filter((x) => x && x !== d)
   return (d ? [d, ...rest] : rest).slice(0, 5)
 }
+
+// Instalador oficial do Claude Code (nativo, sem Node, sem administrador; se atualiza sozinho): code.claude.com/docs/en/setup
+export const claudeInstallCommand = (platform: NodeJS.Platform): string =>
+  platform === 'win32' ? 'irm https://claude.ai/install.ps1 | iex' : 'curl -fsSL https://claude.ai/install.sh | bash'
+// Comando de instalacao de um agente nesta maquina (o do Claude depende do sistema; os outros vem do catalogo)
+export const installCommandFor = (def: { id: string; install?: string }, isWindows: boolean): string | undefined =>
+  def.id === 'claude' ? claudeInstallCommand(isWindows ? 'win32' : 'linux') : def.install

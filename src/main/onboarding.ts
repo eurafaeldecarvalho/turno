@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { childEnv } from './env'
+import { childEnv, claudeInstallCommand } from './env'
 import type { DetectedAgent } from '../shared/types'
 
 // CLIs de agentes que o Turno sabe abrir (onboarding mostra os encontrados no PATH primeiro).
@@ -34,4 +34,16 @@ export async function ollamaModels(baseUrl = 'http://localhost:11434'): Promise<
   } catch {
     return []
   }
+}
+
+// Instala o Claude Code sem terminal (introducao): o instalador oficial, nativo, sem Node e sem administrador.
+// Devolve o fim do log para mostrar se falhar. Linux/macOS: bash; Windows: PowerShell.
+export function installClaude(): Promise<{ ok: boolean; log: string }> {
+  const cmd = claudeInstallCommand(process.platform)
+  const [file, args] = process.platform === 'win32' ? ['powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', cmd]] : ['bash', ['-lc', cmd]]
+  return new Promise((res) =>
+    execFile(file, args, { env: childEnv(), timeout: 10 * 60_000, windowsHide: true, maxBuffer: 4 * 1024 * 1024 }, (err, out, errOut) =>
+      res({ ok: !err, log: `${String(out ?? '')}${String(errOut ?? '')}`.trim().split(/\r?\n/).slice(-12).join('\n') }),
+    ),
+  )
 }

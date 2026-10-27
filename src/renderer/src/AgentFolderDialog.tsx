@@ -67,8 +67,10 @@ export function AgentFolderHost() {
   const start = getSettingsSnapshot()?.agentStartDir ?? ''
   const recent = readRecent().filter((d) => d !== start)
   const choose = async (): Promise<void> => {
+    const asked = current
     const dir = await window.turno.ui.pickFolder()
-    if (dir) openIn(dir)
+    // popup fechado (Esc) ou trocado por outro New agent enquanto o seletor do sistema estava aberto: nao abre nada
+    if (dir && current === asked) openIn(dir)
   }
   return (
     <div className="modal-backdrop" style={{ zIndex: z }} onMouseDown={(e) => e.target === e.currentTarget && (e.preventDefault(), close())}>
