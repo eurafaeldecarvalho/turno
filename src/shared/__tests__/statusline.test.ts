@@ -53,3 +53,16 @@ describe('rodape: texto de fora nao vira comando de terminal', () => {
     expect(plain(renderStatusline({ rate_limits: { five_hour: { used_percentage: 10, resets_at: ms } } }, '', now))).toContain('↺ 3h54m')
   })
 })
+
+describe('rodape: casos de borda achados no QA', () => {
+  it('naoDeveMostrar100PorCentoAntesDeBaterNoLimite', () => {
+    expect(plain(renderStatusline({ rate_limits: { five_hour: { used_percentage: 99.6 } } }, '', now))).toContain(' 99%')
+  })
+  it('deveManterO1MDoModeloMesmoComNomeLongo', () => {
+    const out = plain(renderStatusline({ model: { display_name: 'anthropic.claude-opus-5-5-20261001-v1:0 (1M context)' } }, '', now))
+    expect(out).toContain('1M')
+  })
+  it('deveMostrarAContaMesmoSemNomeDeModelo', () => {
+    expect(plain(renderStatusline({ rate_limits: { five_hour: { used_percentage: 50 } } }, 'eu', now))).toContain('eu')
+  })
+})

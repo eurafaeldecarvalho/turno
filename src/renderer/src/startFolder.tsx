@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { startFolderLabel } from '../../shared/agents'
 import { updateSettings, useSettings } from './appearance'
 
 // Pasta inicial do agente (Settings › Agents e rodape): onde o Agent/Chat abre quando a origem nao pede uma pasta.
@@ -14,7 +13,7 @@ export function useStartFolderMissing(dir: string): boolean {
   const [missing, setMissing] = useState(false)
   useEffect(() => {
     if (!dir) return setMissing(false)
-    void window.turno.ui.fileExists(dir).then((ok) => setMissing(!ok))
+    void window.turno.ui.pathExists(dir).then((ok) => setMissing(!ok)) // pasta (fileExists so aceita arquivo)
   }, [dir])
   return missing
 }
@@ -40,7 +39,7 @@ export function StartFolderCard() {
         </div>
       </label>
       {missing && <small className="tone-warn">This folder wasn't found; agents open in your home folder until you pick another.</small>}
-      <p className="muted small">Also changeable from the status bar: click the folder ({startFolderLabel(dir)}) at the bottom.</p>
+      <p className="muted small">New agent asks where to open each time; this folder is the default there (just press Enter).</p>
     </section>
   )
 }

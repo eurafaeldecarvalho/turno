@@ -714,7 +714,7 @@ body.modal-open .drag { -webkit-app-region: no-drag; }
 .onb-head img { flex: none; border-radius: 9px; }
 .onb-head h2 { margin: 2px 0 4px; font-size: calc(var(--ui-size, 13px) * 18 / 13); font-weight: 600; letter-spacing: -0.01em; }
 .onb-head p { margin: 0; line-height: 1.5; max-width: 60ch; }
-.onb-steps { list-style: none; display: flex; gap: 4px; margin: 0; padding: 6px 22px 12px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.onb-steps { list-style: none; display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 6px 22px 12px; border-bottom: 1px solid var(--border); } /* quebra linha em vez de cortar (fontes largas) */
 .onb-steps button { display: flex; align-items: center; gap: 7px; padding: 5px 9px 5px 5px; border: 0; border-radius: 999px; background: none; color: var(--muted); font: inherit; font-size: calc(var(--ui-size, 13px) * 12 / 13); cursor: pointer; white-space: nowrap; }
 .onb-steps button:hover { background: var(--surface-2); color: var(--text); }
 .onb-num { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-strong); font-size: calc(var(--ui-size, 13px) * 11 / 13); font-variant-numeric: tabular-nums; }

@@ -42,15 +42,19 @@ function effortPill(level: string): string {
 function windowRow(label: string, w: Record<string, unknown>, now: number): string | undefined {
   const raw = num(w.used_percentage) ?? num(w.utilization)
   if (raw === undefined) return undefined
-  const p = Math.max(0, Math.min(100, Math.round(raw)))
+  // para baixo: 99,6% nao aparece como 100% (cheio, "no limite") antes da hora
+  const p = Math.max(0, Math.min(100, Math.floor(raw)))
   return `${fg(C.label)}${label}${X}   ${bar(p)}   ${fg(C.pct)}${BOLD}${String(p).padStart(3)}%${X}   ${fg(C.meta)}↺ ${resetIn(num(w.resets_at), now)}${X}`
 }
 
 // p = JSON que o Claude Code manda ao statusline; account = nome curto da conta (ou da conexao de API)
 export function renderStatusline(p: Record<string, unknown>, account: string, now: number = Date.now()): string {
   const rows: string[] = []
-  // "Opus 5 (1M context)" -> "Opus 5 1M"
-  const model = clean(obj(p.model).display_name).replace(/\(([0-9]+[MK]) context\)/, '$1').trim()
+  // "Opus 5 (1M context)" -> "Opus 5 1M"; nome longo e cortado ANTES do sufixo, que fica sempre visivel
+  const rawModel = String(obj(p.model).display_name ?? '')
+  const ctx = /\(([0-9]+[MK]) context\)/.exec(rawModel)?.[1]
+  const base = clean(rawModel.replace(/\(([0-9]+[MK]) context\)/, ''), ctx ? 40 - ctx.length - 1 : 40)
+  const model = [base, ctx].filter(Boolean).join(' ')
   const effort = clean(obj(p.effort).level, 10).toUpperCase()
   account = clean(account)
   if (model) {
@@ -58,7 +62,7 @@ export function renderStatusline(p: Record<string, unknown>, account: string, no
     if (effort) row += `  ${effortPill(effort)}`
     if (account) row += `  ${fg(C.sep)}·${X}  ${fg(C.acct)}${BOLD}${account}${X}`
     rows.push(row)
-  }
+  } else if (account) rows.push(`${fg(C.acct)}${BOLD}${account}${X}`) // sem nome de modelo ainda: a conta continua visivel
   const rl = obj(p.rate_limits)
   for (const [label, key] of [['5h', 'five_hour'], ['7d', 'seven_day']] as const) {
     const r = windowRow(label, obj(rl[key]), now)

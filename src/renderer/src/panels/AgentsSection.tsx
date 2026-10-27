@@ -30,6 +30,8 @@ export function AgentsSection() {
   const [adding, setAdding] = useState('')
   const [addKind, addId] = adding.split(/:(.*)/) as [string, string]
   const conns = useSettings()?.connections ?? []
+  // logins deste PC que ainda nao estao na lista (grupo some quando vazio)
+  const pcSignIns = AGENTS.filter((a) => st.installed.includes(a.id) && !st.accounts.some((x) => x.id === `default-${a.id}`))
   useEffect(() => void window.turno.agents.detect(), [])
   const accounts = st.accounts
   const multi = AGENTS.filter((a) => a.homeVar) // todos que suportam varias contas; os nao instalados ganham o botao Install
@@ -250,11 +252,13 @@ export function AgentsSection() {
         <select id="acct-add" aria-label="Agent for the new account" value={adding} onMouseDown={() => void window.turno.agents.detect()} onChange={(e) => setAdding(e.target.value)}>
           <option value="">Add an account…</option>
           {/* nada entra sozinho: login deste PC, conta separada ou conexao de API, cada um adicionado aqui */}
-          <optgroup label="Sign-in already on this PC">
-            {AGENTS.filter((a) => st.installed.includes(a.id) && !accounts.some((x) => x.id === `default-${a.id}`)).map((a) => (
-              <option key={a.id} value={`default:${a.id}`}>{a.name}</option>
-            ))}
-          </optgroup>
+          {pcSignIns.length > 0 && (
+            <optgroup label="Sign-in already on this PC">
+              {pcSignIns.map((a) => (
+                <option key={a.id} value={`default:${a.id}`}>{a.name}</option>
+              ))}
+            </optgroup>
+          )}
           <optgroup label="Separate sign-in (new account)">
             {multi.map((a) => <option key={a.id} value={`iso:${a.id}`}>{a.name}{st.installed.includes(a.id) ? '' : ' (not installed)'}</option>)}
           </optgroup>
