@@ -27,12 +27,13 @@ import { SettingsPanel } from './panels/SettingsPanel'
 import { Sidebar } from './Sidebar'
 import { StatusBar } from './StatusBar'
 import { ConfirmHost } from './ConfirmDialog'
+import { AgentFolderHost, newAgentAsk } from './AgentFolderDialog'
 import { SettingsModalHost, openSettingsModal } from './SettingsModal'
 import { OnboardingHost, maybeShowIntro, openOnboarding, openWhatsNew } from './Onboarding'
 import { RoutineEditorModalHost } from './RoutineEditorModal'
 import { PanelModalHost } from './PanelModal'
 import { ToastHost } from './Toast'
-import { dockApi, syncRoutineTitles, openAdhoc, openFanout, openHistory, openRoutine, openRun, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi, openAgent, openTasks } from './layout'
+import { dockApi, syncRoutineTitles, openAdhoc, openFanout, openHistory, openRoutine, openRun, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi, openTasks } from './layout'
 import { getStore, initStore, useStore } from './store'
 import { plural } from './fmt'
 import { addTerminalItem, openItem, patchItem, setDragging } from './sidebarStore'
@@ -265,7 +266,7 @@ function Welcome(_: IWatermarkPanelProps) {
       <h1>Turno</h1>
       <p className="muted">Agents, terminals and routines on your PC, with Claude, local models or any provider.</p>
       <div className="welcome-actions">
-        <button className="btn primary" onClick={() => openAgent()}>
+        <button className="btn primary" onClick={() => newAgentAsk()}>
           <IconChat /> New agent
         </button>
         <button className="btn" onClick={() => openTerminal()}>
@@ -413,7 +414,7 @@ export function App() {
       // paleta: Ctrl+Shift+P em qualquer lugar; Ctrl+K so fora do terminal (no shell e apagar ate o fim da linha)
       if (ev.ctrlKey && ev.shiftKey && k === 'p') return hit(() => openPalette())
       if (ev.ctrlKey && !ev.shiftKey && !ev.altKey && k === 'k' && !(ev.target as HTMLElement | null)?.closest?.('.xterm')) return hit(() => openPalette())
-      if (ev.ctrlKey && ev.shiftKey && k === 'n') return hit(() => openAgent())
+      if (ev.ctrlKey && ev.shiftKey && k === 'n') return hit(() => newAgentAsk())
       if (ev.ctrlKey && ev.shiftKey && k === 'r') return hit(() => openAdhoc())
       if (ev.ctrlKey && ev.shiftKey && k === 'j') return hit(() => openTasks())
       if (ev.altKey && ev.shiftKey && (k === '+' || k === '=')) hit(() => openTerminal('right'))
@@ -502,6 +503,7 @@ export function App() {
       <StatusBar />
       {/* cada janela com o proprio limite de erro: a janela fecha com um aviso, o app e os terminais seguem */}
       <ErrorBoundary scope="dialog" label="The confirmation"><ConfirmHost /></ErrorBoundary>
+      <ErrorBoundary scope="dialog" label="The folder picker"><AgentFolderHost /></ErrorBoundary>
       <ErrorBoundary scope="dialog" label="Settings"><SettingsModalHost /></ErrorBoundary>
       <ErrorBoundary scope="dialog" label="The command palette"><CommandPaletteHost /></ErrorBoundary>
       <ErrorBoundary scope="dialog" label="The setup tour"><OnboardingHost /></ErrorBoundary>
@@ -592,6 +594,7 @@ async function runSmoke(): Promise<void> {
     } else console.log('[smoke] drag-tab: nothing to drag', !!li, !!folder)
   }
   if (window.turno.smoke.view === 'onboarding') openOnboarding()
+  if (window.turno.smoke.view === 'agent-folder') newAgentAsk() // popup "Open agent in" do New agent
   if (window.turno.smoke.view === 'whatsnew') void openWhatsNew(true)
   if (window.turno.smoke.view === 'run') {
     const [last] = await window.turno.run.list(undefined, 1)

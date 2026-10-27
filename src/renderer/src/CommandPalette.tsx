@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { newAgentAsk } from './AgentFolderDialog'
 import { useModalLayer } from './modalStack'
-import { dockApi, focusTab, getActiveAgentKey, openAdhoc, openAgent, openAgentChat, openFanout, openHistory, openRoutine, openRoutineEditorModal, openTasks, openTerminal } from './layout'
+import { dockApi, focusTab, getActiveAgentKey, openAdhoc, openAgentChat, openFanout, openHistory, openRoutine, openRoutineEditorModal, openTasks, openTerminal } from './layout'
 import { openSettingsModal } from './SettingsModal'
 import { openOnboarding, openWhatsNew } from './Onboarding'
 import { ITEMS, PAGES } from './settingsRegistry'
@@ -45,11 +46,11 @@ function buildCommands(): Command[] {
   const add = (group: string, title: string, run: () => void, keys?: string, hint?: string, key?: string): void => void c.push({ id: key ?? `${group}:${title}`, group, title, run, keys, hint })
   const settings = getSettingsSnapshot()
   // New: os mesmos itens do menu New
-  add('New', 'New agent (best account)', () => openAgent(), shortcutFor('New agent'))
+  add('New', 'New agent (best account)', () => newAgentAsk(), shortcutFor('New agent'))
   // mesmas contas do menu do Agent: ligadas e de agente instalado; sem login aparece marcado
   const ag = getAgentsSnapshot()
   for (const a of ag.accounts.filter((x) => x.enabled && ag.installed.includes(x.agent)))
-    add('New', `New agent on ${a.label}${ag.signedOut.includes(a.id) ? ' (not signed in)' : ag.usage[a.id]?.state === 'exhausted' ? ' (at its limit)' : ''}`, () => openAgent({ agent: a.agent, accountId: a.id }), undefined, agentDef(a.agent)?.name, `account:${a.id}`)
+    add('New', `New agent on ${a.label}${ag.signedOut.includes(a.id) ? ' (not signed in)' : ag.usage[a.id]?.state === 'exhausted' ? ' (at its limit)' : ''}`, () => newAgentAsk({ agent: a.agent, accountId: a.id }), undefined, agentDef(a.agent)?.name, `account:${a.id}`)
   // Switch: leva a aba de agente focada (ou a ultima focada) para outra conta, continuando a conversa
   const key = getActiveAgentKey()
   const cur = key ? getAgentSession(key) : undefined

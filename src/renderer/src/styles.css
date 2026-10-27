@@ -946,3 +946,11 @@ fieldset.field > legend { font-size: calc(var(--ui-size, 13px) * 12 / 13); color
 .font-trigger { cursor: text; padding-left: 10px; font-size: var(--ui-size, 13px); }
 .font-trigger:focus { outline: none; border-color: var(--faint); box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 5%, transparent); }
 .font-opt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Popup "Open agent in" do New agent: a pasta padrao primeiro, recentes embaixo */
+.agent-folder-list { display: flex; flex-direction: column; gap: 4px; }
+.agent-folder-opt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: 8px; background: none; color: var(--text); text-align: left; cursor: pointer; }
+.agent-folder-opt:hover, .agent-folder-opt:focus-visible { background: var(--surface-3); outline: none; }
+.agent-folder-opt.default { border-color: var(--border-strong); }
+.agent-folder-opt .grow { display: flex; flex-direction: column; min-width: 0; }
+.agent-folder-opt small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

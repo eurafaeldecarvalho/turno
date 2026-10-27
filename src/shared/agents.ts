@@ -228,3 +228,10 @@ export function parseReset(text: string, now = Date.now()): string | undefined {
 export const agentStartCwd = (explicit?: string, startDir?: string): string | undefined => explicit || startDir?.trim() || undefined
 // Nome curto da pasta inicial para o rodape ("home" quando nao ha uma)
 export const startFolderLabel = (p: string): string => p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || 'home'
+// Pastas recentes do popup do New agent: a ultima primeiro, sem repetir (barra final nao conta), no maximo 5
+export function pushRecentDir(list: string[], dir: string): string[] {
+  const norm = (p: string): string => (p.length > 1 ? p.replace(/[\\/]+$/, '') : p)
+  const d = norm(dir.trim())
+  const rest = list.map(norm).filter((x) => x && x !== d)
+  return (d ? [d, ...rest] : rest).slice(0, 5)
+}

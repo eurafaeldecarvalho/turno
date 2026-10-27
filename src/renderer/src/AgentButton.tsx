@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { agentDef, unavailableText } from '../../shared/agents'
 import { useAgents, usageText, usageTone } from './agentStore'
-import { openAgent } from './layout'
+import { newAgentAsk } from './AgentFolderDialog'
 import { openSettingsModal } from './SettingsModal'
 import { menuKeyNav } from './modalStack'
 import { IconChevron, IconPlus } from './icons'
@@ -58,7 +58,7 @@ export function AgentButton() {
     <div className="agent-nav" ref={wrap}>
       <button
         className="agent-main"
-        onClick={() => openAgent()}
+        onClick={() => newAgentAsk()}
         title={best ? `Opens ${best.label} (best available account${nearLimit ? ', near its limit' : ''})` : unavailable || none}
       >
         <IconPlus /> New agent
@@ -81,7 +81,7 @@ export function AgentButton() {
                   .map((a) => {
                     const u = s.usage[a.id]
                     return (
-                      <button key={a.id} role="menuitem" onClick={() => go(() => openAgent({ agent: a.agent, accountId: a.id }))}>
+                      <button key={a.id} role="menuitem" onClick={() => go(() => newAgentAsk({ agent: a.agent, accountId: a.id }))}>
                         <span className="agent-acc" title={a.label}>
                           {a.label}
                           {best?.id === a.id && <span className="pill pill-ok agent-best">{nearLimit ? 'best · near limit' : 'best'}</span>}

@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
+import { newAgentAsk } from './AgentFolderDialog'
 import { useSettings } from './appearance'
-import { openAdhoc, openAgent, openAgentChat, openFanout, openRoutine, openTerminal } from './layout'
+import { openAdhoc, openAgentChat, openFanout, openRoutine, openTerminal } from './layout'
 import { IconChat, IconFanout, IconFolder, IconRoutine, IconSpark, IconTerminal } from './icons'
 import { shortcutFor } from './shortcuts'
 
@@ -27,7 +28,7 @@ export function NewItems({ onPick, refId }: { onPick: (run: () => void) => void;
   )
   return (
     <>
-      {item('Agent (best account)', <IconChat size={13} />, () => openAgent({ refId }), shortcutFor('New agent'))}
+      {item('Agent (best account)', <IconChat size={13} />, () => newAgentAsk({ refId }), shortcutFor('New agent'))}
       {item('Chat', <IconSpark size={13} />, () => openAgentChat(undefined, refId))}
       {item('Terminal', <IconTerminal size={13} />, () => openTerminal(undefined, {}, undefined, refId), shortcutFor('New terminal'))}
       {/* Claude Code num terminal, falando com cada conexao de modelo (Ollama, provedores do catalogo) */}
