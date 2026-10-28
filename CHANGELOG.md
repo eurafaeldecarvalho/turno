@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.23 (2026-10-28)
+
+### Features
+- Accounts: the Connections screen is merged into Accounts. Agent sign-ins and API/gateway providers are now managed in one place; "Model providers" is the provider registry that backs API accounts.
+- Accounts: a "Sort best to worst" button reorders your accounts in one click — ready and most-quota-left first, subscriptions before pay-per-use API, unavailable ones last. Your manual order still wins afterwards.
+- Catalog: "Install & start" for the OmniRoute and Claude Code Router local gateways — Turno installs the gateway, runs it, and opens its dashboard. One gateway connection exposes all of its providers.
+
 ## 0.9.22 (2026-10-28)
 
 ### Fixes

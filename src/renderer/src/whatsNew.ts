@@ -7,6 +7,14 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.23',
+    items: [
+      { title: 'One Accounts screen', text: 'Connections is merged into Accounts: your agent sign-ins and your API/gateway providers now live on one page.' },
+      { title: 'Sort accounts best to worst', text: 'A button orders your connected accounts best to worst in one click — ready and most quota first, subscriptions before pay-per-use. You can still reorder by hand.' },
+      { title: 'Add a gateway in one click', text: 'Pick OmniRoute or Claude Code Router in the catalog and click "Install & start": Turno installs and runs it, then opens its dashboard. One connection gives you all of its providers.' },
+    ],
+  },
+  {
     version: '0.9.22',
     items: [
       { title: 'Finds CLIs installed with a version manager', text: 'On Linux and macOS, Codex, Gemini, OpenCode, Copilot and other CLIs installed through nvm, Volta, fnm, pnpm or Bun now show up in Agents & accounts, so you can add their account. They used to say "not installed" when Turno was opened from the tray.' },
