@@ -57,7 +57,7 @@ function sameShape(v: unknown, def: unknown): boolean {
 }
 const nonEmpty = (v: unknown): boolean => typeof v === 'string' && !!v.trim()
 const validConn = (c: unknown): c is Connection =>
-  isObj(c) && nonEmpty(c.id) && nonEmpty(c.name) && (c.kind === 'claude' || (c.kind === 'endpoint' && nonEmpty(c.baseUrl) && nonEmpty(c.model)))
+  isObj(c) && nonEmpty(c.id) && nonEmpty(c.name) && (c.kind === 'claude' || c.via === 'route' || (c.kind === 'endpoint' && nonEmpty(c.baseUrl) && nonEmpty(c.model)))
 const oneOf = (...xs: unknown[]) => (v: unknown): boolean => xs.includes(v)
 const range = (min: number, max: number) => (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max
 // valores aceitos (mesmas faixas dos controles em Settings); fora disso o campo volta ao padrao

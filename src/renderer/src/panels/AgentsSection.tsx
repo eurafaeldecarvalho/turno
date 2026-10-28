@@ -279,9 +279,9 @@ export function AgentsSection() {
           <optgroup label="Separate sign-in (new account)">
             {multi.map((a) => <option key={a.id} value={`iso:${a.id}`}>{a.name}{st.installed.includes(a.id) ? '' : ' (not installed)'}</option>)}
           </optgroup>
-          {conns.some((c) => c.kind === 'endpoint' && !accounts.some((x) => x.connection === c.id)) && (
+          {conns.some((c) => c.kind === 'endpoint' && c.via !== 'route' && !accounts.some((x) => x.connection === c.id)) && (
             <optgroup label="API connection">
-              {conns.filter((c) => c.kind === 'endpoint' && !accounts.some((x) => x.connection === c.id)).map((c) => (
+              {conns.filter((c) => c.kind === 'endpoint' && c.via !== 'route' && !accounts.some((x) => x.connection === c.id)).map((c) => (
                 <option key={c.id} value={`conn:${c.id}`}>{c.name}</option>
               ))}
             </optgroup>

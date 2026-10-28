@@ -11,7 +11,7 @@ import { activeCount, answerPermission, initRunner, repairRunCosts, readRunEvent
 import { openDb, getRun, listRuns, threadOf, renameRoutineRuns, allRunIds } from './db'
 import { getSettings, setSettings, settingsReadable } from './settings'
 import { takeNotices } from './jsonStore'
-import { accountEnv, addAccount, addConnectionAccount, addDefaultAccount, agentsState, setConnectionSource, syncConnectionAccounts, clearBlock, clearLimit, detectInstalled, getAccount, initAccounts, refreshLogin, removeAccount, reorderAccounts, setThresholds, updateAccount } from './accounts'
+import { accountEnv, addAccount, addConnectionAccount, addDefaultAccount, agentsState, setConnectionSource, syncConnectionAccounts, clearBlock, clearLimit, detectInstalled, getAccount, initAccounts, markAccount, refreshLogin, removeAccount, reorderAccounts, routableBackends, setThresholds, updateAccount } from './accounts'
 import { closeSession, initBroker, listSessions, prepareLaunch, prepareRaw, swap, type PrepareOpts } from './agentBroker'
 import { listMcp, mcpStatus, removeMcp, saveMcp } from './mcphub'
 import { connectJira, disconnectJira, listTasks, startTask } from './tasks'
@@ -27,7 +27,7 @@ import { prepareClaude } from './claudeprep'
 import { claudeLogin, claudeLogout, claudeStatus } from './provider-auth'
 import { setSecret, deleteSecret, connectionToken } from './secrets'
 import { connectionAccountEnv, findConnection, getConnection } from './providers'
-import { startTranslator } from './translator'
+import { startTranslator, setRouter } from './translator'
 import { checkConnection } from './doctor'
 import { suggestCommand } from './ai'
 
@@ -250,6 +250,17 @@ void startTranslator((id) => {
   const conn = findConnection(getSettings(), id)
   return conn?.via === 'translate' ? { conn, key: connectionToken(conn) } : undefined
 })
+// Turno Router (/route): por request, o proxy pega o melhor backend das contas e cai pro proximo no erro, mantendo o
+// contexto. Assinatura (setup-token) ainda nao tem credencial => pulada; API/gateway roteiam ja. mark so persiste
+// limite/bloqueio (transitorio e temporario, nao suja a conta).
+setRouter(() => ({
+  plan: routableBackends(),
+  credOf: (b) => (b.kind === 'subscription' ? undefined : b.connectionId ? connectionToken(findConnection(getSettings(), b.connectionId)!) : undefined),
+  mark: (id, kind) => {
+    if (kind === 'limit') markAccount(id, 'exhausted', 'usage limit reached (router)', new Date(Date.now() + 15 * 60_000).toISOString())
+    else if (kind === 'auth') markAccount(id, 'blocked', 'the provider rejected the request (router): check the key or sign-in')
+  },
+}))
 ipcMain.handle('agents:state', () => agentsState())
 ipcMain.handle('agents:detect', () => detectInstalled())
 ipcMain.handle('agents:sessions', () => listSessions())

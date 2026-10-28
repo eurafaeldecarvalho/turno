@@ -17,7 +17,7 @@ export interface Connection {
   bootCommand?: string // ex. "ollama serve": sobe o servidor local antes de usar
   healthUrl?: string // ex. "http://localhost:11434/api/version": checa se esta de pe
   // 'translate' = provedor no formato OpenAI: o Claude Code fala com o tradutor local do Turno, que repassa ao baseUrl
-  via?: 'direct' | 'translate'
+  via?: 'direct' | 'translate' | 'route' // 'route' = o proxy de roteamento do Turno (fan-out para todas as contas)
   catalogId?: string // provedor do catalogo de onde a conexao veio
 }
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'

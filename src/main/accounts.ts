@@ -6,6 +6,8 @@ import { basename, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { AccountUsage, AgentAccount, AgentsState, Connection, RankStrategy, UsageWindow } from '../shared/types'
 import { AGENTS, agentDef } from '../shared/agents'
+import { sortAccountsBestToWorst } from '../shared/accountRank'
+import { planBackends, type Backend } from '../shared/routing'
 import { readJson, writeJsonAtomic } from './jsonStore'
 import { childEnv, loginShellPath, mergePath, withUserBin } from './env'
 
@@ -418,6 +420,23 @@ export function pickAccount(opts: { exclude?: string[]; agent?: string; excludeA
     if (holds(a)) warnedAbove = true
   }
   return opts.allowWarning ? ranked.find((a) => st(a) === 'warning') : undefined
+}
+
+// Backends do proxy de roteamento (/route): contas Claude usaveis, ordenadas melhor->pior, viradas em backends. Exclui
+// o proprio Turno Router (via='route') para nao rotear para si mesmo. O index.ts injeta isto via setRouter.
+export function routableBackends(): Backend[] {
+  const accts = load().accounts.filter((a) => a.agent === 'claude')
+  const usage = Object.fromEntries(accts.map((a) => [a.id, effectiveUsage(a.id)]))
+  const signedOut = accts.filter((a) => !signedIn(a)).map((a) => a.id)
+  const ordered = sortAccountsBestToWorst(accts, { usage, installed: installed ? [...installed] : [], signedOut })
+  const usable = (a: AgentAccount): boolean =>
+    a.enabled && (!installed || installed.has(a.agent)) && signedIn(a) && !['exhausted', 'blocked'].includes(effectiveUsage(a.id).state)
+  const orderedUsable = ordered.map((id) => accts.find((a) => a.id === id)!).filter(usable)
+  const connById = (id: string): Connection | undefined => {
+    const c = connSource?.list()?.find((x) => x.id === id)
+    return c && c.via !== 'route' ? c : undefined // anti-recursao: nunca rotear para o proprio router
+  }
+  return planBackends(orderedUsable, connById)
 }
 
 // Ordem das contas conforme a estrategia: empate sempre cai na ordem da lista.

@@ -1,5 +1,5 @@
 import type { Connection } from '../shared/types'
-import { translatorBase, translatorInfo } from './translator'
+import { translatorBase, translatorInfo, routeBase } from './translator'
 
 // Provedores semeados por padrao. Viram dados editaveis em settings.json; nada aqui e hardcode de codigo.
 // 'claude-max' = login do CLI. 'qwen-local' = preset de endpoint Ollama (editavel/removivel pelo usuario).
@@ -16,6 +16,9 @@ export const DEFAULT_CONNECTIONS: Connection[] = [
     healthUrl: 'http://localhost:11434/api/version',
     extraEnv: { CLAUDE_CODE_MAX_CONTEXT_TOKENS: '131072' },
   },
+  // Proxy de roteamento do Turno: um endpoint que fala por TODAS as suas contas (assinatura + API + gateway), trocando
+  // de backend no limite/erro e mantendo a conversa. Aponte uma rotina/agente para ele como profile.
+  { id: 'turno-router', name: 'Turno Router (all accounts)', kind: 'endpoint', via: 'route' },
 ]
 
 // Nome padrao antigo (em portugues) gravado no settings.json de instalacoes anteriores: vira o nome em ingles.
@@ -31,6 +34,9 @@ export const isAnthropicApi = (conn: Connection, token?: string): boolean =>
 // claude = sem env (auth e do proprio CLI). endpoint = aponta o CLI para o baseUrl/model/token.
 export function resolveProviderEnv(conn: Connection, token?: string): Record<string, string> {
   if (conn.kind === 'claude') return { ...(conn.extraEnv ?? {}) }
+  // Turno Router: o CLI aponta para o endpoint /route; ele escolhe o melhor backend por request e cai pro proximo no erro
+  if (conn.via === 'route')
+    return { ANTHROPIC_BASE_URL: routeBase(), ANTHROPIC_AUTH_TOKEN: translatorInfo().token, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', API_TIMEOUT_MS: '1800000', ...(conn.extraEnv ?? {}) }
   // via tradutor: o CLI recebe so o endereco local e o token da sessao do tradutor; a chave do provedor fica no main
   const tr = conn.via === 'translate'
   // a API da propria Anthropic so aceita a chave em x-api-key (ANTHROPIC_API_KEY); compativeis (z.ai etc.) usam Bearer

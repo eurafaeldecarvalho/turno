@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.26 (2026-10-28)
+
+### Features
+- Turno Router (beta): a single endpoint that fronts all your accounts. Point a routine or agent at the "Turno Router" profile and each request goes to your best available account (API providers and gateways, ordered best to worst), falling back to the next one on a limit or error — all while the conversation continues, because the context stays in Claude Code. Your Claude subscription as a routed backend is next (it needs a setup token).
+
 ## 0.9.25 (2026-10-28)
 
 ### Features

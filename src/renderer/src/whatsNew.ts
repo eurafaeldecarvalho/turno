@@ -7,6 +7,12 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.26',
+    items: [
+      { title: 'Turno Router (beta)', text: 'A new "Turno Router" profile fronts all your accounts: each request goes to your best available API/gateway backend and falls back to the next on a limit or error, keeping the conversation. Point a routine or agent at it to try it. Your Claude subscription as a backend is coming next.' },
+    ],
+  },
+  {
     version: '0.9.25',
     items: [
       { title: 'Gateway dashboard inside Turno', text: "A gateway's dashboard (OmniRoute, Claude Code Router) now opens in a tab inside Turno instead of your browser — connect your providers without leaving the app." },

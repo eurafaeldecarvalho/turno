@@ -34,7 +34,7 @@ import { OnboardingHost, maybeShowIntro, openOnboarding, openWhatsNew } from './
 import { RoutineEditorModalHost } from './RoutineEditorModal'
 import { PanelModalHost } from './PanelModal'
 import { ToastHost } from './Toast'
-import { dockApi, syncRoutineTitles, openAdhoc, openFanout, openHistory, openRoutine, openRun, openTerminal, paramsOf, restoreLayout, saveLayout, setDockApi, openTasks } from './layout'
+import { dockApi, syncRoutineTitles, openAdhoc, openFanout, openHistory, openRoutine, openRun, openTerminal, openWebPanel, paramsOf, restoreLayout, saveLayout, setDockApi, openTasks } from './layout'
 import { getStore, initStore, useStore } from './store'
 import { plural } from './fmt'
 import { addTerminalItem, openItem, patchItem, setDragging } from './sidebarStore'
@@ -577,6 +577,7 @@ async function runSmoke(): Promise<void> {
     await updateSettings({ theme: window.turno.smoke.theme })
     openSettingsModal()
   }
+  if (window.turno.smoke.view === 'web') openWebPanel('data:text/html,<h1 style="color:green;font-size:90px;font-family:sans-serif">WEBVIEW_OK</h1>', 'web test')
   if (window.turno.smoke.view === 'fanout') openFanout()
   if (window.turno.smoke.view === 'adhoc') openAdhoc()
   if (window.turno.smoke.view === 'drag-tab') {

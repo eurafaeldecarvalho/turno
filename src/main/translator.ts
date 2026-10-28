@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { Agent, fetch as ufetch } from 'undici'
 import type { Connection } from '../shared/types'
+import { shouldFallback, classifyBackendFailure, type Backend, type BackendFailure } from '../shared/routing'
 
 // modelo local lento (CPU) pode levar minutos ate o primeiro pedaco: sem os tetos de 5 min do fetch padrao.
 // O agente ja tem o proprio limite (API_TIMEOUT_MS de 30 min) e o Esc cancela pelo AbortController.
@@ -276,6 +277,9 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   // so quem tem o token da sessao (o agente que o Turno abriu) usa o tradutor; navegador nao manda esse header
   const auth = String(req.headers['x-api-key'] ?? '') || String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '')
   if (!token || !safeEq(auth, token)) return sendJson(res, 401, anthropicError(401, 'invalid Turno translator token'))
+  // /route: um endpoint so que escolhe o melhor backend por request e cai pro proximo no erro (switch + contexto)
+  const rm = /^\/route(\/v1\/messages(?:\/count_tokens)?)\/?(?:\?.*)?$/.exec(req.url ?? '')
+  if (rm) return req.method === 'POST' ? handleRoute(req, res, rm[1].endsWith('count_tokens')) : void sendJson(res, 404, anthropicError(404, 'not found'))
   const m = /^\/c\/([^/]+)(\/v1\/messages(?:\/count_tokens)?)\/?(?:\?.*)?$/.exec(req.url ?? '')
   if (!m || req.method !== 'POST') return sendJson(res, 404, anthropicError(404, 'not found'))
   const found = lookup(decodeURIComponent(m[1]))
@@ -381,4 +385,179 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     }
   }
   res.end(conv.end())
+}
+
+// ---- /route: proxy de roteamento (um endpoint, varios backends, fallback mantendo o contexto) ----
+// O main injeta, por request, o plano de backends (ordenado melhor->pior), de onde vem a credencial de cada um, e como
+// marcar uma conta que falhou. Codigo novo que REUSA as primitivas testadas (toOpenAI/toAnthropic/streamConverter) e
+// NAO toca no caminho /c que ja funciona.
+export interface RouterPlan {
+  plan: Backend[]
+  credOf: (b: Backend) => string | undefined // setup-token (assinatura) ou chave da conexao
+  anthropicUrl?: string // base da assinatura (default api.anthropic.com)
+  version?: string
+  mark?: (accountId: string, kind: BackendFailure) => void // marca a conta que falhou (limite/bloqueio)
+}
+let routerFn: (() => RouterPlan) | undefined
+export function setRouter(fn: () => RouterPlan): void {
+  routerFn = fn
+}
+export const routeBase = (): string => (port ? `http://127.0.0.1:${port}/route` : '')
+
+type Tried = { ok: true; r: Response } | { ok: false; status: number; message: string }
+
+async function readErr(r: Response): Promise<string> {
+  const t = await readCapped(r, 1 << 20).catch(() => '')
+  try {
+    const j = JSON.parse(t)
+    return String(j.error?.message ?? j.message ?? t.slice(0, 2000))
+  } catch {
+    return t.slice(0, 2000) || `provider returned ${r.status}`
+  }
+}
+
+// Forward OpenAI-compat (mesma logica do /c: tradutor + retry de max_tokens), sem escrever no res (o chamador decide).
+async function tryOpenAI(url: string, model: string, body: Json, key: string | undefined, ac: AbortController): Promise<Tried> {
+  const send = (payload: Json): Promise<Response> =>
+    ufetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...(key ? { authorization: `Bearer ${key}` } : {}) }, body: JSON.stringify(payload), signal: ac.signal, dispatcher: slowOk }) as unknown as Promise<Response>
+  const payload = toOpenAI(body, model)
+  let r = await send(payload)
+  if (r.status === 400 && typeof payload.max_tokens === 'number') {
+    const t = await readCapped(r.clone(), 1 << 20).catch(() => '')
+    if (/max_(completion_)?tokens/i.test(t)) {
+      const { max_tokens, ...rest } = payload
+      r = /max_completion_tokens/i.test(t) && !/max_completion_tokens.*(exceed|too large|greater|maximum)/i.test(t) ? await send({ ...rest, max_completion_tokens: max_tokens }) : await send(rest)
+    }
+  }
+  return r.ok ? { ok: true, r } : { ok: false, status: r.status, message: await readErr(r) }
+}
+
+// Forward Anthropic-compat (assinatura via api.anthropic.com, ou conexao/gateway direto): corpo passa como esta.
+async function tryAnthropic(url: string, body: Json, cred: string | undefined, kind: 'subscription' | 'anthropic', model: string | undefined, version: string | undefined, beta: string | undefined, ac: AbortController): Promise<Tried> {
+  const payload = model ? { ...body, model } : body // gateway/conexao fixa o modelo; assinatura mantem o do request
+  const headers: Record<string, string> = { 'content-type': 'application/json', 'anthropic-version': version || '2023-06-01' }
+  if (beta) headers['anthropic-beta'] = beta
+  if (cred) kind === 'subscription' ? (headers.authorization = `Bearer ${cred}`) : (headers['x-api-key'] = cred)
+  const r = (await ufetch(url, { method: 'POST', headers, body: JSON.stringify(payload), signal: ac.signal, dispatcher: slowOk })) as unknown as Response
+  return r.ok ? { ok: true, r } : { ok: false, status: r.status, message: await readErr(r) }
+}
+
+// Stream/JSON OpenAI -> Anthropic (mesma conversao do /c, a partir das primitivas testadas).
+async function streamOpenAI(r: Response, res: ServerResponse, model: string, ac: AbortController, stream: boolean): Promise<void> {
+  if (!stream) return sendJson(res, 200, toAnthropic(JSON.parse(await readCapped(r, MAX_RESP)) as Json, model))
+  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' })
+  const conv = streamConverter(model)
+  const reader = r.body?.getReader()
+  const dec = new TextDecoder()
+  let buf = ''
+  let total = 0
+  const read = async (): Promise<ReadableStreamReadResult<Uint8Array> | undefined> => {
+    try {
+      return await reader!.read()
+    } catch (e) {
+      res.end(conv.fail(`the provider connection dropped: ${(e as Error).message}`, 502))
+      return undefined
+    }
+  }
+  while (reader) {
+    const r2 = await read()
+    if (!r2) return
+    const { done, value } = r2
+    if (done) break
+    total += value.byteLength
+    if (total > MAX_RESP) {
+      ac.abort()
+      return void res.end(conv.fail('provider response too large', 502))
+    }
+    buf += dec.decode(value, { stream: true })
+    let nl: number
+    while ((nl = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, nl).trim()
+      buf = buf.slice(nl + 1)
+      if (!line.startsWith('data:')) continue
+      const data = line.slice(5).trim()
+      if (data === '[DONE]') continue
+      try {
+        res.write(conv.push(JSON.parse(data)))
+      } catch {
+        /* linha nao-JSON */
+      }
+    }
+  }
+  buf += dec.decode()
+  const tail = buf.trim()
+  if (tail.startsWith('data:')) {
+    const data = tail.slice(5).trim()
+    if (data && data !== '[DONE]') {
+      try {
+        res.write(conv.push(JSON.parse(data)))
+      } catch {
+        /* idem */
+      }
+    }
+  }
+  res.end(conv.end())
+}
+
+// Stream/JSON Anthropic -> Anthropic (passthrough: a resposta ja esta no formato que o Claude Code espera).
+async function streamAnthropic(r: Response, res: ServerResponse, stream: boolean): Promise<void> {
+  if (!stream) {
+    res.writeHead(r.status, { 'content-type': 'application/json' })
+    return void res.end(await readCapped(r, MAX_RESP))
+  }
+  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' })
+  const reader = r.body?.getReader()
+  let total = 0
+  while (reader) {
+    let chunk: ReadableStreamReadResult<Uint8Array>
+    try {
+      chunk = await reader.read()
+    } catch (e) {
+      return void res.end(`event: error\ndata: ${JSON.stringify(anthropicError(502, `the provider connection dropped: ${(e as Error).message}`))}\n\n`)
+    }
+    if (chunk.done) break
+    total += chunk.value.byteLength
+    if (total > MAX_RESP) return void res.end(`event: error\ndata: ${JSON.stringify(anthropicError(502, 'provider response too large'))}\n\n`)
+    res.write(Buffer.from(chunk.value))
+  }
+  res.end()
+}
+
+async function handleRoute(req: IncomingMessage, res: ServerResponse, isCount: boolean): Promise<void> {
+  if (!routerFn) return sendJson(res, 503, anthropicError(503, 'router not configured'))
+  let body: Json
+  try {
+    body = JSON.parse(await readBody(req))
+  } catch {
+    return sendJson(res, 400, anthropicError(400, 'invalid JSON'))
+  }
+  if (isCount) return sendJson(res, 200, { input_tokens: Math.ceil(JSON.stringify(body.messages ?? []).length / 4 + textOf(body.system).length / 4) })
+  const { plan, credOf, anthropicUrl, version, mark } = routerFn()
+  if (!plan.length) return sendJson(res, 503, anthropicError(503, 'no account available to route to'))
+  const ac = new AbortController()
+  res.on('close', () => !res.writableEnded && ac.abort())
+  const reqVersion = String(req.headers['anthropic-version'] ?? '') || version
+  const beta = String(req.headers['anthropic-beta'] ?? '') || undefined
+  let last = { status: 503, message: 'no backend available' }
+  for (const b of plan) {
+    const cred = credOf(b)
+    if (b.kind === 'subscription' && !cred) continue // sem setup-token ainda: pula (a captura e follow-up)
+    const fail = (e: unknown): Tried => ({ ok: false, status: 0, message: String((e as Error)?.message ?? e) })
+    const t =
+      b.kind === 'openai'
+        ? await tryOpenAI(`${b.url!.replace(/\/+$/, '')}/chat/completions`, b.model || String(body.model ?? ''), body, cred, ac).catch(fail)
+        : await tryAnthropic(`${(b.kind === 'subscription' ? anthropicUrl ?? 'https://api.anthropic.com' : b.url!).replace(/\/+$/, '')}/v1/messages`, body, cred, b.kind, b.kind === 'subscription' ? undefined : b.model, reqVersion, beta, ac).catch(fail)
+    if (!t.ok) {
+      if (shouldFallback(t.status)) {
+        mark?.(b.accountId, classifyBackendFailure(t.status))
+        last = { status: t.status || 502, message: t.message }
+        continue
+      }
+      res.writeHead(t.status, { 'content-type': 'application/json' })
+      return void res.end(JSON.stringify(anthropicError(t.status, t.message)))
+    }
+    return b.kind === 'openai' ? streamOpenAI(t.r, res, b.model || String(body.model ?? ''), ac, !!body.stream) : streamAnthropic(t.r, res, !!body.stream)
+  }
+  res.writeHead(last.status, { 'content-type': 'application/json' })
+  res.end(JSON.stringify(anthropicError(last.status, last.message)))
 }
