@@ -265,6 +265,30 @@ describe('conexoes (API) no ranking de contas', () => {
     // detectInstalled de verdade: no Windows le o PATH do registro (reg query) e roda o where, bem mais lento que 5 s no CI
   }, 30_000)
 
+  it('deveAcharCliQueSoEstaNoPATHdoLoginShell (nvm: app aberto pela bandeja tem PATH minimo)', async () => {
+    if (process.platform === 'win32') return // no Windows o PATH extra vem do registro, nao do login shell
+    seed([])
+    const { m } = await load([])
+    const env = await import('../env')
+    const nvmBin = join(dir, 'nvmbin')
+    mkdirSync(nvmBin)
+    writeFileSync(join(nvmBin, 'codex'), '#!/bin/sh\n', { mode: 0o755 }) // instalado via nvm, fora de ~/.local/bin
+    const prev = { PATH: process.env.PATH, Path: process.env.Path }
+    process.env.PATH = process.env.Path = '/usr/bin:/bin' // PATH do app NAO tem a pasta do nvm
+    try {
+      env.__setLoginPathForTest(null) // sem o PATH do login shell: deteccao nao acha (o bug)
+      await m.detectInstalled()
+      expect(m.agentsState().installed).not.toContain('codex')
+      env.__setLoginPathForTest(nvmBin) // login shell expoe a pasta do nvm: agora acha (o fix)
+      await m.detectInstalled()
+      expect(m.agentsState().installed).toContain('codex')
+    } finally {
+      process.env.PATH = prev.PATH
+      process.env.Path = prev.Path
+      env.__setLoginPathForTest(null)
+    }
+  }, 30_000)
+
   it('deveAdicionarOLoginDestePcQuandoUsuarioPede', async () => {
     seed([])
     const { m } = await load([])

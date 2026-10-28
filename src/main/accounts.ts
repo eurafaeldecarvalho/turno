@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto'
 import type { AccountUsage, AgentAccount, AgentsState, Connection, RankStrategy, UsageWindow } from '../shared/types'
 import { AGENTS, agentDef } from '../shared/agents'
 import { readJson, writeJsonAtomic } from './jsonStore'
-import { childEnv, withUserBin } from './env'
+import { childEnv, loginShellPath, mergePath, withUserBin } from './env'
 
 // Registro de contas de agentes (botao Agent). Uma conta = um agente CLI + uma pasta de config isolada
 // (CLAUDE_CONFIG_DIR, CODEX_HOME...). O login e feito pelo proprio CLI, num terminal visivel: o Turno nunca le,
@@ -135,8 +135,11 @@ function scheduleExpiry(): void {
 // PATH ATUAL do sistema (do registro, no Windows), nao o que foi capturado quando o Turno abriu: assim um
 // CLI instalado DEPOIS de abrir o Turno aparece ao reverificar, sem precisar reiniciar o app.
 function currentPath(): Promise<string> {
+  // Linux/macOS: o app aberto pela bandeja herda um PATH minimo; junta o PATH real do login shell
+  // (nvm/volta/fnm/bun/pnpm...) senao CLIs instalados por gerenciador de versao ficam "not installed".
+  if (process.platform !== 'win32')
+    return loginShellPath().then((lp) => mergePath(process.env.PATH ?? '', lp, homedir(), process.platform))
   const base = withUserBin(process.env.Path ?? process.env.PATH ?? '', homedir(), process.platform)
-  if (process.platform !== 'win32') return Promise.resolve(base)
   const expand = (s: string): string => s.replace(/%([^%]+)%/g, (m, n) => process.env[n] ?? process.env[String(n).toUpperCase()] ?? m)
   const read = (key: string): Promise<string> =>
     new Promise((res) =>
