@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.24 (2026-10-28)
+
+### Features
+- Catalog: added Fireworks AI and Featherless.ai (OpenAI-compatible direct providers, bring your API key). The catalog already mirrors OmniRoute's directly-addable providers; its larger count is OmniRoute's hosted free pool, which you reach by adding OmniRoute as a gateway.
+
 ## 0.9.23 (2026-10-28)
 
 ### Features

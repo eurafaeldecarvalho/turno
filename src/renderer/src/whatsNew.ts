@@ -7,6 +7,12 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.24',
+    items: [
+      { title: 'Two more providers', text: 'Fireworks AI and Featherless.ai joined the provider catalog — OpenAI-compatible, bring your API key.' },
+    ],
+  },
+  {
     version: '0.9.23',
     items: [
       { title: 'One Accounts screen', text: 'Connections is merged into Accounts: your agent sign-ins and your API/gateway providers now live on one page.' },

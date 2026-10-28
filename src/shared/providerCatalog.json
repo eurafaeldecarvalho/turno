@@ -553,6 +553,24 @@
    "needsKey": true
   },
   {
+   "id": "fireworks",
+   "name": "Fireworks AI",
+   "kind": "api-key",
+   "style": "openai",
+   "baseUrl": "https://api.fireworks.ai/inference/v1",
+   "docsUrl": "https://fireworks.ai",
+   "needsKey": true
+  },
+  {
+   "id": "featherless",
+   "name": "Featherless.ai",
+   "kind": "api-key",
+   "style": "openai",
+   "baseUrl": "https://api.featherless.ai/v1",
+   "docsUrl": "https://featherless.ai",
+   "needsKey": true
+  },
+  {
    "id": "deepseek",
    "name": "DeepSeek",
    "kind": "api-key",
