@@ -420,3 +420,8 @@ export function setupGateway(g: CatalogGateway): boolean {
   openTerminal('right', { initialCommand: s.command }, `start · ${g.name}`)
   return true
 }
+
+// Abre uma pagina (ex.: dashboard de gateway) DENTRO do Turno, numa aba com webview. Singleton por URL (reclicar so foca).
+export function openWebPanel(url: string, title: string): void {
+  openOnce(`web:${url}`, 'web', title, { url }, 'right')
+}

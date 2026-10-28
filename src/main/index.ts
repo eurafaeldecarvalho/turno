@@ -85,6 +85,7 @@ function createWindow(): void {
       sandbox: false,
       contextIsolation: true,
       nodeIntegration: false,
+      webviewTag: true, // paineis <webview> embutidos: dashboard de gateway (OmniRoute etc.) abre DENTRO do Turno, nao no navegador
       additionalArguments: smoke ? ['--turno-smoke', ...process.argv.filter((a) => a.startsWith('--smoke-'))] : [],
     },
   })

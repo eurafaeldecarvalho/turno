@@ -24,6 +24,7 @@ import { HistoryPanel } from './panels/HistoryPanel'
 import { AdhocPanel } from './panels/AdhocPanel'
 import { FanoutPanel } from './panels/FanoutPanel'
 import { SettingsPanel } from './panels/SettingsPanel'
+import { WebPanel } from './panels/WebPanel'
 import { Sidebar } from './Sidebar'
 import { StatusBar } from './StatusBar'
 import { ConfirmHost } from './ConfirmDialog'
@@ -68,6 +69,7 @@ const components = {
   fanout: guarded(FanoutPanel, 'fan-out'),
   chat: guarded(AgentChatPanel, 'chat'),
   tasks: guarded(TasksPanel, 'tasks'),
+  web: guarded(WebPanel, 'web'), // pagina embutida (dashboard de gateway) numa aba
   settings: guarded(SettingsPanel, 'settings'), // Settings abre em modal; registrado so p/ restaurar layouts salvos antigos com aba 'settings'
 }
 

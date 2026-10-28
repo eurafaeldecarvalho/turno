@@ -7,6 +7,12 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.25',
+    items: [
+      { title: 'Gateway dashboard inside Turno', text: "A gateway's dashboard (OmniRoute, Claude Code Router) now opens in a tab inside Turno instead of your browser — connect your providers without leaving the app." },
+    ],
+  },
+  {
     version: '0.9.24',
     items: [
       { title: 'Two more providers', text: 'Fireworks AI and Featherless.ai joined the provider catalog — OpenAI-compatible, bring your API key.' },

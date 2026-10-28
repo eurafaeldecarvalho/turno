@@ -21,3 +21,8 @@ export function gatewaySetup(g: CatalogGateway): GatewaySetup | null {
   if (!g.boot) return null
   return { command: g.install ? `${g.install} && ${g.boot}` : g.boot, dashboardUrl: g.dashboardUrl }
 }
+
+// Painel web do gateway, para abrir DENTRO do Turno (aba com webview) em vez do navegador do sistema. Sem painel => null.
+export function gatewayDashboard(g: CatalogGateway): { url: string; title: string } | null {
+  return g.dashboardUrl ? { url: g.dashboardUrl, title: `${g.name} dashboard` } : null
+}

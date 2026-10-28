@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.25 (2026-10-28)
+
+### Features
+- Gateways: a gateway's dashboard (OmniRoute, Claude Code Router) now opens in a tab inside Turno instead of the system browser, so you set up its providers — including subscriptions bridged by the gateway — without leaving the app. A persistent session keeps you logged in between reopens.
+
 ## 0.9.24 (2026-10-28)
 
 ### Features

@@ -5,7 +5,9 @@ import { plural } from '../fmt'
 import type { Connection, PreflightResult } from '../../../shared/types'
 import { updateSettings, useSettings } from '../appearance'
 import { connectionsReducer, newConnectionId, validateConnectionForm } from '../connectionsStore'
-import { installAgent, setupGateway } from '../layout'
+import { installAgent, setupGateway, openWebPanel } from '../layout'
+import { gatewayDashboard } from '../../../shared/gateway'
+import { closeSettingsModal } from '../SettingsModal'
 import { useStore } from '../store'
 import { askConfirm } from '../ConfirmDialog'
 import { CATALOG, CatalogPicker, type CatalogEntry } from './CatalogPicker'
@@ -260,23 +262,29 @@ export function ConnectionsSection() {
               {catEntry.docsUrl && <button className="link" onClick={() => void window.turno.ui.openExternal(catEntry.docsUrl!).catch(() => {})}>Open {catEntry.name}</button>}
             </p>
           )}
-          {draft.kind === 'endpoint' && catEntry?.boot && (
-            <div className="row small wrap">
-              <button
-                className="btn small"
-                onClick={() => {
-                  setupGateway(catEntry)
-                  if (catEntry.dashboardUrl) setTimeout(() => void window.turno.ui.openExternal(catEntry.dashboardUrl!).catch(() => {}), 2500)
-                  toast(`Installing and starting ${catEntry.name} in a terminal. When it is up, Save this connection.`, 'info')
-                }}
-              >
-                Install &amp; start {catEntry.name}
-              </button>
-              {catEntry.dashboardUrl && (
-                <button className="btn ghost small" onClick={() => void window.turno.ui.openExternal(catEntry.dashboardUrl!).catch(() => {})}>Open dashboard</button>
-              )}
-            </div>
-          )}
+          {draft.kind === 'endpoint' && catEntry?.boot && (() => {
+            const dash = gatewayDashboard(catEntry)
+            const openDash = (): void => {
+              if (!dash) return
+              closeSettingsModal() // o painel abre atras do modal: fecha o Settings para ele aparecer
+              openWebPanel(dash.url, dash.title)
+            }
+            return (
+              <div className="row small wrap">
+                <button
+                  className="btn small"
+                  onClick={() => {
+                    setupGateway(catEntry)
+                    if (dash) setTimeout(openDash, 3000) // da tempo do servidor subir, entao abre o painel dentro do Turno
+                    toast(`Installing and starting ${catEntry.name} in a terminal. When it is up, Save this connection.`, 'info')
+                  }}
+                >
+                  Install &amp; start {catEntry.name}
+                </button>
+                {dash && <button className="btn ghost small" onClick={openDash}>Open dashboard</button>}
+              </div>
+            )
+          })()}
           {draft.kind === 'endpoint' && draft.via === 'translate' && (
             <p className="muted small">Tools, images and streaming are translated; Anthropic-only features (web search, extended thinking) aren't available on this provider.</p>
           )}
