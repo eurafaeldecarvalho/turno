@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.22 (2026-10-28)
+
+### Fixes
+- Agents & accounts: CLIs installed through a Node version manager (nvm, Volta, fnm, pnpm or Bun) are now detected on Linux and macOS. Opened from the tray or the app menu, Turno saw only a minimal PATH and listed them as "not installed", so their account could not be added. It now reads the PATH from your login shell, the same way the terminal does. (Windows already read it from the registry.)
+
 ## 0.9.21 (2026-10-27)
 
 ### Fixes

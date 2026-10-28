@@ -7,6 +7,12 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.22',
+    items: [
+      { title: 'Finds CLIs installed with a version manager', text: 'On Linux and macOS, Codex, Gemini, OpenCode, Copilot and other CLIs installed through nvm, Volta, fnm, pnpm or Bun now show up in Agents & accounts, so you can add their account. They used to say "not installed" when Turno was opened from the tray.' },
+    ],
+  },
+  {
     version: '0.9.21',
     items: [
       { title: 'Opens on busy Linux machines', text: 'Turno now opens its window even when Linux has no file watchers left; it checks the routines folder every few seconds instead.' },
