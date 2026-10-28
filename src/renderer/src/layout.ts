@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { agentDef, agentStartCwd, installCommandFor } from '../../shared/agents'
+import { gatewaySetup, type CatalogGateway } from '../../shared/gateway'
 import { getSettingsSnapshot } from './appearance'
 import { askConfirm } from './ConfirmDialog'
 import type { DockviewApi, Direction } from 'dockview-react'
@@ -408,5 +409,14 @@ export function installAgent(id: string): boolean {
   const cmd = def && installCommandFor(def, win)
   if (!def || !cmd) return false
   openTerminal('right', { initialCommand: cmd, ...(win && id === 'claude' ? { shell: 'powershell.exe' } : {}) }, `install · ${def.name}`)
+  return true
+}
+
+// Sobe um gateway local do catalogo (OmniRoute, Claude Code Router...) num terminal: instala (se preciso) e inicia o
+// servidor. false = o preset nao tem como auto-iniciar (o usuario sobe na mao). O painel, se houver, abre em seguida.
+export function setupGateway(g: CatalogGateway): boolean {
+  const s = gatewaySetup(g)
+  if (!s) return false
+  openTerminal('right', { initialCommand: s.command }, `start · ${g.name}`)
   return true
 }

@@ -646,9 +646,9 @@ export function SettingsPanel() {
       <>
         <StartFolderCard />
         <AgentsSection />
+        <ConnectionsSection />
       </>
     ),
-    connections: () => <ConnectionsSection />,
     mcp: () => <McpSection />,
     integrations: () => <IntegrationsSection />,
     routines: () => (

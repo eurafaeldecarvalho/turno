@@ -1,7 +1,7 @@
 import { SHORTCUTS } from './shortcuts'
 
 // Paginas e itens do Settings: a navegacao da esquerda, a busca e a paleta de comandos leem daqui.
-export type SettingsPage = 'general' | 'appearance' | 'terminal' | 'notifications' | 'shortcuts' | 'agents' | 'connections' | 'mcp' | 'integrations' | 'routines' | 'about'
+export type SettingsPage = 'general' | 'appearance' | 'terminal' | 'notifications' | 'shortcuts' | 'agents' | 'mcp' | 'integrations' | 'routines' | 'about'
 export type SettingsGroup = 'App' | 'AI' | 'Work' | 'About'
 
 export interface PageDef {
@@ -19,8 +19,7 @@ export const PAGES: PageDef[] = [
   { id: 'terminal', label: 'Terminal', group: 'App', description: 'How new and open terminals look and behave.' },
   { id: 'notifications', label: 'Notifications', group: 'App', description: 'Windows notifications and alerts on your phone.' },
   { id: 'shortcuts', label: 'Shortcuts', group: 'App', description: 'Every keyboard shortcut in Turno.' },
-  { id: 'agents', label: 'Agents & accounts', group: 'AI', description: 'Accounts per agent, their order and when Turno switches to the next one. Used by the Agent button.' },
-  { id: 'connections', label: 'Connections', group: 'AI', description: 'Where routines and ad hoc runs get their model: Claude, local models and providers from the catalog.' },
+  { id: 'agents', label: 'Accounts', group: 'AI', description: 'Every account in one place: agent sign-ins and API/gateway providers, their order and when Turno switches to the next one. Used by the Agent button and by routines.' },
   { id: 'mcp', label: 'MCP servers', group: 'AI', description: 'Tools agents can use, set up once and picked per folder and per routine.' },
   { id: 'integrations', label: 'Integrations', group: 'Work', description: 'Where Tasks come from: GitHub and Jira.' },
   { id: 'routines', label: 'Routines', group: 'Work', description: 'Where your routines live.' },
@@ -51,11 +50,12 @@ export const ITEMS: SettingItem[] = [
   { label: 'Font ligatures', page: 'terminal', card: 'Behavior', anchor: 'settings-terminal-behavior' },
   { label: 'Phone notifications (ntfy)', page: 'notifications', card: 'Phone notifications', anchor: 'settings-ntfy', keywords: 'ntfy server topic push mobile test' },
   { label: 'Keyboard shortcuts', page: 'shortcuts', anchor: 'settings-shortcuts', keywords: `keys hotkeys keybindings command palette ctrl+k ${SHORTCUTS.map((s) => `${s.keys} ${s.label}`.toLowerCase()).join(' ')}` },
-  { label: 'Switch thresholds', page: 'agents', card: 'Agents and accounts', anchor: 'settings-agents', keywords: 'limit usage 5-hour weekly percent quota' },
-  { label: 'Which account goes first', page: 'agents', card: 'Agents and accounts', anchor: 'settings-agents', keywords: 'ranking strategy headroom reset order' },
-  { label: 'Add or remove an account', page: 'agents', card: 'Agents and accounts', anchor: 'settings-agents', keywords: 'sign in login claude codex gemini copilot kiro' },
-  { label: 'Claude connection', page: 'connections', card: 'Connections', keywords: 'login subscription cli' },
-  { label: 'Add a provider from the catalog', page: 'connections', card: 'Connections', keywords: 'openrouter groq mistral ollama lm studio vllm deepseek api key endpoint model free local' },
+  { label: 'Switch thresholds', page: 'agents', card: 'Accounts', anchor: 'settings-agents', keywords: 'limit usage 5-hour weekly percent quota' },
+  { label: 'Which account goes first', page: 'agents', card: 'Accounts', anchor: 'settings-agents', keywords: 'ranking strategy headroom reset order' },
+  { label: 'Add or remove an account', page: 'agents', card: 'Accounts', anchor: 'settings-agents', keywords: 'sign in login claude codex gemini copilot kiro' },
+  { label: 'Sort accounts best to worst', page: 'agents', card: 'Accounts', anchor: 'settings-agents', keywords: 'order rank sort auto best worst quota' },
+  { label: 'Claude connection', page: 'agents', card: 'Model providers', keywords: 'login subscription cli connection' },
+  { label: 'Add a provider or gateway from the catalog', page: 'agents', card: 'Model providers', keywords: 'openrouter groq mistral ollama lm studio vllm deepseek api key endpoint model free local gateway omniroute connection' },
   { label: 'MCP servers', page: 'mcp', anchor: 'settings-mcp', keywords: 'tools sentry atlassian bitbucket github playwright secrets' },
   { label: 'Jira', page: 'integrations', card: 'Jira Cloud', anchor: 'settings-jira', keywords: 'atlassian tasks token issues' },
   { label: 'GitHub issues', page: 'integrations', card: 'GitHub', anchor: 'settings-github', keywords: 'gh tasks issues' },

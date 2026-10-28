@@ -75,7 +75,7 @@ export function getConnection(settings: { connections?: Connection[] }, id: stri
 // Usado por startRun, entao cobre runRoutine, followUp E adhoc de uma vez. Dinheiro > conveniencia.
 export function requireConnection(settings: { connections?: Connection[] }, id: string): Connection {
   const c = findConnection(settings, id)
-  if (!c) throw new Error(`connection "${id}" doesn't exist anymore; pick one in Settings › Connections or in the routine`)
+  if (!c) throw new Error(`connection "${id}" doesn't exist anymore; pick one in Settings › Accounts or in the routine`)
   return c
 }
 
@@ -84,7 +84,7 @@ export function requireConnection(settings: { connections?: Connection[] }, id: 
 export function runConnection(base: Connection, account: { connection?: string } | undefined, conns: Connection[]): Connection {
   if (!account?.connection) return base
   const c = conns.find((x) => x.id === account.connection)
-  if (!c) throw new Error(`connection "${account.connection}" doesn't exist anymore; pick another account in Settings › Agents & accounts`)
+  if (!c) throw new Error(`connection "${account.connection}" doesn't exist anymore; pick another account in Settings › Accounts`)
   return c
 }
 

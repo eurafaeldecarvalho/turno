@@ -103,7 +103,7 @@ export function agentsState(): AgentsState {
 // Conta isolada sem login encontrado na pasta (acabou de ser criada, login cancelado): fora do ranking ate entrar.
 // Login padrao do usuario (home null) e agentes cujo login o Turno nao sabe ler contam como logados.
 export function signedIn(a: AgentAccount): boolean {
-  // conexao de API: "logada" enquanto a conexao existir em Settings › Connections
+  // conexao de API: "logada" enquanto a conexao existir em Settings › Accounts
   if (a.connection) return !!connSource?.list()?.some((c) => c.id === a.connection)
   if (!a.home) return true
   try {
@@ -171,7 +171,7 @@ export async function detectInstalled(): Promise<string[]> {
 }
 
 // Arruma nomes antigos. Nenhuma conta entra sozinha: o usuario adiciona cada uma (login deste PC, conta separada ou
-// conexao de API) em Settings › Agents & accounts.
+// conexao de API) em Settings › Accounts.
 function ensureDefaults(): void {
   const s = load()
   if (!installed || blocked) return
@@ -328,7 +328,7 @@ export function accountEnv(a: AgentAccount): Record<string, string> {
   if (a.connection) {
     // env vazio rodaria o Claude Code na assinatura do usuario com o nome da conexao: falha em vez disso
     const conn = connSource?.list()?.find((c) => c.id === a.connection)
-    if (!conn || !connSource) throw new Error(`connection "${a.connection}" isn't available; check Settings › Connections`)
+    if (!conn || !connSource) throw new Error(`connection "${a.connection}" isn't available; check Settings › Accounts`)
     return connSource.env(conn)
   }
   const def = agentDef(a.agent)
@@ -569,7 +569,7 @@ export const connectionAccountId = (connId: string): string => `conn-${connId}`
 export function addConnectionAccount(connId: string): AgentAccount {
   const s = load()
   const c = connSource?.list()?.find((x) => x.id === connId && x.kind === 'endpoint')
-  if (!c) throw new Error(`connection "${connId}" isn't available; add it in Settings › Connections first`)
+  if (!c) throw new Error(`connection "${connId}" isn't available; add it in Settings › Accounts first`)
   if (s.accounts.some((a) => a.connection === connId)) throw new Error(`${c.name} is already in the list`)
   delete usage[connectionAccountId(connId)] // limite/bloqueio de quando estava na lista antes nao volta junto
   saveUsageSoon()
@@ -617,4 +617,4 @@ export async function pickReadyAccount(opts: Parameters<typeof pickAccount>[0], 
 export const noClaudeAccountText = (): string =>
   load().accounts.some((a) => a.agent === 'claude')
     ? 'no Claude account is available (every one is off, not signed in or at its usage limit)'
-    : 'No Claude account yet: add one in Settings › Agents & accounts'
+    : 'No Claude account yet: add one in Settings › Accounts'

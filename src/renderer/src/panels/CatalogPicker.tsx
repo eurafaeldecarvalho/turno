@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import catalog from '../../../shared/providerCatalog.json'
-import { goToSettings } from '../SettingsModal'
 
 export interface CatalogEntry {
   id: string
@@ -16,6 +15,9 @@ export interface CatalogEntry {
   docsUrl?: string
   authNotes?: string
   needsKey?: boolean
+  install?: string // gateway local: comando para instalar (idempotente)
+  boot?: string // gateway local: comando para subir o servidor
+  dashboardUrl?: string // gateway local: painel para plugar os provedores
 }
 interface AgentHint {
   id: string
@@ -97,7 +99,7 @@ export function CatalogPicker({ onPick, onClose }: { onPick: (e: CatalogEntry) =
       </div>
       {hints.length > 0 && (
         <p className="muted small catalog-hint">
-          {hints.map((h) => h.name).join(', ')}: {hints.length > 1 ? 'these are subscriptions' : 'this is a subscription'} used through the agent's own CLI. Add {hints.length > 1 ? 'them' : 'it'} in{' '}<button className="link" onClick={() => goToSettings('agents')}>Agents & accounts</button>{' '}instead.
+          {hints.map((h) => h.name).join(', ')}: {hints.length > 1 ? 'these are subscriptions' : 'this is a subscription'} used through the agent's own CLI. Add {hints.length > 1 ? 'them' : 'it'} as an account in the list above instead.
         </p>
       )}
       <ul

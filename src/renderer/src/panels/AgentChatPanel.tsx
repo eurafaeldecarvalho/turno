@@ -97,11 +97,11 @@ export function AgentChatPanel({ params, api }: IDockviewPanelProps<AgentChatPar
         <p className="muted small">
           Runs Claude Code in a structured chat on your best Claude account{best ? ` (now: ${best.label}${usageText(agents.usage[best.id]) ? `, ${usageText(agents.usage[best.id])}` : ''})` : ''}. When an account reaches its limit, the conversation continues on the next one.
         </p>
-        {!claudeConn && <div className="banner banner-err">There is no Claude connection in Settings › Connections.</div>}
+        {!claudeConn && <div className="banner banner-err">There is no Claude connection in Settings › Accounts.</div>}
         {claudeConn && why && (
           <div className="banner banner-warn">
             {why}{' '}
-            {/Settings › Agents/.test(why) && <button className="link" onClick={() => openSettingsModal('agents')}>Open Agents & accounts</button>}
+            {/Settings › Accounts/.test(why) && <button className="link" onClick={() => openSettingsModal('agents')}>Open Accounts</button>}
           </div>
         )}
         <div className="adhoc-grid">

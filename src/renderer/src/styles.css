@@ -849,7 +849,7 @@ fieldset.field > legend { font-size: calc(var(--ui-size, 13px) * 12 / 13); color
 .task-start { display: flex; flex-direction: column; gap: 8px; padding: 4px 8px 12px 50px; }
 .task-start .row { flex-wrap: wrap; gap: 10px; }
 
-/* Catalogo de provedores (Settings › Connections) */
+/* Catalogo de provedores (Settings › Accounts) */
 .catalog { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--bg); }
 .catalog-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .catalog-head input { min-width: 180px; }

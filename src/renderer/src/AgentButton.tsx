@@ -42,7 +42,7 @@ export function AgentButton() {
   // sem conta: o mesmo texto da aba de Chat e do main (shared/agents.ts)
   const unavailable = unavailableText(s.accounts.filter((a) => s.installed.includes(a.agent)), s.usage, s.signedOut)
   const allOff = !usable.length && s.accounts.some((a) => s.installed.includes(a.agent))
-  const none = allOff ? 'Every account is turned off: turn one on in Settings › Agents & accounts' : 'No agent found: install one or add an account in Settings › Agents & accounts'
+  const none = allOff ? 'Every account is turned off: turn one on in Settings › Accounts' : 'No agent found: install one or add an account in Settings › Accounts'
   const byAgent = [...new Set(usable.map((a) => a.agent))]
   // o item do menu some ao fechar: o foco vai antes para o botao do menu (quem abrir algo devolve o foco a ele)
   const go = (fn: () => void): void => (setOpen(false), trigger.current?.focus(), fn())

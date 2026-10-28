@@ -209,7 +209,7 @@ function AgentsStep({ s }: { s: Settings }) {
       toast('Claude Code installed. Sign in to start using it.', 'ok')
       setClaude('checking')
       void window.turno.provider.claudeStatus().then((ok) => setClaude(ok ? 'in' : 'out'))
-    } else toast(`Claude Code didn't install.${r.log ? ` ${r.log.split('\n').slice(-2).join(' ')}` : ''} Try Settings › Agents & accounts › Install, which runs it in a terminal.`, 'warn', { sticky: true })
+    } else toast(`Claude Code didn't install.${r.log ? ` ${r.log.split('\n').slice(-2).join(' ')}` : ''} Try Settings › Accounts › Install, which runs it in a terminal.`, 'warn', { sticky: true })
   }
   const signIn = async (): Promise<void> => {
     setClaude('busy')
@@ -250,7 +250,7 @@ function AgentsStep({ s }: { s: Settings }) {
                   {!models.includes(local.model ?? '') && <option value="">{local.model ? `${local.model} (not installed)` : 'Pick a model'}</option>}
                   {models.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>
-              ) : <span className="muted small">{models && !models.length ? 'Ollama is not running or has no models' : local ? 'Reading models…' : 'Add it in Settings › Connections'}</span>
+              ) : <span className="muted small">{models && !models.length ? 'Ollama is not running or has no models' : local ? 'Reading models…' : 'Add it in Settings › Accounts'}</span>
             ) : !a.path && a.id === 'claude' ? (
               // Claude Code e o que o Turno usa: instala aqui mesmo, com o instalador oficial (sem Node)
               installing ? (

@@ -107,13 +107,13 @@ export function unavailableText(
   what = 'account',
 ): string {
   const on = accounts.filter((a) => a.enabled)
-  if (!accounts.length) return `No ${what} found. Install the agent CLI or add an account in Settings › Agents & accounts.`
-  if (!on.length) return `Every ${what} is turned off. Turn one on in Settings › Agents & accounts.`
+  if (!accounts.length) return `No ${what} found. Install the agent CLI or add an account in Settings › Accounts.`
+  if (!on.length) return `Every ${what} is turned off. Turn one on in Settings › Accounts.`
   const signed = on.filter((a) => !signedOut.includes(a.id))
   if (!signed.length) {
     // a unica logada esta desligada: o caminho e ligar, nao entrar de novo
     const offSigned = accounts.find((a) => !a.enabled && !signedOut.includes(a.id))
-    return offSigned ? `${offSigned.label} is turned off, and the other accounts are not signed in. Turn it on in Settings › Agents & accounts.` : `No ${what} is signed in yet. Use Sign in in Settings › Agents & accounts.`
+    return offSigned ? `${offSigned.label} is turned off, and the other accounts are not signed in. Turn it on in Settings › Accounts.` : `No ${what} is signed in yet. Use Sign in in Settings › Accounts.`
   }
   const st = (id: string): string => usage[id]?.state ?? 'unknown'
   if (signed.some((a) => !['exhausted', 'blocked'].includes(st(a.id)))) return ''
@@ -122,7 +122,7 @@ export function unavailableText(
   return [
     anyLimit ? `No ${what} is available right now${back ? `; the first one at its limit is back at ${backText(back)}` : ''}.` : '',
     ...signed.filter((a) => st(a.id) === 'blocked').map((a) => blockedText(a.label, usage[a.id]?.reason)),
-    signed.length < on.length ? 'Accounts that are not signed in are skipped (Sign in in Settings › Agents & accounts).' : '',
+    signed.length < on.length ? 'Accounts that are not signed in are skipped (Sign in in Settings › Accounts).' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -131,7 +131,7 @@ export function unavailableText(
 // Texto para conta bloqueada: login vencido pede novo login; problema de conta (plano, organizacao) so explica
 export const blockedText = (label: string, reason?: string): string =>
   !reason || /^login expired/.test(reason)
-    ? `${label} needs a new sign-in: use Sign in in Settings › Agents & accounts, then Check sign-in.`
+    ? `${label} needs a new sign-in: use Sign in in Settings › Accounts, then Check sign-in.`
     : `${label}: ${reason}.`
 
 // nunca comeca com "-": o id vai solto na linha de comando e viraria uma opcao do CLI

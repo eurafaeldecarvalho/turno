@@ -265,7 +265,7 @@ export async function runRoutine(id: string, trigger: RunTrigger, scheduledAt?: 
     // rotina fixada numa conta especifica: checa essa conta (nao o login padrao), senao falha so na hora de rodar
     const acc = getAccount(r.config.account)
     if (!acc) return void skip(r, trigger, scheduledAt, `the account this routine is pinned to no longer exists; pick one in the routine's Configure`, runId)
-    if (!signedIn(acc)) return void skip(r, trigger, scheduledAt, `the account "${acc.label}" this routine uses is not signed in (add it in Settings › Agents & accounts)`, runId)
+    if (!signedIn(acc)) return void skip(r, trigger, scheduledAt, `the account "${acc.label}" this routine uses is not signed in (add it in Settings › Accounts)`, runId)
   } else if (conn.kind === 'claude' && !(await claudeStatus()))
     return void skip(r, trigger, scheduledAt, 'Claude Code is not logged in (run "claude" and use /login)', runId)
   if (claudeExtras && r.config.mcp?.length) {

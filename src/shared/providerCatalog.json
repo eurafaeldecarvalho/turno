@@ -111,8 +111,11 @@
    "style": "openai",
    "baseUrl": "http://localhost:20128/v1",
    "free": true,
+   "install": "npm install -g omniroute",
+   "boot": "omniroute",
+   "dashboardUrl": "http://localhost:20128",
    "docsUrl": "https://github.com/cheaper-inference/OmniRoute",
-   "authNotes": "Start OmniRoute first (dashboard at http://localhost:20128) and connect your providers there. Use an OmniRoute API key if you enabled one, and a model or combo name from its dashboard."
+   "authNotes": "Install & start installs and runs OmniRoute, then opens its dashboard at http://localhost:20128. Connect your providers there; a fresh install already answers through its free `auto` route, so you can leave the key blank and the model as auto."
   },
   {
    "id": "9router",
@@ -131,8 +134,11 @@
    "style": "anthropic",
    "baseUrl": "http://127.0.0.1:3456/v1",
    "free": true,
+   "install": "npm install -g @musistudio/claude-code-router",
+   "boot": "ccr start",
+   "dashboardUrl": "http://127.0.0.1:3456",
    "docsUrl": "https://github.com/musistudio/claude-code-router",
-   "authNotes": "Start the Claude Code Router server first (gateway at http://127.0.0.1:3456). It speaks the Anthropic API, so Claude Code talks to it directly; use the model or route name you set up there."
+   "authNotes": "Install & start installs Claude Code Router and runs `ccr start` (gateway at http://127.0.0.1:3456). Set up your providers and routes with `ccr ui`, then use the model or route name you defined. It speaks the Anthropic API, so Claude Code talks to it directly."
   },
   {
    "id": "agentrouter",

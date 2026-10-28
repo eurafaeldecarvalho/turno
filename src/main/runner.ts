@@ -449,7 +449,7 @@ export function startRun(o: StartOptions): string {
     // segue na proxima conta. limite/credito = 1 h; servidor fora do ar = 20 min; chave recusada = bloqueada.
     const pf = account?.connection ? parseProviderFailure(line) : undefined
     if (pf && account) {
-      if (pf.kind === 'auth') markAccount(account.id, 'blocked', 'the provider rejected the API key: check it in Settings › Connections')
+      if (pf.kind === 'auth') markAccount(account.id, 'blocked', 'the provider rejected the API key: check it in Settings › Accounts')
       else
         markAccount(
           account.id,

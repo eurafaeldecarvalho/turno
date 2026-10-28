@@ -327,7 +327,7 @@ export interface AgentAccount {
   rank: number // 1 = primeira escolha
   enabled: boolean
   home: string | null // pasta de config isolada; null = login padrao do usuario
-  connection?: string // conexao de API (Settings › Connections): o Claude Code roda nesse provedor; sem = assinatura
+  connection?: string // conexao de API (Settings › Accounts): o Claude Code roda nesse provedor; sem = assinatura
   email?: string
   createdAt: string
 }
@@ -456,7 +456,7 @@ export interface TurnoApi {
     prepare(o: { key?: string; agent?: string; accountId?: string; cwd?: string; resumeSessionId?: string; prompt?: string; chrome?: boolean; folderId?: string; model?: string; banner?: string }): Promise<AgentLaunch>
     add(agent: string, label?: string): Promise<{ account: AgentAccount; launchId: string; command: string }>
     addDefault(agent: string): Promise<AgentAccount> // login que ja existe neste PC (pasta normal do agente)
-    addConnection(connId: string): Promise<AgentAccount> // conexao de API (Settings › Connections) no ranking
+    addConnection(connId: string): Promise<AgentAccount> // conexao de API (Settings › Accounts) no ranking
     login(id: string): Promise<{ launchId: string; command: string }>
     refreshLogin(id: string): Promise<boolean>
     update(id: string, patch: { label?: string; enabled?: boolean }): Promise<void>

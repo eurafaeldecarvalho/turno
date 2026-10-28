@@ -505,7 +505,7 @@ describe('mensagem quando nao ha conta para rodar', () => {
   it('deveMandarAdicionarUmaContaQuandoAListaEstaVazia', async () => {
     writeFileSync(join(dir, 'accounts.json'), JSON.stringify({ accounts: [] }))
     const m = await import('../accounts')
-    expect(m.noClaudeAccountText()).toMatch(/No Claude account yet.*Settings › Agents & accounts/)
+    expect(m.noClaudeAccountText()).toMatch(/No Claude account yet.*Settings › Accounts/)
   })
   it('deveDizerQueEstaoDesligadasOuNoLimiteQuandoHaContas', async () => {
     writeFileSync(join(dir, 'accounts.json'), JSON.stringify({ accounts: [{ id: 'a', agent: 'claude', label: 'a', rank: 1, enabled: false, home: null, createdAt: 'x' }] }))

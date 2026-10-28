@@ -5,7 +5,7 @@ import { openAgent } from './layout'
 import { existingRecents, pushRecentDir, recentWithoutDefault, startFolderLabel } from '../../shared/agents'
 import { IconFolder } from './icons'
 
-// Popup do New agent: em qual pasta abrir. A pasta padrao (Settings › Agents & accounts › Start folder, ou a home)
+// Popup do New agent: em qual pasta abrir. A pasta padrao (Settings › Accounts › Start folder, ou a home)
 // e a opcao destacada: Enter abre direto. Tasks e pastas da sidebar nao passam por aqui (ja tem a pasta delas).
 type OpenOpts = Parameters<typeof openAgent>[0]
 interface Ask {
@@ -101,7 +101,7 @@ export function AgentFolderHost() {
             <IconFolder size={14} />
             <span className="grow">
               <strong>{start ? startFolderLabel(start) : 'Home folder'}</strong>
-              <small className="muted mono">{start || 'Default folder (set it in Settings › Agents & accounts)'}</small>
+              <small className="muted mono">{start || 'Default folder (set it in Settings › Accounts)'}</small>
             </span>
             <span className="pill pill-ok">default</span>
           </button>

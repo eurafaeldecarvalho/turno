@@ -239,7 +239,7 @@ setRotateHandler(followUp)
 registerPty(liveWc)
 
 // ---- botao Agent: contas, broker de troca, hub de MCP ----
-// conexoes de API (Settings › Connections) entram no ranking como contas do Claude Code apontadas para o provedor
+// conexoes de API (Settings › Accounts) entram no ranking como contas do Claude Code apontadas para o provedor
 setConnectionSource({ list: () => (settingsReadable() ? getSettings().connections : undefined), env: (c) => connectionAccountEnv(c, connectionToken(c)) })
 initAccounts((s) => send('agents:state', s))
 syncConnectionAccounts()

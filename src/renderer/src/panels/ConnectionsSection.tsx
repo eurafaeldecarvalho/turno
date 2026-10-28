@@ -5,7 +5,7 @@ import { plural } from '../fmt'
 import type { Connection, PreflightResult } from '../../../shared/types'
 import { updateSettings, useSettings } from '../appearance'
 import { connectionsReducer, newConnectionId, validateConnectionForm } from '../connectionsStore'
-import { installAgent } from '../layout'
+import { installAgent, setupGateway } from '../layout'
 import { useStore } from '../store'
 import { askConfirm } from '../ConfirmDialog'
 import { CATALOG, CatalogPicker, type CatalogEntry } from './CatalogPicker'
@@ -172,8 +172,8 @@ export function ConnectionsSection() {
 
   return (
     <section className="card">
-      <h3>Connections</h3>
-      <p className="muted small">Where the AI comes from. Claude signs in through its own CLI. Other providers are endpoints: Anthropic-compatible ones are used directly, OpenAI-compatible ones go through Turno's local translator.</p>
+      <h3>Model providers</h3>
+      <p className="muted small">The API and gateway providers your accounts above can use. Add one here, then add it as an account above (it shows under "API connection"). Anthropic-compatible providers are used directly; OpenAI-compatible ones go through Turno's local translator.</p>
       <div className="conn-list">
         {conns.map((c) => {
           const chk = checks[c.id]
@@ -259,6 +259,23 @@ export function ConnectionsSection() {
               {catEntry.authNotes ?? 'Create an API key on the provider site and paste it above.'}{' '}
               {catEntry.docsUrl && <button className="link" onClick={() => void window.turno.ui.openExternal(catEntry.docsUrl!).catch(() => {})}>Open {catEntry.name}</button>}
             </p>
+          )}
+          {draft.kind === 'endpoint' && catEntry?.boot && (
+            <div className="row small wrap">
+              <button
+                className="btn small"
+                onClick={() => {
+                  setupGateway(catEntry)
+                  if (catEntry.dashboardUrl) setTimeout(() => void window.turno.ui.openExternal(catEntry.dashboardUrl!).catch(() => {}), 2500)
+                  toast(`Installing and starting ${catEntry.name} in a terminal. When it is up, Save this connection.`, 'info')
+                }}
+              >
+                Install &amp; start {catEntry.name}
+              </button>
+              {catEntry.dashboardUrl && (
+                <button className="btn ghost small" onClick={() => void window.turno.ui.openExternal(catEntry.dashboardUrl!).catch(() => {})}>Open dashboard</button>
+              )}
+            </div>
           )}
           {draft.kind === 'endpoint' && draft.via === 'translate' && (
             <p className="muted small">Tools, images and streaming are translated; Anthropic-only features (web search, extended thinking) aren't available on this provider.</p>

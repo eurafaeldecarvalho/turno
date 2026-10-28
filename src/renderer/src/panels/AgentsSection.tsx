@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AGENTS, agentDef, installCommandFor } from '../../../shared/agents'
+import { sortAccountsBestToWorst } from '../../../shared/accountRank'
 import { useAgents, usageText, usageTone, whenText } from '../agentStore'
 import { installAgent, openTerminal } from '../layout'
 import { closeSettingsModal } from '../SettingsModal'
@@ -24,7 +25,7 @@ function Bar({ w, label }: { w?: UsageWindow; label: string }) {
   )
 }
 
-// Settings › Agents & accounts: contas ranqueadas. O Agent abre na primeira com cota; no limiar (ou no limite) troca para a proxima.
+// Settings › Accounts: contas ranqueadas. O Agent abre na primeira com cota; no limiar (ou no limite) troca para a proxima.
 export function AgentsSection() {
   const st = useAgents()
   const [adding, setAdding] = useState('')
@@ -56,6 +57,16 @@ export function AgentsSection() {
           el.removeAttribute('data-esc-local')
           toast(errText(e), 'err')
         })
+  }
+  // Botao "Sort best to worst": reescreve a ordem manual da lista num clique (contas prontas e com mais cota primeiro,
+  // assinatura antes de API paga, indisponiveis no fim). Opcional: depois o usuario ajusta na mao com as setas.
+  const autoOrder = async (): Promise<void> => {
+    const order = sortAccountsBestToWorst(accounts, { usage: st.usage, installed: st.installed, signedOut: st.signedOut })
+    if (order.join() === accounts.map((a) => a.id).join()) return void toast('Already ordered best to worst.', 'info')
+    await window.turno.agents
+      .reorder(order)
+      .then(() => toast('Reordered best to worst. Nudge any account with the arrows if you want.', 'ok'))
+      .catch((e) => toast(errText(e), 'err'))
   }
   const move = (i: number, d: -1 | 1): void => {
     const ids = accounts.map((a) => a.id)
@@ -115,7 +126,7 @@ export function AgentsSection() {
     const message = a.home
       ? `Remove "${label}" from Turno? Its sign-in folder is deleted; your conversations stay (they're shared with your other accounts).`
       : a.connection
-        ? `Remove "${label}" from the list? The connection stays in Settings › Connections; add it back here any time.`
+        ? `Remove "${label}" from the list? The connection stays in Settings › Accounts; add it back here any time.`
         : `Remove "${label}" from the list? Your sign-in on this PC isn't touched; add it back here any time.`
     const ok = await askConfirm({ title: 'Remove account', message, confirmLabel: 'Remove' })
     if (!ok) return
@@ -130,7 +141,7 @@ export function AgentsSection() {
     if (installCommandFor(selDef, !!window.turno.winBuild)) {
       closeSettingsModal()
       installAgent(selDef.id)
-      toast(`Installing ${selDef.name} in a terminal. When it finishes, reopen Agents & accounts and add the account.`, 'info', { sticky: true })
+      toast(`Installing ${selDef.name} in a terminal. When it finishes, reopen Accounts and add the account.`, 'info', { sticky: true })
       void window.turno.agents.detect()
     } else if (selDef.url) {
       void window.turno.ui.openExternal(selDef.url)
@@ -139,7 +150,7 @@ export function AgentsSection() {
 
   return (
     <section className="card agents-card" id="settings-agents">
-      <h3>Agents and accounts</h3>
+      <h3>Accounts</h3>
       <p className="muted small">
         {{
           rank: 'The Agent button opens the first account in this list that still has quota.',
@@ -166,6 +177,12 @@ export function AgentsSection() {
           </select>
         </label>
       </div>
+      {accounts.length > 1 && (
+        <div className="row">
+          <button className="btn ghost small" onClick={() => void autoOrder()} title="Order the connected accounts best to worst; you can still reorder by hand afterwards">Sort best to worst</button>
+          <small className="muted">One click orders them best to worst (ready and most quota first); you stay free to reorder.</small>
+        </div>
+      )}
       <ol className="acct-list">
         {accounts.map((a, i) => {
           const u = st.usage[a.id]
@@ -179,9 +196,9 @@ export function AgentsSection() {
                   aria-label="Account name"
                   key={a.label} // nome trocado fora daqui (Check sign-in): remonta com o novo valor
                   defaultValue={a.label}
-                  // conta de conexao: o nome vem de Settings › Connections (renomear aqui seria desfeito na proxima sincronia)
+                  // conta de conexao: o nome vem de Settings › Accounts (renomear aqui seria desfeito na proxima sincronia)
                   readOnly={!!a.connection}
-                  title={a.connection ? `${a.label} (rename it in Settings › Connections)` : a.label}
+                  title={a.connection ? `${a.label} (rename it in Settings › Accounts)` : a.label}
                   // com edicao pendente, Esc so desfaz o nome (data-esc-local); sem edicao, Esc fecha o Settings como sempre
                   onInput={(e) => e.currentTarget.toggleAttribute('data-esc-local', e.currentTarget.value !== a.label)}
                   onBlur={(e) => commitLabel(a, e.currentTarget, false)}

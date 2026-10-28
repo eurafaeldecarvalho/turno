@@ -18,7 +18,7 @@ const emit = (): void => {
 }
 
 // Ids antigos de secao (antes das paginas) continuam valendo
-const LEGACY: Record<string, SettingsPage> = { agents: 'agents', mcp: 'mcp', connections: 'connections', notifications: 'notifications', terminal: 'terminal', appearance: 'appearance' }
+const LEGACY: Record<string, SettingsPage> = { agents: 'agents', mcp: 'mcp', connections: 'agents', notifications: 'notifications', terminal: 'terminal', appearance: 'appearance' }
 
 // section: pagina (ex. 'agents', 'mcp') ou 'pagina:id-do-card'
 export function openSettingsModal(section?: string): void {
