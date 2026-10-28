@@ -47,3 +47,24 @@ export function shouldFallback(status: number): boolean {
   if (status >= 200 && status < 300) return false
   return classifyBackendFailure(status) !== 'client'
 }
+
+// Alguns backends escondem uma falha DELES num status de cliente (400/404) ou num 200 com corpo de erro: modelo
+// desconhecido no gateway, crédito/cota esgotados, sobrecarga. Pela MENSAGEM dá pra reconhecer e cair pro próximo
+// (a requisição é válida; quem falhou foi o backend). Puro e testável — só casa frases claras, não erro de requisição.
+export function isBackendFaultMessage(message: string): boolean {
+  return (
+    /\b(no such model|unknown model|unsupported model|invalid model|model_not_found)\b/i.test(message) ||
+    /\bmodel\b[^.]{0,40}\b(not found|not supported|unavailable|unknown|does not exist)\b/i.test(message) ||
+    /\b(overloaded|over ?capacity|at capacity|temporarily unavailable|service unavailable|try again later)\b/i.test(message) ||
+    // crédito/cota ESGOTADOS (contexto claro, não a palavra solta num nome de campo — senão mascararia um 400 de cliente)
+    /\b(credit|quota|balance|funds?)\b[^.]{0,30}\b(low|empty|exceed\w*|exhaust\w*|deplet\w*|insufficient|reached|run out|used up)\b/i.test(message) ||
+    /\b(insufficient|out of|no|ran out of)\b[^.]{0,20}\b(credit|quota|balance|funds?)\b/i.test(message) ||
+    /\brate.?limit\w*\b[^.]{0,20}\b(exceed\w*|hit|reach\w*|too many)\b/i.test(message)
+  )
+}
+
+// Vale SEGURAR a conta por um tempo (mark)? SÓ pelo status inequívoco de limite — 429 (rate limit) ou 402 (pagamento).
+// Mensagem fuzzy NÃO marca (benchar uma conta sadia por engano é pior); a queda pro próximo já cobre a requisição.
+export function isLimitLike(status: number): boolean {
+  return status === 429 || status === 402
+}

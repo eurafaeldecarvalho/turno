@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.27 (2026-10-28)
+
+### Fixes
+- Turno Router (beta): hardened after a six-round review. A backend that hides an error inside an HTTP-200 body (common with OpenAI-compatible gateways) now falls back to the next account instead of returning a blank or garbled turn; a transient 401/402/403 no longer permanently blocks an account (only a real 429/402 limit holds it, for the provider's Retry-After window, capped at 24h); "model not found" and "credit/quota exhausted" fall back; the abandoned backend's stream is cancelled on fallback, so it stops generating billed tokens and no connection leaks; Anthropic-compatible gateways now get the correct auth header (Bearer, not x-api-key); and a split or stalled error preamble can no longer hang the request.
+
 ## 0.9.26 (2026-10-28)
 
 ### Features

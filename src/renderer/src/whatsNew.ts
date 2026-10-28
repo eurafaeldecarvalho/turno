@@ -7,6 +7,12 @@ export interface ReleaseNotes {
 
 export const WHATS_NEW: ReleaseNotes[] = [
   {
+    version: '0.9.27',
+    items: [
+      { title: 'Turno Router: sturdier', text: 'The Turno Router (beta) now handles provider errors, limits and gateway quirks robustly — it falls back correctly even when a backend hides an error in a 200 response, never gets stuck, and does not keep an abandoned backend running.' },
+    ],
+  },
+  {
     version: '0.9.26',
     items: [
       { title: 'Turno Router (beta)', text: 'A new "Turno Router" profile fronts all your accounts: each request goes to your best available API/gateway backend and falls back to the next on a limit or error, keeping the conversation. Point a routine or agent at it to try it. Your Claude subscription as a backend is coming next.' },

@@ -256,10 +256,9 @@ void startTranslator((id) => {
 setRouter(() => ({
   plan: routableBackends(),
   credOf: (b) => (b.kind === 'subscription' ? undefined : b.connectionId ? connectionToken(findConnection(getSettings(), b.connectionId)!) : undefined),
-  mark: (id, kind) => {
-    if (kind === 'limit') markAccount(id, 'exhausted', 'usage limit reached (router)', new Date(Date.now() + 15 * 60_000).toISOString())
-    else if (kind === 'auth') markAccount(id, 'blocked', 'the provider rejected the request (router): check the key or sign-in')
-  },
+  // SO limite: segura a conta pela janela que o provedor pediu (Retry-After) ou um default curto de 2 min — um
+  // 401/403/5xx pontual do router NAO bloqueia a conta (seria sticky e vazaria pro caminho /c; ver review).
+  mark: (id, retryAfterMs) => markAccount(id, 'exhausted', 'usage limit reached (router)', new Date(Date.now() + (retryAfterMs ?? 2 * 60_000)).toISOString()),
 }))
 ipcMain.handle('agents:state', () => agentsState())
 ipcMain.handle('agents:detect', () => detectInstalled())

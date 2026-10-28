@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { Agent, fetch as ufetch } from 'undici'
 import type { Connection } from '../shared/types'
-import { shouldFallback, classifyBackendFailure, type Backend, type BackendFailure } from '../shared/routing'
+import { shouldFallback, isBackendFaultMessage, isLimitLike, type Backend } from '../shared/routing'
 
 // modelo local lento (CPU) pode levar minutos ate o primeiro pedaco: sem os tetos de 5 min do fetch padrao.
 // O agente ja tem o proprio limite (API_TIMEOUT_MS de 30 min) e o Esc cancela pelo AbortController.
@@ -396,7 +396,9 @@ export interface RouterPlan {
   credOf: (b: Backend) => string | undefined // setup-token (assinatura) ou chave da conexao
   anthropicUrl?: string // base da assinatura (default api.anthropic.com)
   version?: string
-  mark?: (accountId: string, kind: BackendFailure) => void // marca a conta que falhou (limite/bloqueio)
+  // marca a conta que bateu LIMITE (so limite; auth/transitorio NAO persiste — um 401/403 pontual nao deve bloquear a
+  // conta para sempre). retryAfterMs = quanto segurar, se o provedor informou (senao o chamador usa um default curto).
+  mark?: (accountId: string, retryAfterMs?: number) => void
 }
 let routerFn: (() => RouterPlan) | undefined
 export function setRouter(fn: () => RouterPlan): void {
@@ -404,13 +406,29 @@ export function setRouter(fn: () => RouterPlan): void {
 }
 export const routeBase = (): string => (port ? `http://127.0.0.1:${port}/route` : '')
 
-type Tried = { ok: true; r: Response } | { ok: false; status: number; message: string }
+type Fault = { status: number; message: string; retryAfter?: number }
+type Tried = { ok: true; r: Response } | ({ ok: false } & Fault)
+
+// Retry-After do provedor -> ms (segundos ou data HTTP). Para a janela do mark ser a que o provedor pediu.
+const RETRY_CAP_MS = 24 * 60 * 60 * 1000 // teto: um Retry-After absurdo nao pode estourar o Date nem segurar a conta por anos
+function retryAfterMs(r: Response): number | undefined {
+  const h = r.headers.get('retry-after')
+  if (!h) return undefined
+  const s = Number(h)
+  if (Number.isFinite(s)) return Math.min(Math.max(0, s * 1000), RETRY_CAP_MS)
+  const d = Date.parse(h)
+  return Number.isFinite(d) ? Math.min(Math.max(0, d - Date.now()), RETRY_CAP_MS) : undefined
+}
+
+const jsonErrMsg = (j: Json): string => {
+  const e = j?.error as Json
+  return String((e && typeof e === 'object' ? e.message : e) ?? j?.message ?? 'provider error')
+}
 
 async function readErr(r: Response): Promise<string> {
   const t = await readCapped(r, 1 << 20).catch(() => '')
   try {
-    const j = JSON.parse(t)
-    return String(j.error?.message ?? j.message ?? t.slice(0, 2000))
+    return jsonErrMsg(JSON.parse(t) as Json)
   } catch {
     return t.slice(0, 2000) || `provider returned ${r.status}`
   }
@@ -429,47 +447,117 @@ async function tryOpenAI(url: string, model: string, body: Json, key: string | u
       r = /max_completion_tokens/i.test(t) && !/max_completion_tokens.*(exceed|too large|greater|maximum)/i.test(t) ? await send({ ...rest, max_completion_tokens: max_tokens }) : await send(rest)
     }
   }
-  return r.ok ? { ok: true, r } : { ok: false, status: r.status, message: await readErr(r) }
+  return r.ok ? { ok: true, r } : { ok: false, status: r.status, message: await readErr(r), retryAfter: retryAfterMs(r) }
 }
 
 // Forward Anthropic-compat (assinatura via api.anthropic.com, ou conexao/gateway direto): corpo passa como esta.
+// Auth: x-api-key SO para a API da propria Anthropic (api.anthropic.com ou chave sk-ant-api); gateways compativeis
+// (CCR, z.ai...) usam Authorization: Bearer — mandar x-api-key neles daria 401. Mesma regra do resolveProviderEnv.
 async function tryAnthropic(url: string, body: Json, cred: string | undefined, kind: 'subscription' | 'anthropic', model: string | undefined, version: string | undefined, beta: string | undefined, ac: AbortController): Promise<Tried> {
   const payload = model ? { ...body, model } : body // gateway/conexao fixa o modelo; assinatura mantem o do request
   const headers: Record<string, string> = { 'content-type': 'application/json', 'anthropic-version': version || '2023-06-01' }
   if (beta) headers['anthropic-beta'] = beta
-  if (cred) kind === 'subscription' ? (headers.authorization = `Bearer ${cred}`) : (headers['x-api-key'] = cred)
+  if (cred) {
+    const xkey = kind === 'anthropic' && (/^https?:\/\/api\.anthropic\.com(\/|:|$)/i.test(url) || /^sk-ant-api/.test(cred))
+    if (xkey) headers['x-api-key'] = cred
+    else headers.authorization = `Bearer ${cred}`
+  }
   const r = (await ufetch(url, { method: 'POST', headers, body: JSON.stringify(payload), signal: ac.signal, dispatcher: slowOk })) as unknown as Response
-  return r.ok ? { ok: true, r } : { ok: false, status: r.status, message: await readErr(r) }
+  return r.ok ? { ok: true, r } : { ok: false, status: r.status, message: await readErr(r), retryAfter: retryAfterMs(r) }
 }
 
-// Stream/JSON OpenAI -> Anthropic (mesma conversao do /c, a partir das primitivas testadas).
-async function streamOpenAI(r: Response, res: ServerResponse, model: string, ac: AbortController, stream: boolean): Promise<void> {
-  if (!stream) return sendJson(res, 200, toAnthropic(JSON.parse(await readCapped(r, MAX_RESP)) as Json, model))
-  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' })
-  const conv = streamConverter(model)
-  const reader = r.body?.getReader()
-  const dec = new TextDecoder()
-  let buf = ''
-  let total = 0
-  const read = async (): Promise<ReadableStreamReadResult<Uint8Array> | undefined> => {
+// Alguns gateways respondem HTTP 200 com um corpo de ERRO (OpenAI-compat faz isso). Detecta no inicio do stream (1a
+// linha data:) ou no corpo inteiro (200 nao-SSE). Retorna o erro para o chamador cair pro proximo backend.
+function earlyStreamError(buf: string): Fault | undefined {
+  // 1o evento SSE 'error' (mesmo com data: vazio): gateway sinalizou falha -> cai pro proximo
+  if (/^event:\s*error\b/m.test(buf)) {
+    const d = /^data:\s*(.+)$/m.exec(buf)?.[1]?.trim()
+    let msg = 'provider error'
+    if (d) {
+      try {
+        msg = jsonErrMsg(JSON.parse(d) as Json)
+      } catch {
+        /* data parcial/vazio */
+      }
+    }
+    return { status: 502, message: msg }
+  }
+  for (const raw of buf.split('\n')) {
+    const l = raw.trim()
+    if (!l.startsWith('data:')) continue
+    const data = l.slice(5).trim()
+    if (!data || data === '[DONE]') continue
     try {
-      return await reader!.read()
-    } catch (e) {
-      res.end(conv.fail(`the provider connection dropped: ${(e as Error).message}`, 502))
-      return undefined
+      const j = JSON.parse(data) as Json
+      if (j?.error) return { status: 502, message: jsonErrMsg(j) }
+    } catch {
+      /* linha parcial/nao-JSON: trata como conteudo normal (comita) */
+    }
+    return undefined // primeira linha data: valida sem erro => comita
+  }
+  if (!/\bdata:/.test(buf)) {
+    try {
+      const j = JSON.parse(buf.trim()) as Json
+      if (j?.error && !j?.choices) return { status: 502, message: jsonErrMsg(j) }
+    } catch {
+      /* corpo ainda chegando: comita */
     }
   }
-  while (reader) {
-    const r2 = await read()
-    if (!r2) return
-    const { done, value } = r2
-    if (done) break
-    total += value.byteLength
-    if (total > MAX_RESP) {
-      ac.abort()
-      return void res.end(conv.fail('provider response too large', 502))
+  return undefined
+}
+
+// Le o inicio do stream (ate a 1a linha data: ou um teto) para inspecionar ANTES de comitar; devolve os bytes lidos.
+async function peekStream(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<{ chunks: Buffer[]; text: string; drop?: Fault }> {
+  const chunks: Buffer[] = []
+  const dec = new TextDecoder()
+  let text = ''
+  for (;;) {
+    let c: ReadableStreamReadResult<Uint8Array>
+    try {
+      c = await reader.read()
+    } catch (e) {
+      return { chunks, text, drop: { status: 502, message: `the provider connection dropped: ${(e as Error).message}` } }
     }
-    buf += dec.decode(value, { stream: true })
+    if (c.done) break
+    chunks.push(Buffer.from(c.value))
+    text += dec.decode(c.value, { stream: true })
+    // Para na 1a linha SSE COMPLETA (event: OU data:, com \n) — assim um "event: error" sem data: ainda e detectado
+    // (nao fica pendurado esperando um data: que nunca vem) e um erro partido no 1o chunk espera a linha fechar.
+    if (/(^|\n)(event|data):[^\n]*\n/.test(text) || text.length > 1 << 18) break
+  }
+  return { chunks, text }
+}
+
+// Comita a resposta OpenAI no res, OU devolve um Fault (sem escrever nada) se o backend 200 escondeu um erro no corpo.
+async function commitOpenAI(r: Response, res: ServerResponse, model: string, ac: AbortController, stream: boolean): Promise<Fault | undefined> {
+  if (!stream) {
+    const text = await readCapped(r, MAX_RESP).catch(() => '')
+    let j: Json
+    try {
+      j = JSON.parse(text) as Json
+    } catch {
+      return { status: 502, message: 'non-JSON response from provider' }
+    }
+    if (j?.error && !j?.choices) return { status: 502, message: jsonErrMsg(j) }
+    sendJson(res, 200, toAnthropic(j, model))
+    return undefined
+  }
+  const reader = r.body?.getReader()
+  if (!reader) return { status: 502, message: 'empty response from provider' }
+  // Ao abandonar este backend (cair pro proximo), cancela o stream upstream — senao ele segue gerando (cobrado) e o
+  // socket fica aberto ate o bodyTimeout. So antes do commit; depois o proprio loop drena ate o fim.
+  const bail = (f: Fault): Fault => (reader.cancel().catch(() => {}), f)
+  const peek = await peekStream(reader)
+  if (peek.drop) return bail(peek.drop)
+  const early = earlyStreamError(peek.text)
+  if (early) return bail(early)
+  // comita: escreve o que ja foi lido e continua
+  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' })
+  const conv = streamConverter(model)
+  const dec = new TextDecoder()
+  let buf = dec.decode(Buffer.concat(peek.chunks), { stream: true })
+  let total = peek.chunks.reduce((n, c) => n + c.byteLength, 0)
+  const processBuf = (): void => {
     let nl: number
     while ((nl = buf.indexOf('\n')) >= 0) {
       const line = buf.slice(0, nl).trim()
@@ -484,6 +572,25 @@ async function streamOpenAI(r: Response, res: ServerResponse, model: string, ac:
       }
     }
   }
+  processBuf()
+  for (;;) {
+    let c: ReadableStreamReadResult<Uint8Array>
+    try {
+      c = await reader.read()
+    } catch (e) {
+      res.end(conv.fail(`the provider connection dropped: ${(e as Error).message}`, 502))
+      return undefined
+    }
+    if (c.done) break
+    total += c.value.byteLength
+    if (total > MAX_RESP) {
+      ac.abort()
+      res.end(conv.fail('provider response too large', 502))
+      return undefined
+    }
+    buf += dec.decode(c.value, { stream: true })
+    processBuf()
+  }
   buf += dec.decode()
   const tail = buf.trim()
   if (tail.startsWith('data:')) {
@@ -497,30 +604,75 @@ async function streamOpenAI(r: Response, res: ServerResponse, model: string, ac:
     }
   }
   res.end(conv.end())
+  return undefined
 }
 
-// Stream/JSON Anthropic -> Anthropic (passthrough: a resposta ja esta no formato que o Claude Code espera).
-async function streamAnthropic(r: Response, res: ServerResponse, stream: boolean): Promise<void> {
+// Comita a resposta Anthropic (passthrough de bytes), OU devolve um Fault se o 200 escondeu um erro no corpo/stream.
+async function commitAnthropic(r: Response, res: ServerResponse, stream: boolean): Promise<Fault | undefined> {
   if (!stream) {
-    res.writeHead(r.status, { 'content-type': 'application/json' })
-    return void res.end(await readCapped(r, MAX_RESP))
+    const text = await readCapped(r, MAX_RESP).catch(() => null) // drop/limite de corpo = falha do backend, nao 200 vazio
+    if (text == null || text.trim() === '') return { status: 502, message: 'empty or unreadable response from provider' }
+    try {
+      const j = JSON.parse(text) as Json
+      if (j?.type === 'error' || (j?.error && !j?.content)) return { status: 502, message: jsonErrMsg(j) }
+    } catch {
+      /* nao-JSON: passa como esta */
+    }
+    res.writeHead(200, { 'content-type': 'application/json' })
+    res.end(text)
+    return undefined
+  }
+  const reader = r.body?.getReader()
+  if (!reader) return { status: 502, message: 'empty response from provider' }
+  // Abandonar o backend = cancelar o stream upstream (senao segue gerando/cobrando + socket aberto ate o bodyTimeout).
+  const bail = (f: Fault): Fault => (reader.cancel().catch(() => {}), f)
+  const peek = await peekStream(reader)
+  if (peek.drop) return bail(peek.drop)
+  // Erro logo no inicio: 1o evento SSE 'error', OU a 1a linha data: cujo JSON e {type:error} (gateway que omite
+  // 'event:'), OU um 200 nao-SSE cujo corpo inteiro e erro. So o PRIMEIRO evento conta — conteudo valido que mencione
+  // "event: error" no texto nao derruba o backend.
+  const firstEvent = /^event:\s*(\S+)/m.exec(peek.text)?.[1]
+  const firstDataRaw = /^data:\s*(.+)$/m.exec(peek.text)?.[1]?.trim()
+  let firstDataJson: Json | undefined
+  if (firstDataRaw) {
+    try {
+      firstDataJson = JSON.parse(firstDataRaw) as Json
+    } catch {
+      /* linha parcial (nao deveria, apos peekStream completar a 1a data:) */
+    }
+  }
+  if (firstEvent === 'error' || firstDataJson?.type === 'error' || (firstDataJson?.error && !firstDataJson?.content)) {
+    return bail({ status: 502, message: firstDataJson ? jsonErrMsg(firstDataJson) : 'provider error' })
+  }
+  if (!/^(event|data):/m.test(peek.text)) {
+    try {
+      const j = JSON.parse(peek.text.trim()) as Json
+      if (j?.type === 'error' || (j?.error && !j?.content)) return bail({ status: 502, message: jsonErrMsg(j) })
+    } catch {
+      /* corpo ainda chegando: comita */
+    }
   }
   res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' })
-  const reader = r.body?.getReader()
-  let total = 0
-  while (reader) {
-    let chunk: ReadableStreamReadResult<Uint8Array>
+  for (const c of peek.chunks) res.write(c)
+  let total = peek.chunks.reduce((n, c) => n + c.byteLength, 0)
+  for (;;) {
+    let c: ReadableStreamReadResult<Uint8Array>
     try {
-      chunk = await reader.read()
+      c = await reader.read()
     } catch (e) {
-      return void res.end(`event: error\ndata: ${JSON.stringify(anthropicError(502, `the provider connection dropped: ${(e as Error).message}`))}\n\n`)
+      res.end(`event: error\ndata: ${JSON.stringify(anthropicError(502, `the provider connection dropped: ${(e as Error).message}`))}\n\n`)
+      return undefined
     }
-    if (chunk.done) break
-    total += chunk.value.byteLength
-    if (total > MAX_RESP) return void res.end(`event: error\ndata: ${JSON.stringify(anthropicError(502, 'provider response too large'))}\n\n`)
-    res.write(Buffer.from(chunk.value))
+    if (c.done) break
+    total += c.value.byteLength
+    if (total > MAX_RESP) {
+      res.end(`event: error\ndata: ${JSON.stringify(anthropicError(502, 'provider response too large'))}\n\n`)
+      return undefined
+    }
+    res.write(Buffer.from(c.value))
   }
   res.end()
+  return undefined
 }
 
 async function handleRoute(req: IncomingMessage, res: ServerResponse, isCount: boolean): Promise<void> {
@@ -533,13 +685,21 @@ async function handleRoute(req: IncomingMessage, res: ServerResponse, isCount: b
   }
   if (isCount) return sendJson(res, 200, { input_tokens: Math.ceil(JSON.stringify(body.messages ?? []).length / 4 + textOf(body.system).length / 4) })
   const { plan, credOf, anthropicUrl, version, mark } = routerFn()
+  const safeMark = (id: string, ra?: number): void => {
+    try {
+      mark?.(id, ra)
+    } catch {
+      /* um callback de mark quebrado NAO pode derrubar o roteamento (perder o fallback) */
+    }
+  }
   if (!plan.length) return sendJson(res, 503, anthropicError(503, 'no account available to route to'))
   const ac = new AbortController()
   res.on('close', () => !res.writableEnded && ac.abort())
   const reqVersion = String(req.headers['anthropic-version'] ?? '') || version
   const beta = String(req.headers['anthropic-beta'] ?? '') || undefined
-  let last = { status: 503, message: 'no backend available' }
+  let last: Fault = { status: 503, message: 'no backend available' }
   for (const b of plan) {
+    if (ac.signal.aborted) return // cliente desistiu (Esc): nao adianta tentar os proximos backends
     const cred = credOf(b)
     if (b.kind === 'subscription' && !cred) continue // sem setup-token ainda: pula (a captura e follow-up)
     const fail = (e: unknown): Tried => ({ ok: false, status: 0, message: String((e as Error)?.message ?? e) })
@@ -548,16 +708,25 @@ async function handleRoute(req: IncomingMessage, res: ServerResponse, isCount: b
         ? await tryOpenAI(`${b.url!.replace(/\/+$/, '')}/chat/completions`, b.model || String(body.model ?? ''), body, cred, ac).catch(fail)
         : await tryAnthropic(`${(b.kind === 'subscription' ? anthropicUrl ?? 'https://api.anthropic.com' : b.url!).replace(/\/+$/, '')}/v1/messages`, body, cred, b.kind, b.kind === 'subscription' ? undefined : b.model, reqVersion, beta, ac).catch(fail)
     if (!t.ok) {
-      if (shouldFallback(t.status)) {
-        mark?.(b.accountId, classifyBackendFailure(t.status))
+      // backend-fault = status de falha do backend OU mensagem clara (modelo desconhecido, credito, sobrecarga) num 400/404
+      if (shouldFallback(t.status) || isBackendFaultMessage(t.message)) {
+        if (isLimitLike(t.status)) safeMark(b.accountId, t.retryAfter) // so limite (429/402) persiste; auth/transitorio nao
         last = { status: t.status || 502, message: t.message }
         continue
       }
-      res.writeHead(t.status, { 'content-type': 'application/json' })
+      res.writeHead(t.status, { 'content-type': 'application/json' }) // erro da REQUISICAO: devolve, nao queima os outros
       return void res.end(JSON.stringify(anthropicError(t.status, t.message)))
     }
-    return b.kind === 'openai' ? streamOpenAI(t.r, res, b.model || String(body.model ?? ''), ac, !!body.stream) : streamAnthropic(t.r, res, !!body.stream)
+    // 200: comita; mas pode descobrir um erro no corpo (gateway 200+erro) e, se nada foi escrito, cai pro proximo
+    const fb = await (b.kind === 'openai' ? commitOpenAI(t.r, res, b.model || String(body.model ?? ''), ac, !!body.stream) : commitAnthropic(t.r, res, !!body.stream)).catch(
+      (e: unknown): Fault => ({ status: 502, message: String((e as Error)?.message ?? e) }),
+    )
+    if (!fb) return // comitou
+    if (res.headersSent || res.writableEnded) return void (res.writableEnded || res.end()) // ja comprometeu o stream: nao da pra cair
+    if (isLimitLike(fb.status)) safeMark(b.accountId, fb.retryAfter)
+    last = fb
   }
-  res.writeHead(last.status, { 'content-type': 'application/json' })
-  res.end(JSON.stringify(anthropicError(last.status, last.message)))
+  const status = last.status === 429 ? 429 : 502 // nunca devolve 401/403 do backend como se fosse do router (confunde o CLI)
+  res.writeHead(status, { 'content-type': 'application/json' })
+  res.end(JSON.stringify(anthropicError(status, last.message)))
 }
